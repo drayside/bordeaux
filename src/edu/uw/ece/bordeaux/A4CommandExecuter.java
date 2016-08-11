@@ -177,6 +177,7 @@ public class A4CommandExecuter {
 		A4Options options = new A4Options();
 		options.solver = A4Options.SatSolver.SAT4J;
 		options.symmetry = 0;
+		options.higherOrderSolver = false;
 
 		for (Command command : world.getAllCommands()) {
 			if (!command.label.equals(commandName)) {

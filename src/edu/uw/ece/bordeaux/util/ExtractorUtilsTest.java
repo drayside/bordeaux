@@ -64,7 +64,7 @@ public class ExtractorUtilsTest {
 			fail(e.getMessage());
 		}
 
-		final String alloySolution = ExtractorUtils.convertA4SolutionToAlloySyntax(solution);
+		final String alloySolution = ExtractorUtils.convertA4SolutionToAlloySyntax(solution, false);
 		final String alloyContentWithSol = alloyContent + "\npred alloysol{\n" + alloySolution + "\n}\nrun alloysol";
 		try {
 			Util.writeAll(testFile.getAbsolutePath(), alloyContentWithSol);

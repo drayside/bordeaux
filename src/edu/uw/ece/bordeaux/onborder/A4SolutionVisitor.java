@@ -27,7 +27,8 @@ public class A4SolutionVisitor {
 
 				for(ExprHasName field : decl.names) {
 					String name = field.label;
-					String label = getCamelCase(sigWrapper.getSig()) + "_" + name;
+//					String label = ExtractorUtils.getCamelCase(sigWrapper.getSig()) + "_" + name;
+					String label = ExtractorUtils.getLocalFieldName(name, sigWrapper.getSig());
 					String type = field.type().toString().replaceAll("[{\\[\\]}]", "").replace("this/", "");
 					String[] typeParts = type.split("->");
 					
@@ -40,13 +41,6 @@ public class A4SolutionVisitor {
 		}
 		
 		return sigs;
-	}
-	
-	private static String getCamelCase(String in) {
-		if(in == null || in.isEmpty()) return in;
-		
-		boolean lenG1 = in.length() > 1;
-		return Character.toLowerCase(in.charAt(0)) + (lenG1 ? in.substring(1) : "");
 	}
 	
 }

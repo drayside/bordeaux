@@ -67,6 +67,17 @@ public class ExtractorUtils {
 		return sig.isSubsig != null && sig instanceof Sig.PrimSig && !((Sig.PrimSig)sig).parent.builtin;
 	}
 
+	public static String getCamelCase(String in) {
+		if(in == null || in.isEmpty()) return in;
+		
+		boolean lenG1 = in.length() > 1;
+		return Character.toLowerCase(in.charAt(0)) + (lenG1 ? in.substring(1) : "");
+	}
+	
+	public static String getLocalFieldName(String fieldLabel, String sigName) {
+
+		return getCamelCase(sigName) + "_" + fieldLabel;
+	}
 	/**
 	 * Given an A4solution object from AlloyExecuter, it converts it to a Alloy
 	 * syntax
@@ -74,7 +85,7 @@ public class ExtractorUtils {
 	 * @param solution
 	 * @return
 	 */
-	public static String convertA4SolutionToAlloySyntax(A4Solution solution) {
+	public static String convertA4SolutionToAlloySyntax(A4Solution solution, boolean useLocalNames) {
 		List<String> emptySigs = new ArrayList<>();
 		List<String> constraints = new ArrayList<>();
 		List<String> quantifiers = new ArrayList<>();
@@ -87,6 +98,7 @@ public class ExtractorUtils {
 				continue;
 
 			String sigName = sig.label.replace("this/", "");
+			sigName = useLocalNames ? getCamelCase(sigName) : sigName;
 
 			if (solution.eval(sig).size() == 0) {
 				emptySigs.add(sigName);
@@ -112,6 +124,7 @@ public class ExtractorUtils {
 				for (Field field : sig.getFields()) {
 					A4TupleSet fieldsTuples = solution.eval(field);
 					String fieldName = field.label;
+					fieldName = useLocalNames ? getLocalFieldName(fieldName, sig.label.replace("this/", "")) : fieldName;
 					if (isOrdering(sig)) {
 						fieldName = (sig.label.contains("/") ? sig.label.split("/")[0] + "/" : "")
 								+ field.label.toLowerCase();

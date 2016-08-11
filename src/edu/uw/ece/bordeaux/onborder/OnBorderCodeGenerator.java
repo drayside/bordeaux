@@ -148,11 +148,12 @@ public class OnBorderCodeGenerator {
      */
     public void runWithStaticIntance(A4Solution staticSoln, String intendedPred) {
 
-    	System.out.println(staticSoln.toString() + "\n----\n");
-    	System.out.println(ExtractorUtils.convertA4SolutionToAlloySyntax(staticSoln));
     	this.useStaticInstance = true;
-    	String predA = ExtractorUtils.convertA4SolutionToAlloySyntax(staticSoln);
+    	String predA = ExtractorUtils.convertA4SolutionToAlloySyntax(staticSoln, true);
     	String predB = intendedPred;
+
+    	System.out.println(staticSoln.toString() + "\n----\n");
+    	System.out.println(predA);
     	this.run(predA, predB);
     }
     
@@ -379,7 +380,7 @@ public class OnBorderCodeGenerator {
         for (SigFieldWrapper sigWrap : this.sigs) {
             
             String sigName = this.getCamelCase(sigWrap.getSig());
-            args.append(String.format(", %s", sigWrap.getSig()));
+            args.append(String.format(", %s", sigName));
             params.append(String.format(", %s: set %s", sigName, sigWrap.getSig()));
             
             for (FieldInfo field : sigWrap.getFields()) {
