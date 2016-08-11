@@ -125,9 +125,9 @@ public final class BordeauxEngine {
 
 		// First generate static A4olution from input path
 		boolean success = true;
-		HolaReporter a4reporter = new HolaReporter();
+//		HolaReporter a4reporter = new HolaReporter();
 		try {
-			A4CommandExecuter.getInstance().runAlloy(inputPath.getAbsolutePath(), a4reporter, command);
+			A4CommandExecuter.getInstance().runAlloy(inputPath.getAbsolutePath(), reporter, command);
 		} catch (Err e) {
 			success = false;
 			e.printStackTrace();
@@ -138,7 +138,8 @@ public final class BordeauxEngine {
 			}
 		}
 
-		A4Solution staticSoln = a4reporter.getA4Solution();
+		A4Solution staticSoln = reporter.getA4Solution();
+		logger.info("Static A4Solution acquired from Alloy...running OnBorderCodeGenerator");
 
 		// Generate on Border instances
 		String fileName = Utils.getFileName(inputPath.getAbsolutePath());
@@ -155,6 +156,7 @@ public final class BordeauxEngine {
 		OnBorderCodeGenerator generator = new OnBorderCodeGenerator(fileToGenerate, writer);
 		generator.runWithStaticIntance(staticSoln, intendedPred);
 
+		logger.info("OnBorder Code generated...running Alloy*");
 		if (Configuration.IsInDeubbungMode) {
 			logger.info("OnBorderFile for: " + fileName + "\n" + Utils.readFile(onBorderFile.getAbsolutePath()));
 		}
@@ -182,6 +184,7 @@ public final class BordeauxEngine {
 			if (soln != null) {
 				try {
 					soln.writeXML(outputPath.getAbsolutePath());
+					logger.info("Final A4Solution acquired from Alloy*");
 				} catch (Err e) {
 					e.printStackTrace();
 					logger.severe("[" + Thread.currentThread().getName() + "] "

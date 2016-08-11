@@ -464,17 +464,4 @@ public class A4CommandExecuter {
 	private static String alloyHome = null;
 	private static final String fs = System.getProperty("file.separator");
 
-	/**
-	 * @param args
-	 * @throws Err
-	 */
-	public static void main(String[] args) throws Err {
-
-		HolaReporter rep = new HolaReporter();
-		// AlloyProcessedResult rep = new AlloyProcessedResult(lastProccessing);
-		String file = "/Users/vajih/Documents/workspace-git/alloy/relational_props/tmp/49162/predName___1960133549_IMPLY_functional.als";
-		A4CommandExecuter.getInstance().runAlloy(file, rep, COMMAND_BLOCK_NAME);
-
-	}
-
 }

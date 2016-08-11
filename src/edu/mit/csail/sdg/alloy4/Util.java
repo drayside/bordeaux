@@ -164,7 +164,10 @@ public final class Util {
       String JAR = jarPrefix();
       boolean fromJar=false;
       if (filename.startsWith(JAR)) { fromJar=true; filename=filename.substring(JAR.length()).replace('\\', '/'); }
+
+	   // TODO: Fix getClassLoader().getResource(pathname) issue
       fromJar = false;
+      
       InputStream fis=null;
       int now=0, max=4096;
       if (!fromJar) {

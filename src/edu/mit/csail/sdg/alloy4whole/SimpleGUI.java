@@ -176,10 +176,7 @@ import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.ast.Expr;
 import edu.mit.csail.sdg.alloy4compiler.ast.ExprVar;
 import edu.mit.csail.sdg.alloy4compiler.ast.Module;
-import edu.mit.csail.sdg.alloy4compiler.ast.Sig;
-import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
 import edu.mit.csail.sdg.alloy4compiler.parser.CompUtil;
-import edu.mit.csail.sdg.alloy4compiler.sim.SimInstance;
 import edu.mit.csail.sdg.alloy4compiler.sim.SimTuple;
 import edu.mit.csail.sdg.alloy4compiler.sim.SimTupleset;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Options;
@@ -203,7 +200,9 @@ import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleTask2;
  */
 public final class SimpleGUI implements ComponentListener, Listener {
 
-    /** The latest welcome screen; each time we update the welcome screen, we increment this number. */
+    public static final String APPLICATION_NAME = "Bordeaux";
+
+	/** The latest welcome screen; each time we update the welcome screen, we increment this number. */
 //    private static final int welcomeLevel = 2;
 
     // Verify that the graphics environment is set up
@@ -336,7 +335,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         if (text==null) return null; // If this was called prior to the "text" being fully initialized
         OurSyntaxWidget t = text.get();
         if (Util.onMac()) frame.getRootPane().putClientProperty("windowModified", Boolean.valueOf(t.modified()));
-        if (t.isFile()) frame.setTitle(t.getFilename()); else frame.setTitle("Alloy Analyzer "+Version.version());
+        if (t.isFile()) frame.setTitle(t.getFilename()); else frame.setTitle(SimpleGUI.APPLICATION_NAME + " "+ Version.version());
         toolbar.setBorder(new OurBorder(false, false, text.count()<=1, false));
         int c = t.getCaret();
         int y = t.getLineOfOffset(c)+1;
@@ -1373,9 +1372,9 @@ public final class SimpleGUI implements ComponentListener, Listener {
     /** This method displays the about box. */
     private Runner doAbout() {
        if (wrap) return wrapMe();
-       OurDialog.showmsg("About Alloy Analyzer " + Version.version(),
+       OurDialog.showmsg("About " + SimpleGUI.APPLICATION_NAME + " " + Version.version(),
              OurUtil.loadIcon("images/logo.gif"),
-             "Alloy Analyzer " + Version.version(),
+             SimpleGUI.APPLICATION_NAME + " " + Version.version(),
              "Build date: " + Version.buildDate(),
              " ",
              "Lead developer: Felix Chang",
@@ -1422,7 +1421,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
             JScrollPane scroll2 = OurUtil.scrollpane(html2);
             JSplitPane split = OurUtil.splitpane(JSplitPane.HORIZONTAL_SPLIT, scroll1, scroll2, 150);
             split.setResizeWeight(0d);
-            frame.setTitle("Alloy Analyzer Online Guide");
+            frame.setTitle(SimpleGUI.APPLICATION_NAME + " Online Guide");
             frame.getContentPane().setLayout(new BorderLayout());
             frame.getContentPane().add(split, BorderLayout.CENTER);
             frame.pack();
@@ -1459,9 +1458,9 @@ public final class SimpleGUI implements ComponentListener, Listener {
            }
         };
         OurDialog.showmsg("Copyright Notices",
-              "The source code for the Alloy Analyzer is available under the MIT license.",
+              "The source code for " + SimpleGUI.APPLICATION_NAME + " is available under the UW/MIT license.",
               " ",
-              "The Alloy Analyzer utilizes several third-party packages whose code may",
+              SimpleGUI.APPLICATION_NAME + "utilizes several third-party packages whose code may",
               "be distributed under a different license. We are extremely grateful to",
               "the authors of these packages for making their source code freely available.",
               " ",
@@ -1689,11 +1688,11 @@ public final class SimpleGUI implements ComponentListener, Listener {
 
         // Enable better look-and-feel
         if (Util.onMac() || Util.onWindows()) {
-           System.setProperty("com.apple.mrj.application.apple.menu.about.name", "Alloy");
            System.setProperty("com.apple.mrj.application.growbox.intrudes","true");
            System.setProperty("com.apple.mrj.application.live-resize","true");
            System.setProperty("com.apple.macos.useScreenMenuBar","true");
            System.setProperty("apple.laf.useScreenMenuBar","true");
+           System.setProperty("com.apple.mrj.application.apple.menu.about.name", SimpleGUI.APPLICATION_NAME);
         }
         if (Util.onMac()) {
            Application.getApplication().addPreferencesMenuItem();
@@ -1722,10 +1721,10 @@ public final class SimpleGUI implements ComponentListener, Listener {
         int y=AnalyzerY.get(); if (y<0) y=screenHeight/10; if (y>screenHeight-100) y=screenHeight-100;
 
         // Put up a slash screen
-        final JFrame frame = new JFrame("Alloy Analyzer");
+        final JFrame frame = new JFrame(APPLICATION_NAME);
         frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         frame.pack();
-        if (!Util.onMac() && !Util.onWindows()) {
+        if (/*!Util.onMac() && */!Util.onWindows()) {
            String gravity = System.getenv("_JAVA_AWT_WM_STATIC_GRAVITY");
            if (gravity==null || gravity.length()==0) {
               // many Window managers do not respect ICCCM2; this should help avoid the Title Bar being shifted "off screen"
@@ -1738,7 +1737,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         frame.setSize(width,height);
         frame.setLocation(x,y);
         frame.setVisible(true);
-        frame.setTitle("Alloy Analyzer "+Version.version()+" loading... please wait...");
+        frame.setTitle(SimpleGUI.APPLICATION_NAME + " " + Version.version()+" loading... please wait...");
         final int windowWidth = width;
         // We intentionally call setVisible(true) first before settings the "please wait" title,
         // since we want the minimized window title on Linux/FreeBSD to just say Alloy Analyzer
@@ -1822,7 +1821,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
             windowmenu  = menu(bar,  "&Window",  doRefreshWindow(false));
             windowmenu2 = menu(null, "&Window",  doRefreshWindow(true));
             helpmenu    = menu(bar,  "&Help",    null);
-            if (!Util.onMac()) menuItem(helpmenu, "About Alloy...", 'A', doAbout());
+            if (!Util.onMac()) menuItem(helpmenu, "About " + SimpleGUI.APPLICATION_NAME + "...", 'A', doAbout());
             menuItem(helpmenu, "Quick Guide",                       'Q', doHelp());
             menuItem(helpmenu, "See the Copyright Notices...",      'L', doLicense());
         } finally {
@@ -1884,7 +1883,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         all.add(status, BorderLayout.SOUTH);
 
         // Generate some informative log messages
-        log.logBold("Alloy Analyzer "+Version.version()+" (build date: "+Version.buildDate()+")\n\n");
+        log.logBold(SimpleGUI.APPLICATION_NAME + " "+Version.version()+" (build date: "+Version.buildDate()+")\n\n");
 
         // If on Mac, then register an application listener
         try {
@@ -1952,7 +1951,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
            JCheckBox again = new JCheckBox("Show this message every time you start the Alloy Analyzer");
            again.setSelected(true);
            OurDialog.showmsg("Welcome",
-                 "Thank you for using the Alloy Analyzer "+Version.version(),
+                 "Thank you for using " + SimpleGUI.APPLICATION_NAME + " " + Version.version(),
                  " ",
                  "Version 4 of the Alloy Analyzer is a complete rewrite,",
                  "offering improvements in robustness, performance and usability.",
@@ -1985,7 +1984,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
               if (System.currentTimeMillis() - now >= 3000 || n <= Version.buildNumber()) { t.stop(); return; }
               latestAlloyVersion = n;
               latestAlloyVersionName = MailBug.latestBuildName();
-              log.logBold("An updated version of the Alloy Analyzer has been released.\n");
+              log.logBold("An updated version of " + SimpleGUI.APPLICATION_NAME + " has been released.\n");
               log.log("Please visit alloy.mit.edu to download the latest version:\nVersion " + latestAlloyVersionName + "\n");
               log.logDivider();
               log.flush();

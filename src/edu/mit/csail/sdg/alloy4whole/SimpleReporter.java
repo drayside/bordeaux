@@ -634,7 +634,7 @@ public final class SimpleReporter extends A4Reporter {
                 A4Solution sol;
                 if(options.enableBordeaux) {
                     cb(out, "bold", "Running Bordeaux Solver\n");
-                	sol = BordeauxEngine.get().getBorderInstances(latestRep, new File(options.originalFilename));
+                	sol = BordeauxEngine.get().getBorderInstancesFromStaticInstance(latestRep, new File(options.originalFilename), cmd.label, "");
                     latestKodkod = sol;
                 }else {
                 	TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options);
