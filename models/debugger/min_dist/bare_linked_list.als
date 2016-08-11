@@ -9,6 +9,14 @@ pred singleParent[nodes: set Node, next1: Node -> Node] {
 	all disj n1, n2 : nodes | n1.next1 != n2.next1
 }
 
+pred hello {
+
+}
+
+pred hi {
+
+}
+
 fact {
 	isAcyclic[Node, next]
 	singleParent[Node, next]

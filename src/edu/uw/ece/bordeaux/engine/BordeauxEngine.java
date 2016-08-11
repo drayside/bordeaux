@@ -56,7 +56,7 @@ public final class BordeauxEngine {
 		generator.run(predNames);
 		
 		if(Configuration.IsInDeubbungMode) {
-			logger.info(Utils.readFile(onBorderFile.getAbsolutePath()));
+			logger.info("OnBorderFile for: " + fileName + "\n" + Utils.readFile(onBorderFile.getAbsolutePath()));
 		}
 		
 		// Run onborder instances through the higher order solver (alloy*)
@@ -88,5 +88,7 @@ public final class BordeauxEngine {
 				}
 			}
 		}
+		
+		onBorderFile.delete();
 	}
 }

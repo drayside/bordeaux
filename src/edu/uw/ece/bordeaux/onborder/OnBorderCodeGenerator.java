@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.collections4.MultiValuedMap;
+
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Util;
@@ -114,6 +116,7 @@ public class OnBorderCodeGenerator {
             	
         try {
             this.generateSigs(this.out);
+        	this.generatePredicates(this.out, predNames);
             this.generateDeltas(this.out);
             this.generateIsInstance(this.out, predNames);
             this.generateFindMarginalInstances(out, predNames);
@@ -138,6 +141,25 @@ public class OnBorderCodeGenerator {
         
         println(this.sigDeclaration);
         
+    }
+    
+    private void generatePredicates(PrintWriter out, String...predNames) {
+    	
+    	if(predNames == null) return;
+    	
+    	this.out = out;
+    	
+    	MultiValuedMap<String, String> predMap = Field2ConstraintMapper.getPredDeclarationViaPos(this.module);
+    	for(String predName: predNames) {
+
+    		if(predName == null || predName.isEmpty()) continue;
+    		
+    		for(String impl : predMap.get(predName)) {
+        		ln();
+    			println(impl);
+    		}
+    		
+    	}
     }
     
     private void generateDeltas(PrintWriter out) {
@@ -262,8 +284,8 @@ public class OnBorderCodeGenerator {
             
         }
         
-        String predA = predNames != null && predNames.length > 0 ? predNames[0].replaceAll("\\s+", "_").toUpperCase() : "";
-        String predB = predNames != null && predNames.length > 1 ? "is" + predNames[1].replaceAll("\\s+", "_").toUpperCase() : "not is";
+        String predA = predNames != null && predNames.length > 0 && !predNames[0].isEmpty()? predNames[0].replaceAll("\\s+", "_").toUpperCase() : "";
+        String predB = predNames != null && predNames.length > 1 && !predNames[1].isEmpty() ? "is" + predNames[1].replaceAll("\\s+", "_").toUpperCase() : "not is";
         
         // say "not isPREDAInstance" if predA exists
         if(predB.equals("not is") && !predA.equals("")) {

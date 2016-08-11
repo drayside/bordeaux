@@ -1,8 +1,9 @@
 package edu.uw.ece.bordeaux.onborder;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4compiler.ast.Bounds;
@@ -18,6 +19,7 @@ import edu.mit.csail.sdg.alloy4compiler.ast.ExprList;
 import edu.mit.csail.sdg.alloy4compiler.ast.ExprQt;
 import edu.mit.csail.sdg.alloy4compiler.ast.ExprUnary;
 import edu.mit.csail.sdg.alloy4compiler.ast.ExprVar;
+import edu.mit.csail.sdg.alloy4compiler.ast.Func;
 import edu.mit.csail.sdg.alloy4compiler.ast.Module;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
@@ -32,7 +34,14 @@ import edu.uw.ece.bordeaux.util.Utils;
  */
 public class Field2ConstraintMapper extends VisitReturn<Object> {
 
-	public static String getSigDeclarationViaPos(Module sol) throws Err {
+	/**
+	 * Gets signature definitions from the given module based on their position (line number)
+	 * in the module file.
+	 * @param sol - the specified module of interest
+	 * @return A string with every unignorable ({@link ExtractorUtils.sigToBeIgnored}) signature definition
+	 * @throws Err
+	 */
+	public static String getSigDeclarationViaPos(Module sol) {
 		
 		StringBuilder allSigs = new StringBuilder();
 		for(Sig sig: sol.getAllReachableSigs()) {
@@ -40,8 +49,44 @@ public class Field2ConstraintMapper extends VisitReturn<Object> {
 			if(ExtractorUtils.sigToBeIgnored(sig)) continue;
 			allSigs.append("sig " + Utils.readSnippet(sig.span()) + "\n");
 		}
-		
+
 		return allSigs.toString();
+	}
+	
+	/**
+	 * Gets a map of predicates from the given module based on their position (line number) in the module file.
+	 * @param sol - the specified module of interest
+	 * @return A map where the key is the pred name and the value is the pred code. Each key can have multiple values due to function overloads
+	 * @throws Err
+	 */
+	public static MultiValuedMap<String, String> getPredDeclarationViaPos(Module sol) {
+		
+		MultiValuedMap<String, String> preds = new HashSetValuedHashMap<>();
+		for(Func func: sol.getAllFunc()) {
+			
+			if(!func.isPred) continue;
+			
+			String codeSnippet = Utils.readSnippet(func.span());
+			int bracketIndex = codeSnippet.indexOf('[');
+			bracketIndex = bracketIndex == -1 ? codeSnippet.indexOf('{') : bracketIndex;
+			
+			String predName = func.label;
+			
+			if(bracketIndex >= 0) {
+				int predIndex = codeSnippet.indexOf("pred ");
+				if(predIndex >= 0) { 
+					predName = codeSnippet.substring(predIndex, bracketIndex);
+					predName = predName.replace("pred", "");
+				} else {
+					predName = codeSnippet.substring(0, bracketIndex);
+				}
+			}
+			
+			predName = predName.trim();
+			preds.put(predName, codeSnippet);
+		}
+
+		return preds;
 	}
 	
 	public static String getSigDeclations(Module sol) throws Err {
@@ -104,7 +149,7 @@ public class Field2ConstraintMapper extends VisitReturn<Object> {
 				
 				String label = field.label;
 				
-				Expr constraint = field.in(decl.expr);
+//				Expr constraint = field.in(decl.expr);
 				
 				Field2ConstraintMapper mapper = new Field2ConstraintMapper();
 				Object str = mapper.visitThis(expr);
