@@ -1,10 +1,17 @@
 package edu.uw.ece.bordeaux;
 
 import java.io.Serializable;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ErrorWarning;
+import edu.mit.csail.sdg.alloy4compiler.ast.Command;
+import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
+import kodkod.engine.hol.HOLTranslation;
+import kodkod.instance.Instance;
 
 //TODO: This class has to be immutable.
 public class HolaReporter extends A4Reporter implements Serializable {
@@ -22,6 +29,49 @@ public class HolaReporter extends A4Reporter implements Serializable {
 	public long evalInsts = 0;
 	public int sat = 0;
 
+    private final Deque<Instance> instances;    
+    private A4Solution satSolution;
+    
+    public HolaReporter() {
+        this.satSolution = null;
+        this.instances = new ArrayDeque<>();
+	}
+    
+    public Optional<A4Solution> getA4Solution() {
+        return Optional.ofNullable(this.satSolution);
+    }
+    
+    public Instance getTopInstance() {
+    	
+        if(this.instances.isEmpty()) {
+        	return null;
+        }
+        
+        return this.instances.pop();
+    }
+       
+    public Deque<Instance> getInstances() {
+
+        return this.instances;
+    }
+    
+    public void resetSolution() {
+        this.instances.clear();
+        this.satSolution = null;
+    }
+    
+    public void holCandidateFound(HOLTranslation tr, Instance candidate) {
+        
+        System.out.println("Adding Candidate Instance");
+        this.instances.push(candidate);
+    }
+    
+    public void holFixpointFirstSolution(HOLTranslation tr, Instance candidate) {
+        
+        System.out.println("Adding Candidate Instance");
+        this.instances.push(candidate);
+    }
+    
 	// For example, here we choose to display each "warning" by printing it to
 	// System.out
 	@Override
@@ -30,6 +80,7 @@ public class HolaReporter extends A4Reporter implements Serializable {
 		// System.out.flush();
 	}
 
+	@Override
 	public void typecheck(String msg) {
 	}
 
@@ -53,6 +104,14 @@ public class HolaReporter extends A4Reporter implements Serializable {
 
 	@Override
 	public void resultSAT(Object command, long solvingTime, Object solution) {
+		
+		 if (!(solution instanceof A4Solution) || !(command instanceof Command)) {
+            return;
+        }
+
+        System.out.println("Adding SAT Solution");
+        this.satSolution = (A4Solution) solution;   
+	        
 		this.solveTime = System.currentTimeMillis() - lastTime;
 		if (Configuration.IsInDeubbungMode)
 			logger.info(String.format(
@@ -61,6 +120,7 @@ public class HolaReporter extends A4Reporter implements Serializable {
 		this.sat = 1;
 	}
 
+	@Override
 	public void resultUNSAT(Object command, long solvingTime, Object solution) {
 		this.solveTime = System.currentTimeMillis() - lastTime;
 		if (Configuration.IsInDeubbungMode)

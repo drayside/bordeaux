@@ -52,7 +52,7 @@ pred TrainsMoveLegal [x, x': TrainState, g: GateState, ts: set Train] {
   MayMove [g, x, ts]
   GatePolicy [g, x]
   }
-run TrainsMoveLegal for 3 expect 1
+run TrainsMoveLegal for 4 expect 1
 
 
 

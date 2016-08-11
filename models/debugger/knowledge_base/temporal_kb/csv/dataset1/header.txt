@@ -1,0 +1,1 @@
+statement,direction,property,field1,field,spec,sat,solvTime,transTime,vars,clauses

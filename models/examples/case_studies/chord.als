@@ -12,9 +12,7 @@ open util/relation as rel
 sig Id {next: Id}
 fact {all i: Id | Id in i.*next}
 
-/**
- * true iff i precedes j in the order starting at from
- */
+-- true iff i precedes j in the order starting at from
 pred less_than [from, i,j: Id] {
         let next' = Id<:next - (Id->from) | j in i.^next'  // if from=j, returns true if # nodes > 1
         }
@@ -39,11 +37,9 @@ sig State {
         data: active -> one NodeData
         }
 
-/**
- * node n's next node is defined to be the m where n's finger table maps the id
- * that follows n.id to m
- * next holds the first entry of the finger table
- */
+-- node n's next node is defined to be the m where n's finger table maps the id
+-- that follows n.id to m
+-- next holds the first entry of the finger table
 fact {all s: State | all n: s.active | n.(s.data).next = n.(s.data).finger[n.id.next]}
 
 pred NextCorrect [s: State] {

@@ -16,11 +16,9 @@ module examples/case_studies/sync
 
 private open util/graph[Name] as graph
 
-/**
- * The Name atom represents the hierarchy of all name sequences
- * used in the model. A Name atom represents the name, and the path
- * in the sequence of names to the root excluding the RootName.
- */
+// The Name atom represents the hierarchy of all name sequences
+// used in the model. A Name atom represents the name, and the path
+// in the sequence of names to the root excluding the RootName.
 sig Name {
   children: set Name
 }
@@ -68,16 +66,14 @@ fun RestrictFSComplement[fs: Name -> lone FileContents, p: Name]: Name -> lone F
    fs & ((Name - p.*children) -> FileContents)
 }
 
-/**
- * The following function test whether a particular synchronizer
- * operation satisfies the "reasonableness" conditions.
- * The arguments are:
- * O - the original filesystem.
- * A,B - separately modified copies
- * Adirty, Bdirty - sets of paths modified in A and B, respectively, from O.
- *
- * A',B' - results of synchronizer operation
- */
+// The following function test whether a particular synchronizer
+// operation satisfies the "reasonableness" conditions.
+// The arguments are:
+// O - the original filesystem.
+// A,B - separately modified copies
+// Adirty, Bdirty - sets of paths modified in A and B, respectively, from O.
+//
+// A',B' - results of synchronizer operation
 pred SyncSpec[A, B, A', B': Name -> lone FileContents, Adirty, Bdirty: set Name] {
   {
      IsValidFS[A]

@@ -32,11 +32,9 @@ sig Process {
 
 one sig Root extends Process {}
 
-/**
- * intuitively, the depth level at which
- * a process resides in the spanning tree,
- * with the root at level zero
- */
+// intuitively, the depth level at which
+// a process resides in the spanning tree,
+// with the root at level zero
 sig Lvl {}
 
 fact processGraph {
@@ -46,50 +44,36 @@ fact processGraph {
 }
 
 sig State {
-  /**
-   * the set of processes which execute in this state.
-   * used to allow flexibility in how many processes
-   * run simultaneously
-   */
+  // the set of processes which execute in this state.
+  // used to allow flexibility in how many processes
+  // run simultaneously
   runs : set Process,
-
-  /**
-   * the level of a process in this state
-   */
+  // the level of a process in this state
   lvl: Process -> lone Lvl,
-
-  /**
-   * who the process thinks is its parent in this state.
-   * the parent pointers should eventually become
-   * the spanning tree
-   */
+  // who the process thinks is its parent in this state.
+  // the parent pointers should eventually become
+  // the spanning tree
   parent: Process -> lone Process
 }
 
-/**
- * initially, the lvl and parent fields are blank
- */
 pred Init {
+  // initially, the lvl and parent fields are blank
   let fs = so/first | {
     no fs.lvl
     no fs.parent
   }
 }
 
-/**
- * simple NOP transition
- */
+// simple NOP transition
 pred TRNop[p : Process, pre, post: State] {
   pre.lvl[p] = post.lvl[p]
   pre.parent[p] = post.parent[p]
 }
 
-/**
- * preconditions for a process to actually act
- * in a certain pre-state
- * used to preclude stalling of entire system
- * for no reason (see TransIfPossible)
- */
+// preconditions for a process to actually act
+// in a certain pre-state
+// used to preclude stalling of entire system
+// for no reason (see TransIfPossible)
 pred TRActPreConds[p : Process, pre : State] {
   // can't already have a level
   no pre.lvl[p]
@@ -100,9 +84,7 @@ pred TRActPreConds[p : Process, pre : State] {
   (p = Root || some pre.lvl[p.adj])
 }
 
-/**
- * transition which changes state of a process
- */
+// transition which changes state of a process
 pred TRAct[p : Process, pre, post : State] {
   // can't already have a level
   no pre.lvl[p]
@@ -132,12 +114,10 @@ pred Trans[p : Process, pre, post : State] {
   TRNop[p, pre, post]
 }
 
-/**
- * all processes do a nop transition in some
- * state only when no process can act because
- * preconditions are not met
- */
 fact TransIfPossible {
+  // all processes do a nop transition in some
+  // state only when no process can act because
+  // preconditions are not met
   all s : State - so/last |
     (all p : Process | TRNop[p, s, so/next[s]]) =>
       (all p : Process | !TRActPreConds[p,s])
@@ -167,17 +147,13 @@ pred SpanTreeAtState[s : State] {
   graph/dag[~(s.parent)]
 }
 
-/**
- * show a run that produces a spanning tree
- */
+// show a run that produces a spanning tree
 pred SuccessfulRun {
   SpanTreeAtState[so/last]
   all s : State - so/last | !SpanTreeAtState[s]
 }
 
-/**
- * show a trace without a loop
- */
+// show a trace without a loop
 pred TraceWithoutLoop {
   all s, s' : State | s!=s' => {
     !EquivStates[s, s']
@@ -186,27 +162,21 @@ pred TraceWithoutLoop {
   all s: State | !SpanTreeAtState[s]
 }
 
-/**
- * defines equivalent states
- */
+// defines equivalent states
 pred EquivStates[s, s' : State] {
   s.lvl = s'.lvl
   s.parent = s'.parent
 }
 
-/**
- * show a trace that violates liveness
- */
+// show a trace that violates liveness
 pred BadLivenessTrace {
   // two different states equivalent (loop)
   some s, s' : State | s!=s' && EquivStates[s, s']
   all s : State | !SpanTreeAtState[s]
 }
 
-/**
- * check that once spanning tree is constructed,
- * it remains
- */
+// check that once spanning tree is constructed,
+// it remains
 assert Closure {
   all s : State - so/last |
     SpanTreeAtState[s] => (s.parent = so/next[s].parent)

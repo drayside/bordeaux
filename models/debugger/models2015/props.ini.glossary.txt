@@ -1,0 +1,15 @@
+b: Binary
+t: Ternary
+o: ordered.
+r: Range,
+d: Domain
+m: Middle
+
+The ordered properties are interpreted as:
+prop1,ot,d,0,r
+
+prop1 is ordered.
+prop1 is ternary
+prop1 is ordered over d
+prop1 is not ordered over m
+prop1 is also ordered over r

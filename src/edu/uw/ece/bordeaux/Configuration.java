@@ -16,7 +16,7 @@ public class Configuration {
 	final public static String SYMMETRY_OFF = "symmetryOff";
 	final public static String USING_SYMMETRY = "usingSymmetry";
 	final public static String REPORT_FILE_NAME = "reportFileName";
-	final public static boolean IsInDeubbungMode = false; //Boolean.parseBoolean(System.getProperty("debug")); 
+	final public static boolean IsInDeubbungMode = true; //Boolean.parseBoolean(System.getProperty("debug")); 
 	
 	private final java.util.Properties props;
 	private static Configuration myself = null;

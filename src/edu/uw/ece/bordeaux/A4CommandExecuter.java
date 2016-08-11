@@ -51,17 +51,21 @@ public class A4CommandExecuter {
 			.getLogger(A4CommandExecuter.class.getName() + "--"
 					+ Thread.currentThread().getName());
 
-	private static A4CommandExecuter itself;
+	private static A4CommandExecuter instance;
+	private static Object lock = new Object();
 
 	private A4CommandExecuter() {
 		setUp();
 	}
 
 	public static A4CommandExecuter getInstance() {
-		if (itself == null) {
-			itself = new A4CommandExecuter();
+		synchronized(lock) {
+			if (instance == null) {
+				instance = new A4CommandExecuter();
+			}
 		}
-		return itself;
+		
+		return instance;
 	}
 
 	private void setUp() {
@@ -233,7 +237,7 @@ public class A4CommandExecuter {
 		return Collections.unmodifiableMap(result);
 	}
 
-	public Map<Command, A4Solution> executeHola(IA4Reporter rep, String tmpDirectory, String... filenames) throws Err {
+	public Map<Command, A4Solution> executeHola(A4Reporter rep, String tmpDirectory, String... filenames) throws Err {
 		
         Map<Command, A4Solution> result = new HashMap<>();
 

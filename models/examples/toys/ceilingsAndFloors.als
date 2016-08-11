@@ -41,6 +41,12 @@ pred NoSharing {
   no m,n: Man | m!=n && (m.floor = n.floor || m.ceiling = n.ceiling)
 }
 
+pred NoSharing2 {
+  no m,n: Man | m!=n => (m.floor = n.floor || m.ceiling = n.ceiling)
+}
+
+check {NoSharing <=> NoSharing2} for 6 
+
 assert BelowToo'' { NoSharing => (all m: Man | some n: Man | m.Above[n]) }
 check BelowToo'' for 6 expect 0
 check BelowToo'' for 10 expect 0
