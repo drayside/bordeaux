@@ -81,12 +81,10 @@ pred ReleaseMutex [s: State, p: Process, m: Mutex, s': State] {
   }
 }
 
-/**
- * for every adjacent (pre,post) pair of States,
- * one action happens: either some process grabs a mutex,
- * or some process releases a mutex,
- * or nothing happens (have to allow this to show deadlocks)
- */
+// for every adjacent (pre,post) pair of States,
+// one action happens: either some process grabs a mutex,
+// or some process releases a mutex,
+// or nothing happens (have to allow this to show deadlocks)
 pred GrabOrRelease  {
     Initial[so/first] &&
     (

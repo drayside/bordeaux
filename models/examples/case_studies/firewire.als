@@ -179,14 +179,10 @@ sig Link {target, source: Node, reverse: Link} {
   reverse.@target = source
   }
 
-/**
- * at most one link between a pair of nodes in a given direction
- */
+-- at most one link between a pair of nodes in a given direction
 fact {no x,y: Link | x!=y && x.source = y.source && x.target = y.target}
 
-/**
- * topology is tree-like: acyclic when viewed as an undirected graph
- */
+-- topology is tree-like: acyclic when viewed as an undirected graph
 fact Topology {
 some tree: Node lone -> Node, root: Node {
   Node in root.*tree

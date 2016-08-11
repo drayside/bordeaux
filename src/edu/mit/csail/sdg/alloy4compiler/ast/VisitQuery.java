@@ -104,4 +104,8 @@ public abstract class VisitQuery<T> extends VisitReturn<T> {
         return null;
     }
 
+    /** Visits a Bounds node (this default implementation simply returns null) */
+    @Override public T visit(Bounds x) throws Err {
+        return null;
+    }
 }

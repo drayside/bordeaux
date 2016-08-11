@@ -43,6 +43,10 @@ public class A4Reporter implements IA4Reporter {
    public A4Reporter (IA4Reporter reporter) {
       parent = reporter;
    }
+   
+	public A4Solution getA4Solution() {
+		return null;
+	}
 
    /** This method is called at various points to report the current progress;
     * it is intended as a debugging aid for the developers; the messages are generally not useful for end users.

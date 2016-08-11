@@ -14,71 +14,60 @@ open util/relation as rel
 sig Node {}
 
 sig MsgState {
-   /** Node that sent the message */
+   // Node that sent the message
    from: Node,
-
-   /** Intended recipient(s) of a message; note that broadcasts are allowed */
+   // Intended recipient(s) of a message; note that broadcasts are allowed
    to: set Node
 }
 
 sig Msg {
    state: MsgState,
-
-   /** Timestamp: the tick on which the message was sent */
+   // Timestamp: the tick on which the message was sent
    sentOn: Tick,
-
-   /** tick at which node reads message, if read */
+   // tick at which node reads message, if read
    readOn: Node -> lone Tick
 }{
   readOn.Tick in state.to
 }
 
 sig Tick {
-   /** The state of each node */
+   // The state of each node
    state: Node -> one NodeState,
 
-   /**
-    * Definition of what each node does on this tick:
-    *
-    * Typically, a node would determine
-    * the messages it sends and its next state, based on its current
-    * state and the messages it reads.
-    *
-    * Messages that the node _can_ read in this tick, i.e. messages available
-    * for reading at the beginning of this tick.  The messages that
-    * the node actually reads are a subset of this set.  Determined by
-    * constraints in this module.
-    */
+   //
+   // Definition of what each node does on this tick:
+   //
+   // Typically, a node would determine
+   // the messages it sends and its next state, based on its current
+   // state and the messages it reads.
+   //
+
+   // Messages that the node _can_ read in this tick, i.e. messages available
+   // for reading at the beginning of this tick.  The messages that
+   // the node actually reads are a subset of this set.  Determined by
+   // constraints in this module.
    visible: Node -> Msg,
 
-   /**
-    * Messages that the node _actually reads_ in this tick.  Must be a subset
-    * of visible.  Determined by constraints of the particular system
-    * that uses this module.
-    */
+   // Messages that the node _actually reads_ in this tick.  Must be a subset
+   // of visible.  Determined by constraints of the particular system
+   // that uses this module.
    read: Node -> Msg,
 
-   /**
-    * Messages sent by the node in this tick.  They become visible to
-    * (and can be read by) their recipients on the next tick.
-    */
+   // Messages sent by the node in this tick.  They become visible to
+   // (and can be read by) their recipients on the next tick.
    sent: Node -> Msg,
 
-   /**
-    * Messages available for sending at this tick.  A given message
-    * atom is only used once, and then it gets removed from the available
-    * set and cannot be used to represent messages sent on subsequent ticks.
-    * Also, two different nodes cannot send the same message atom.
-    * So, a message atom represents a particular single physical message
-    * sent by a given node on a given tick.
-    */
+   // Messages available for sending at this tick.  A given message
+   // atom is only used once, and then it gets removed from the available
+   // set and cannot be used to represent messages sent on subsequent ticks.
+   // Also, two different nodes cannot send the same message atom.
+   // So, a message atom represents a particular single physical message
+   // sent by a given node on a given tick.
    available: set Msg,
 
-   /**
-    * For each node, at each tick, the number of messages it _needs_ to send.
-    * Used to rule out "proofs" of liveness violations that are caused
-    * solely by not having enough messages available for sending.
-    */
+   // For each node, at each tick, the number of messages it _needs_ to send.
+   // Used to rule out "proofs" of liveness violations that are caused
+   // solely by not having enough messages available for sending.
    needsToSend: Node -> Msg
 }
 
@@ -184,24 +173,20 @@ pred ReadInOrder  {
 
 fact ReadOnlyVisible { read in visible }
 
-/**
- * this function ensures that messages will not
- * be lost, i.e. a message send to a node will
- * eventually be visible to that node
- */
 pred NoLostMessages {
+  // this function ensures that messages will not
+  // be lost, i.e. a message send to a node will
+  // eventually be visible to that node
   all m: Msg |
     (m.sentOn != ord/last) => (all n: m.state.to |
       some t: ord/nexts[m.sentOn] |
         m in t.visible[n])
 }
 
-/**
- * this function ensures that there will be
- * no shortage of messages in the available
- * message pool during the trace
- */
 pred NoMessageShortage {
+  // this function ensures that there will be
+  // no shortage of messages in the available
+  // message pool during the trace
   all t: Tick - ord/last |
     (sum n: Node | # t.needsToSend[n]) =< # t.available
 }

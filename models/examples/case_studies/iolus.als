@@ -20,23 +20,17 @@ open util/ordering[Tick] as ord
 
 sig Tick {}
 
-/**
- * It can be abstract, since the fact below says Key=GroupKey
- */
+// It can be abstract, since the fact below says Key=GroupKey
 abstract sig Key {}
 
-/**
- * It can be abstract, since the fact below says Message=DataMessage
- */
+// It can be abstract, since the fact below says Message=DataMessage
 abstract sig Message {
   sender : Member,
   sentTime : Tick,
   key : Key
 }
 
-/**
- * It can be abstract, since the fact below says KDS=GSA
- */
+// It can be abstract, since the fact below says KDS=GSA
 abstract sig KDS {
   keys : Tick -> Key,
   members : Tick -> Member
@@ -48,9 +42,7 @@ abstract sig KDS {
   }
 }
 
-/**
- * It can be abstract, since the fact below says "Member=Client"
- */
+// It can be abstract, since the fact below says "Member=Client"
 abstract sig Member {
   ownedKeys : Tick -> Key,
   receivedMessages : Tick -> Message

@@ -29,52 +29,48 @@ private one sig Ord {
    pred/totalOrder[elem,First,Next]
 }
 
-/** first */
+// first
 fun first: one elem { Ord.First }
 
-/** last */
+// last
 fun last: one elem { elem - (next.elem) }
 
-/** return a mapping from each element to its predecessor */
+// return a mapping from each element to its predecessor
 fun prev : elem->elem { ~(Ord.Next) }
 
-/** return a mapping from each element to its successor */
+// return a mapping from each element to its successor
 fun next : elem->elem { Ord.Next }
 
-/** return elements prior to e in the ordering */
+// return elements prior to e in the ordering
 fun prevs [e: elem]: set elem { e.^(~(Ord.Next)) }
 
-/** return elements following e in the ordering */
+// return elements following e in the ordering
 fun nexts [e: elem]: set elem { e.^(Ord.Next) }
 
-/** e1 is less than e2 in the ordering */
+// e1 is less than e2 in the ordering
 pred lt [e1, e2: elem] { e1 in prevs[e2] }
 
-/** e1 is greater than e2 in the ordering */
+// e1 is greater than e2 in the ordering
 pred gt [e1, e2: elem] { e1 in nexts[e2] }
 
-/** e1 is less than or equal to e2 in the ordering */
+// e1 is less than or equal to e2 in the ordering
 pred lte [e1, e2: elem] { e1=e2 || lt [e1,e2] }
 
-/** e1 is greater than or equal to e2 in the ordering */
+// e1 is greater than or equal to e2 in the ordering
 pred gte [e1, e2: elem] { e1=e2 || gt [e1,e2] }
 
-/** returns the larger of the two elements in the ordering */
+// returns the larger of the two elements in the ordering
 fun larger [e1, e2: elem]: elem { lt[e1,e2] => e2 else e1 }
 
-/** returns the smaller of the two elements in the ordering */
+// returns the smaller of the two elements in the ordering
 fun smaller [e1, e2: elem]: elem { lt[e1,e2] => e1 else e2 }
 
-/**
- * returns the largest element in es
- * or the empty set if es is empty
- */
+// returns the largest element in es
+// or the empty set if es is empty
 fun max [es: set elem]: lone elem { es - es.^(~(Ord.Next)) }
 
-/**
- * returns the smallest element in es
- * or the empty set if es is empty
- */
+// returns the smallest element in es
+// or the empty set if es is empty
 fun min [es: set elem]: lone elem { es - es.^(Ord.Next) }
 
 assert correct {

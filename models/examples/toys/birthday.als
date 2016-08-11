@@ -25,7 +25,7 @@ module examples/toys/birthday
 
 sig Name {}
 sig Date {}
-sig BirthdayBook {known: set Name, date: known -> one Date}
+sig BirthdayBook {known: set Name, date: known -> one Date}//, date2: lone Name -> one Date}
 
 pred AddBirthday [bb, bb': BirthdayBook, n: Name, d: Date] {
     bb'.date = bb.date ++ (n->d)
@@ -59,10 +59,34 @@ assert DelIsUndo {
     }
 
 check AddWorks for 3 but 2 BirthdayBook expect 0
-check DelIsUndo for 3 but 2 BirthdayBook expect 1
+check DelIsUndo2 for 3 but 3 BirthdayBook expect 0
 
 pred BusyDay [bb: BirthdayBook, d: Date]{
     some cards: set Name | Remind [bb,d,cards] && !lone cards
     }
 
 run BusyDay for 3 but 1 BirthdayBook expect 1
+
+/** Fikayo Modified **/
+
+/**
+* DellsUndo fails because it attempts to assert that bb1.date = bb3.date after deletion.
+* This is incorrect because the birthday n->d added to bb2 could have previously existed in bb1 as n->d'
+* This relation n-> d' would be replaced by n->d when added to bb2.
+* However, the deletion of n would completely remove all relations from n from bb3
+* As a result bb1 would still have the original relation of bb1->n->d' while bb3 would not have any relations involving n.
+* Consequently, the assertion that bb1.date = bb3.date would be false with the satement above serving as a counterexample.
+*
+* DellsUndo2 fixes the issue and instead makes one of the following checks:
+*	n->d exists in bb2.date but n does not exist in bb3.known
+*	adding (or replacing) n->d to bb1.date, then removing n-> from bb1.date yields bb1.date = bb3.date
+*	removing n from bb1.known is equal to bb3.known
+*/
+assert DelIsUndo2 {
+    all bb1,bb2, bb3: BirthdayBook, n: Name, d: Date|
+        AddBirthday [bb1,bb2,n,d] && DelBirthday [bb2, bb3, n] 
+		// Any of the following constraints will satisfy the neccessary check
+		=> n->d in bb2.date and n not in bb3.known
+		// => ((bb1.date ++ n->d) - n->d) = bb3.date
+		// => (bb1.known - n) = bb3.known
+    }

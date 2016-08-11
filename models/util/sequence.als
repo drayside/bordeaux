@@ -37,23 +37,23 @@ sig Seq {
   all i: SeqIdx - ord/first | some i.seqElems => some ord/prev[i].seqElems
 }
 
-/** no two sequences are identical */
+/* no two sequences are identical */
 fact canonicalizeSeqs {
   no s1, s2: Seq | s1!=s2 && s1.seqElems=s2.seqElems
 }
 
-/** invoke if you want none of the sequences to have duplicates */
+/* invoke if you want none of the sequences to have duplicates */
 pred noDuplicates {
   all s: Seq | !s.hasDups
 }
 
-/** invoke if you want all sequences within scope to exist */
+/* invoke if you want all sequences within scope to exist */
 pred allExist {
   (some s: Seq | s.isEmpty) &&
   (all s: Seq | SeqIdx !in s.inds => (all e: elem | some s': Seq | s.add[e, s']))
 }
 
-/** invoke if you want all sequences within scope with no duplicates */
+/* invoke if you want all sequences within scope with no duplicates */
 pred allExistNoDuplicates {
   some s: Seq | s.isEmpty
   all s: Seq {
@@ -62,19 +62,19 @@ pred allExistNoDuplicates {
   }
 }
 
-/** returns element at the given index */
+/* returns element at the given index */
 fun at [s: Seq, i: SeqIdx]: lone elem { i.(s.seqElems) }
 
-/** returns all the elements in this sequence */
+/* returns all the elements in this sequence */
 fun elems [s: Seq]: set elem { SeqIdx.(s.seqElems) }
 
-/** returns the first element in the sequence */
+/* returns the first element in the sequence */
 fun first [s:Seq]: lone elem { s.at[ord/first] }
 
-/** returns the last element in the sequence */
+/* returns the last element in the sequence */
 fun last [s:Seq]: lone elem { s.at[s.lastIdx] }
 
-/**
+/*
  * true if the argument is the "cdr" of this sequence
  * false if this sequence is empty
  */
@@ -83,19 +83,19 @@ pred rest [s, r: Seq] {
    all i: SeqIdx | r.at[i] = s.at[ord/next[i]]
 }
 
-/** true if the sequence is empty */
+/* true if the sequence is empty */
 pred isEmpty [s:Seq] { no s.elems }
 
-/** true if this sequence has duplicates */
+/* true if this sequence has duplicates */
 pred hasDups [s:Seq] { # elems[s] < # inds[s] }
 
-/** returns all the indices occupied by this sequence */
+/* returns all the indices occupied by this sequence */
 fun inds [s:Seq] : set SeqIdx { elem.~(s.seqElems) }
 
-/** returns last index occupied by this sequence */
+/* returns last index occupied by this sequence */
 fun lastIdx [s:Seq] : lone SeqIdx { ord/max[s.inds] }
 
-/**
+/*
  * returns the index after the last index
  * if this sequence is empty, returns the first index,
  * if this sequence is full, returns empty set
@@ -104,41 +104,41 @@ fun afterLastIdx [s:Seq] : lone SeqIdx {
   ord/min[SeqIdx - s.inds]
 }
 
-/** returns first index at which given element appears or the empty set if it doesn't */
+/* returns first index at which given element appears or the empty set if it doesn't */
 fun idxOf [s: Seq, e: elem] : lone SeqIdx { ord/min[s.indsOf[e]] }
 
-/** returns last index at which given element appears or the empty set if it doesn't */
+/* returns last index at which given element appears or the empty set if it doesn't */
 fun lastIdxOf [s: Seq, e: elem] : lone SeqIdx { ord/max[s.indsOf[e]] }
 
-/** returns set of indices at which given element appears or the empty set if it doesn't */
+/* returns set of indices at which given element appears or the empty set if it doesn't */
 fun indsOf [s: Seq, e: elem] : set SeqIdx { (s.seqElems).e }
 
-/** true if this starts with prefix */
+/* true if this starts with prefix */
 pred startsWith [s, prefix: Seq] {
   all i: prefix.inds | s.at[i] = prefix.at[i]
 }
 
-/** added is the result of appending e to the end of s */
+/* added is the result of appending e to the end of s */
 pred add [s: Seq, e: elem, added: Seq] {
   added.startsWith[s]
   added.seqElems[s.afterLastIdx] = e
-  #added.inds = #s.inds.add[1]
+  #added.inds = #s.inds + 1
 }
 
-/** setted is the result of setting value at index i to e */
+/* setted is the result of setting value at index i to e */
 pred setAt [s: Seq, idx: SeqIdx, e: elem, setted: Seq] {
   setted.seqElems = s.seqElems ++ idx->e
 }
 
-/** inserts is the result of inserting value e at index i */
+/* inserts is the result of inserting value e at index i */
 pred insert [s: Seq, idx: SeqIdx, e: elem, inserted: Seq] {
   inserted.at[idx] = e
   all i: ord/prevs[idx] | inserted.at[i] = s.at[i]
   all i: ord/nexts[idx] | inserted.at[i] = s.at[ord/prev[i]]
-  #inserted.inds = #s.inds.add[1]
+  #inserted.inds = #s.inds + 1
 }
 
-/** copies source into dest starting at destStart */
+/* copies source into dest starting at destStart */
 pred copy [source, dest: Seq, destStart: SeqIdx] {
   all sourceIdx : source.inds | some destIdx: SeqIdx {
     ord/gte[destIdx, destStart]
@@ -147,14 +147,14 @@ pred copy [source, dest: Seq, destStart: SeqIdx] {
   }
 }
 
-/** appended is the result of appending s2 to s1 */
+/* appended is the result of appending s2 to s1 */
 pred append [s1, s2, appended: Seq] {
   appended.startsWith[s1]
   copy[s2, appended, s1.afterLastIdx]
-  #appended.inds = #s1.inds.add[#s2.inds]
+  #appended.inds = #s1.inds + #s2.inds
 }
 
-/** sub is the subsequence of s between from and to, inclusive */
+/* sub is the subsequence of s between from and to, inclusive */
 pred subseq [s, sub: Seq, from, to: SeqIdx] {
   ord/lte[from, to]
   copy[sub, s, from]

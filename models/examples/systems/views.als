@@ -84,11 +84,9 @@ fact ViewTypes {
   all s: State | s.views[KeySetView] = ~(s.views[KeySetView'])
   }
 
-/**
- * mods is refs modified directly or by view mechanism
- * doesn't handle possibility of modifying an object and its view at once?
- * should we limit frame conds to non-dirty refs?
- */
+-- mods is refs modified directly or by view mechanism
+-- doesn't handle possibility of modifying an object and its view at once?
+-- should we limit frame conds to non-dirty refs?
 pred modifies [pre, post: State, rs: set Ref] {
   let vr = pre.views[ViewType], mods = rs.*vr {
     all r: pre.refs - mods | pre.obj[r] = post.obj[r]
@@ -106,9 +104,7 @@ pred allocates [pre, post: State, rs: set Ref] {
   post.refs = pre.refs + rs
   }
 
-/** 
- * models frame condition that limits change to view object from v to v' when backing object changes to b'
- */
+-- models frame condition that limits change to view object from v to v' when backing object changes to b'
 pred viewFrame [t: ViewType, v, v', b': Object] {
   t in KeySetView => v'.elts = dom [b'.map]
   t in KeySetView' => b'.elts = dom [v'.map]
@@ -197,21 +193,19 @@ assert zippishOK {
   }
 
 pred precondition [pre: State, ks, vs, m: Ref] {
-  // all these conditions and other errors discovered in scope of 6 but 8,3
-  // in initial state, must have view invariants hold
+-- all these conditions and other errors discovered in scope of 6 but 8,3
+  -- in initial state, must have view invariants hold
   (all t: ViewType, b, v: pre.refs |
     b->v in pre.views[t] => viewFrame [t, pre.obj[v], pre.obj[v], pre.obj[b]])
-  // sets are not aliases
+  -- sets are not aliases
 --  ks != vs
-  // sets are not views of map
+  -- sets are not views of map
 --  no (ks+vs)->m & ViewType.pre.views
-  // no iterator currently on either set
+  -- no iterator currently on either set
 --  no Ref->(ks+vs) & ViewType.pre.views
   }
 
 check zippishOK for 6 but 8 State, 3 ViewType expect 1
 
-/** 
- * experiment with controlling heap size
- */
+-- experiment with controlling heap size
 fact {all s: State | #s.obj < 5}
