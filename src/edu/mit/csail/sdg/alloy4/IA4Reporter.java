@@ -8,6 +8,8 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 
 public interface IA4Reporter {
 
+	public A4Solution getA4Solution();
+	
     /** This method is called at various points to report the current progress;
      * it is intended as a debugging aid for the developers; the messages are generally not useful for end users.
      */

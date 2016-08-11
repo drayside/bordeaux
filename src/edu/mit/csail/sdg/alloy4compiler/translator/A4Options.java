@@ -205,6 +205,9 @@ public final class A4Options implements Serializable {
     public boolean holFullIncrements = false;
     public int holMaxIter = -1;
     public boolean convertHolInst2A4Sol = false;
+    
+    /** Whether to use bordeaux solver*/
+    public boolean enableBordeaux = false;
 
     /** This method makes a copy of this Options object. */
     public A4Options dup() {
@@ -229,6 +232,7 @@ public final class A4Options implements Serializable {
         x.coreGranularity = coreGranularity;
         x.partialInstance = partialInstance;
         x.renameAtoms = renameAtoms;
+        x.enableBordeaux = enableBordeaux;
         return x;
     }
 }

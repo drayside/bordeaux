@@ -51,6 +51,7 @@ import static edu.mit.csail.sdg.alloy4.A4Preferences.SyntaxDisabled;
 import static edu.mit.csail.sdg.alloy4.A4Preferences.TabSize;
 import static edu.mit.csail.sdg.alloy4.A4Preferences.Unrolls;
 import static edu.mit.csail.sdg.alloy4.A4Preferences.UseHOLSolver;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.UseBordeauxSolver;
 import static edu.mit.csail.sdg.alloy4.A4Preferences.VerbosityPref;
 import static edu.mit.csail.sdg.alloy4.A4Preferences.WarningNonfatal;
 import static edu.mit.csail.sdg.alloy4.A4Preferences.Welcome;
@@ -1080,6 +1081,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         opt.solver = Solver.get();
         opt.solverThreads = SolverThreads.get();
         opt.solverThreadsShareClauses = SolverThreadsShareClauses.get();
+        opt.enableBordeaux = UseBordeauxSolver.get();
         task.bundleIndex = i;
         task.bundleWarningNonFatal = WarningNonfatal.get();
         task.map = text.takeSnapshot();
@@ -1260,6 +1262,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
         try {
             wrap = true;
             optmenu.removeAll();
+            
+            // Welcome options
             addToMenu(optmenu, Welcome);
 
             optmenu.addSeparator();
@@ -1269,6 +1273,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
 
             optmenu.addSeparator();
 
+            // Display options
             addToMenu(optmenu, SyntaxDisabled, KeyBindings, FontSize);
 
             menuItem(optmenu, "Font: "+FontName.get()+"...", doOptFontname());
@@ -1283,6 +1288,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
 
             optmenu.addSeparator();
 
+            // Solver options
             addToMenu(optmenu, Solver);
             addToMenu(optmenu, Solver.get().isParellel(), SolverThreads);
             addToMenu(optmenu, Solver.get().isParellel(), SolverThreadsShareClauses);
@@ -1298,9 +1304,17 @@ public final class SimpleGUI implements ComponentListener, Listener {
             }
 
             optmenu.addSeparator();
+            
+            // HOLA options
             addToMenu(optmenu, UseHOLSolver);
             addToMenu(optmenu, UseHOLSolver.get(), HOLForceIncInd, HOLMaxIter,
                     HOLSaveCandidates, HOLSaveCex, HOLSaveFormulas, HOLSavePI);
+
+            optmenu.addSeparator();
+            
+            // Bordeaux Options
+            addToMenu(optmenu, UseBordeauxSolver);
+            
         } finally {
             wrap = false;
         }

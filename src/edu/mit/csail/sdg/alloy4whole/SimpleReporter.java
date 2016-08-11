@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import kodkod.ast.Formula;
@@ -67,10 +68,11 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4SolutionWriter;
 import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod;
 import edu.mit.csail.sdg.alloy4viz.StaticInstanceReader;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
+import edu.uw.ece.bordeaux.engine.BordeauxEngine;
 
 /** This helper method is used by SimpleGUI. */
 
-final class SimpleReporter extends A4Reporter {
+public final class SimpleReporter extends A4Reporter {
 
     public static final class SimpleCallback1 implements WorkerCallback {
         private final SimpleGUI gui;
@@ -328,6 +330,10 @@ final class SimpleReporter extends A4Reporter {
         cb(sers.toArray(new Serializable[0]));
     }
 
+	public A4Solution getA4Solution() {
+		return latestKodkod;
+	}
+    
     private void cb(Serializable... objs) {
         cb.callback(objs);
     }
@@ -623,12 +629,22 @@ final class SimpleReporter extends A4Reporter {
                 final String tempCNF=tempdir+File.separatorChar+i+".cnf";
                 final Command cmd=cmds.get(i);
                 latestRep.tempfile=tempCNF;
-                cb(out, "bold", "Executing \""+cmd+"\"\n");
-                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options);
-                A4Solution sol = tr.getFrame();
-                latestKodkod = sol;
-                sol = tr.executeCommandFromBook();
-                        //TranslateAlloyToKodkod.execute_commandFromBook(rep, world.getAllReachableSigs(), cmd, options);
+                
+                cb(out, "bold", "Executing :) :)\""+cmd+"\"\n");
+                A4Solution sol;
+                if(options.enableBordeaux) {
+                    cb(out, "bold", "Running Bordeaux Solver\n");
+                	sol = BordeauxEngine.get().getBorderInstances(latestRep, new File(options.originalFilename));
+                    latestKodkod = sol;
+                }else {
+                    cb(out, "bold", "NOTTT!!! Running Bordeaux Solver\n");
+                	TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options);
+                    sol = tr.getFrame();
+                    latestKodkod = sol;
+                    sol = tr.executeCommandFromBook();
+                    //TranslateAlloyToKodkod.execute_commandFromBook(rep, world.getAllReachableSigs(), cmd, options);
+                }
+                
                 if (sol==null) result.add(null);
                 else if (sol.satisfiable()) result.add(tempXML);
                 else {

@@ -427,6 +427,10 @@ public class A4Preferences {
    public static final ChoicePref<InstFormat> HOLSaveCex = new ChoicePref<InstFormat>("HOLSaveCex", "Save CEGIS counterexamples as",
            InstFormat.values(), InstFormat.VIZ);
 
+
+   /** Use bordeaux solver */
+   public static final BooleanPref UseBordeauxSolver = new BooleanPref("UseBordeauxSolver", "Use On-Border Exmple Finder", true);
+   
    /** The unsat core minimization strategy. */
    private static final String[] coreMinimizationLabels = new String[] {
       "Slow", "Slow (guarantees local minimum)",

@@ -37,8 +37,8 @@ public class HolaReporter extends A4Reporter implements Serializable {
         this.instances = new ArrayDeque<>();
 	}
     
-    public Optional<A4Solution> getA4Solution() {
-        return Optional.ofNullable(this.satSolution);
+    public A4Solution getA4Solution() {
+        return this.satSolution;
     }
     
     public Instance getTopInstance() {
