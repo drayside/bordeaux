@@ -1,4 +1,4 @@
-package edu.uw.ece.bordeaux.debugger.onborder;
+package edu.uw.ece.bordeaux.onborder;
 
 import java.io.File;
 

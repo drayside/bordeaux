@@ -1,4 +1,4 @@
-package edu.uw.ece.bordeaux.debugger.onborder;
+package edu.uw.ece.bordeaux.onborder;
 
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +23,7 @@ import edu.mit.csail.sdg.alloy4compiler.ast.Sig;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
 import edu.mit.csail.sdg.alloy4compiler.ast.VisitReturn;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
+import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import edu.uw.ece.bordeaux.util.Utils;
 
 /**
@@ -36,7 +37,7 @@ public class Field2ConstraintMapper extends VisitReturn<Object> {
 		StringBuilder allSigs = new StringBuilder();
 		for(Sig sig: sol.getAllReachableSigs()) {
 			
-			if(sig.builtin || sig.isAbstract != null || sig.isOne != null) continue;
+			if(ExtractorUtils.sigToBeIgnored(sig)) continue;
 			allSigs.append("sig " + Utils.readSnippet(sig.span()) + "\n");
 		}
 		

@@ -1,4 +1,4 @@
-package edu.uw.ece.bordeaux.debugger.onborder;
+package edu.uw.ece.bordeaux.onborder;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,8 +12,8 @@ import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4compiler.ast.Module;
-import edu.uw.ece.bordeaux.debugger.exec.A4CommandExecuter;
-import edu.uw.ece.bordeaux.debugger.onborder.SigFieldWrapper.FieldInfo;
+import edu.uw.ece.bordeaux.A4CommandExecuter;
+import edu.uw.ece.bordeaux.onborder.SigFieldWrapper.FieldInfo;
 import kodkod.ast.Formula;
 
 public class OnBorderCodeGenerator {

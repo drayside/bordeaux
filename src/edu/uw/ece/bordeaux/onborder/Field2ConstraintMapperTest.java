@@ -1,4 +1,4 @@
-package edu.uw.ece.bordeaux.debugger.onborder;
+package edu.uw.ece.bordeaux.onborder;
 
 import java.util.List;
 import java.util.Map;
@@ -13,7 +13,7 @@ import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.ast.Module;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
-import edu.uw.ece.bordeaux.debugger.exec.A4CommandExecuter;
+import edu.uw.ece.bordeaux.A4CommandExecuter;
 import kodkod.ast.Formula;
 
 public class Field2ConstraintMapperTest {
@@ -28,7 +28,7 @@ public class Field2ConstraintMapperTest {
 		String[] files = { alloy4Home + "/models/debugger/min_dist/" + fileName };
 		// alloy4Home + "/models/examples/toys/birthday.als" };
 		Map<Command, A4Solution> map = A4CommandExecuter.getInstance()
-				.runThenGetAnswers(files, A4Reporter.NOP);
+				.runAlloyThenGetAnswers(files, A4Reporter.NOP);
 
 		System.out.println("Listing commands and solutions:");
 

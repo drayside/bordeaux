@@ -1,4 +1,4 @@
-package edu.uw.ece.bordeaux.debugger.onborder;
+package edu.uw.ece.bordeaux.onborder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,7 +7,8 @@ import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4compiler.ast.Decl;
 import edu.mit.csail.sdg.alloy4compiler.ast.ExprHasName;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig;
-import edu.uw.ece.bordeaux.debugger.onborder.SigFieldWrapper.FieldInfo;
+import edu.uw.ece.bordeaux.onborder.SigFieldWrapper.FieldInfo;
+import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import edu.mit.csail.sdg.alloy4compiler.ast.Module; 
 
 public class A4SolutionVisitor {
@@ -17,7 +18,7 @@ public class A4SolutionVisitor {
 		List<SigFieldWrapper> sigs = new ArrayList<>();
 		for (Sig sig : sol.getAllReachableSigs()) {
 
-			if(sig.builtin) continue;
+			if(ExtractorUtils.sigToBeIgnored(sig)) continue;
 			
 			String sigType = sig.label.replace("this/", "");
 			SigFieldWrapper sigWrapper = new SigFieldWrapper(sigType);

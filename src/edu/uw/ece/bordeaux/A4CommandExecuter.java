@@ -1,4 +1,15 @@
-package edu.uw.ece.bordeaux.debugger.exec;
+package edu.uw.ece.bordeaux;
+
+import static edu.mit.csail.sdg.alloy4.A4Preferences.CoreGranularity;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.CoreMinimization;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.NoOverflow;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.RecordKodkod;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.SkolemDepth;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.Solver;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.SolverThreads;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.SolverThreadsShareClauses;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.Unrolls;
+import static edu.mit.csail.sdg.alloy4.A4Preferences.UseHOLSolver;
 
 import java.io.File;
 import java.util.Collections;
@@ -9,10 +20,13 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import edu.mit.csail.sdg.alloy4.A4Preferences;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.alloy4.IA4Reporter;
 import edu.mit.csail.sdg.alloy4.OurDialog;
 import edu.mit.csail.sdg.alloy4.Util;
+import edu.mit.csail.sdg.alloy4.Version;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.ast.Module;
 import edu.mit.csail.sdg.alloy4compiler.parser.CompModule;
@@ -22,13 +36,12 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod;
 import edu.mit.csail.sdg.alloy4compiler.translator.TranslateDeclarativeConstriant2DeclarativeFormula;
 import edu.uw.ece.bordeaux.Configuration;
-import edu.uw.ece.bordeaux.HolaReporter;
 import kodkod.ast.Formula;
 
 /**
  * This class is for executing the decomposer using Alloy 4
  * 
- * @author vajih
+ * @author Fikayo Odunayo
  *
  */
 public class A4CommandExecuter {
@@ -147,13 +160,14 @@ public class A4CommandExecuter {
 
 	}
 
-	public A4Solution runThenGetAnswers(String filename, A4Reporter rep,
-			String commandName) throws Err {
+	public A4Solution runAlloyThenGetAnswers(String filename, A4Reporter rep, String commandName) throws Err {
+		
 		A4Solution result = null;
 		// Parse+typecheck the model
 		if (Configuration.IsInDeubbungMode)
 			logger.log(Level.INFO, "[" + Thread.currentThread().getName() + "]"
 					+ "=========== Parsing+Typechecking " + filename + " =============");
+		
 		CompModule world = (CompModule) parse(filename, rep);
 		// Choose some default options for how you want to execute the commands
 		A4Options options = new A4Options();
@@ -181,15 +195,14 @@ public class A4CommandExecuter {
 		return result;
 	}
 
-	public Map<Command, A4Solution> runThenGetAnswers(String[] args,
-			A4Reporter rep) throws Err {
+	public Map<Command, A4Solution> runAlloyThenGetAnswers(String[] filenames, A4Reporter rep) throws Err {
 		// Alloy4 sends diagnostic messages and progress reports to the A4Reporter.
 		// By default, the A4Reporter ignores all these events (but you can extend
 		// the A4Reporter to display the event for the user)
 
 		Map<Command, A4Solution> result = new HashMap<>();
 
-		for (String filename : args) {
+		for (String filename : filenames) {
 			// Parse+typecheck the model
 			if (Configuration.IsInDeubbungMode)
 				logger.log(Level.INFO,
@@ -220,13 +233,54 @@ public class A4CommandExecuter {
 		return Collections.unmodifiableMap(result);
 	}
 
-	public void run(String fileName, A4Reporter rep, String commandName)
-			throws Err {
-		runThenGetAnswers(fileName, rep, commandName);
+	public Map<Command, A4Solution> executeHola(IA4Reporter rep, String tmpDirectory, String... filenames) throws Err {
+		
+        Map<Command, A4Solution> result = new HashMap<>();
+
+        // Choose some default options for how you want to execute the commands
+        A4Options opt = new A4Options();
+        //// opt.tempDirectory = alloyHome() + fs + "tmp";
+        opt.tempDirectory = tmpDirectory;
+        opt.solverDirectory = alloyHome() + fs + "binary";
+        opt.recordKodkod = RecordKodkod.get();
+        opt.noOverflow = NoOverflow.get();
+        opt.unrolls = Version.experimental ? Unrolls.get() : (-1);
+        opt.skolemDepth = SkolemDepth.get();
+        opt.higherOrderSolver = UseHOLSolver.get();
+        opt.holMaxIter = A4Preferences.HOLMaxIter.get();
+        opt.holFullIncrements = !A4Preferences.HOLForceIncInd.get();
+        opt.coreMinimization = CoreMinimization.get();
+        opt.coreGranularity = CoreGranularity.get();
+        opt.solver = Solver.get();
+        opt.solverThreads = SolverThreads.get();
+        opt.solverThreadsShareClauses = SolverThreadsShareClauses.get();
+
+        for (String filename : filenames) {
+
+            if (Configuration.IsInDeubbungMode)
+                logger.log(Level.INFO, "[" + Thread.currentThread().getName() + "]" + "=========== Parsing+Typechecking " + filename + " =============");
+
+            opt.originalFilename = filename;
+            CompModule world = (CompModule) parse(filename, (A4Reporter) rep);
+
+            for (Command command : world.getAllCommands()) {
+
+                if (Configuration.IsInDeubbungMode)
+                    logger.log(Level.INFO, "[" + Thread.currentThread().getName() + "]" + "============ Command " + command + ": ============");
+
+                result.put(command, TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, opt));
+            }
+        }
+
+        return Collections.unmodifiableMap(result);
+	}
+	
+	public void runAlloy(String fileName, A4Reporter rep, String commandName) throws Err {
+		runAlloyThenGetAnswers(fileName, rep, commandName);
 	}
 
-	public void run(String[] args, A4Reporter rep) throws Err {
-		runThenGetAnswers(args, rep);
+	public void runAlloy(String[] args, A4Reporter rep) throws Err {
+		runAlloyThenGetAnswers(args, rep);
 	}
 
 	private static void copyFromJAR() {
@@ -415,7 +469,7 @@ public class A4CommandExecuter {
 		HolaReporter rep = new HolaReporter();
 		// AlloyProcessedResult rep = new AlloyProcessedResult(lastProccessing);
 		String file = "/Users/vajih/Documents/workspace-git/alloy/relational_props/tmp/49162/predName___1960133549_IMPLY_functional.als";
-		A4CommandExecuter.getInstance().run(file, rep, COMMAND_BLOCK_NAME);
+		A4CommandExecuter.getInstance().runAlloy(file, rep, COMMAND_BLOCK_NAME);
 
 	}
 

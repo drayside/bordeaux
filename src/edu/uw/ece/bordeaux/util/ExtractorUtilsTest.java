@@ -13,8 +13,8 @@ import org.junit.Test;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
+import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.HolaReporter;
-import edu.uw.ece.bordeaux.debugger.exec.A4CommandExecuter;
 
 /**
  * Test cases for ExtractorUtil
@@ -58,7 +58,7 @@ public class ExtractorUtilsTest {
 		final HolaReporter rep = new HolaReporter();
 		A4Solution solution = null;
 		try {
-			solution = A4CommandExecuter.getInstance().runThenGetAnswers(testFile.getAbsolutePath(), rep, "gen");
+			solution = A4CommandExecuter.getInstance().runAlloyThenGetAnswers(testFile.getAbsolutePath(), rep, "gen");
 		} catch (Err e) {
 			e.printStackTrace();
 			fail(e.getMessage());
@@ -73,7 +73,7 @@ public class ExtractorUtilsTest {
 			fail(e.getMessage());
 		}
 		try {
-			solution = A4CommandExecuter.getInstance().runThenGetAnswers(testFile.getAbsolutePath(), rep, "alloysol");
+			solution = A4CommandExecuter.getInstance().runAlloyThenGetAnswers(testFile.getAbsolutePath(), rep, "alloysol");
 		} catch (Err e) {
 			System.err.println(alloySolution);
 			e.printStackTrace();

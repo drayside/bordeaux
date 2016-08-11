@@ -53,6 +53,11 @@ public class ExtractorUtils {
 		return sb.toString();
 	}
 
+	public static boolean sigToBeIgnored(Sig sig) {
+		
+		return (sig.builtin || sig.isAbstract != null || sig.isOne != null || isOrdering(sig));
+	}
+	
 	private static boolean isOrdering(Sig sig) {
 		return sig.isPrivate != null && sig.isOne != null
 				&& new File(sig.pos().filename).getName().equals("ordering.als");
