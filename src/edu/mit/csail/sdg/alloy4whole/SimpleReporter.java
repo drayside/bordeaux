@@ -630,14 +630,13 @@ public final class SimpleReporter extends A4Reporter {
                 final Command cmd=cmds.get(i);
                 latestRep.tempfile=tempCNF;
                 
-                cb(out, "bold", "Executing :) :)\""+cmd+"\"\n");
+                cb(out, "bold", "Executing \""+cmd+"\"\n");
                 A4Solution sol;
                 if(options.enableBordeaux) {
                     cb(out, "bold", "Running Bordeaux Solver\n");
                 	sol = BordeauxEngine.get().getBorderInstances(latestRep, new File(options.originalFilename));
                     latestKodkod = sol;
                 }else {
-                    cb(out, "bold", "NOTTT!!! Running Bordeaux Solver\n");
                 	TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options);
                     sol = tr.getFrame();
                     latestKodkod = sol;
