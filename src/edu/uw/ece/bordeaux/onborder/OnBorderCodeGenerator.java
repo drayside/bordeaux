@@ -14,8 +14,10 @@ import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4compiler.ast.Module;
+import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.onborder.SigFieldWrapper.FieldInfo;
+import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import kodkod.ast.Formula;
 
 public class OnBorderCodeGenerator {
@@ -23,6 +25,7 @@ public class OnBorderCodeGenerator {
     private static final String RUN = "\npred p[] {}\nrun p";
     
     private PrintWriter out;
+    private boolean useStaticInstance;
     private String indent;
     private Module module;
     private String sigDeclaration;
@@ -112,6 +115,10 @@ public class OnBorderCodeGenerator {
         this.out = writer;
     }
     
+    /**
+     * Runs the generator using the given predNames as valid instances
+     * @param predNames
+     */
     public void run(String...predNames) {
             	
         try {
@@ -132,6 +139,21 @@ public class OnBorderCodeGenerator {
         }
         
         this.out.flush();
+    }
+    
+    /**
+     * Runs the generator using the specified {@link A4Solution} as a static instance the the given predName as the intended instance.
+     * @param staticSoln
+     * @param pred
+     */
+    public void runWithStaticIntance(A4Solution staticSoln, String intendedPred) {
+
+    	System.out.println(staticSoln.toString() + "\n----\n");
+    	System.out.println(ExtractorUtils.convertA4SolutionToAlloySyntax(staticSoln));
+    	this.useStaticInstance = true;
+    	String predA = ExtractorUtils.convertA4SolutionToAlloySyntax(staticSoln);
+    	String predB = intendedPred;
+    	this.run(predA, predB);
     }
     
     private void generateSigs(PrintWriter out) throws Err {
@@ -284,12 +306,19 @@ public class OnBorderCodeGenerator {
             
         }
         
-        String predA = predNames != null && predNames.length > 0 && !predNames[0].isEmpty()? predNames[0].replaceAll("\\s+", "_").toUpperCase() : "";
-        String predB = predNames != null && predNames.length > 1 && !predNames[1].isEmpty() ? "is" + predNames[1].replaceAll("\\s+", "_").toUpperCase() : "not is";
-        
-        // say "not isPREDAInstance" if predA exists
-        if(predB.equals("not is") && !predA.equals("")) {
-        	predB += predA;
+        String predA;
+        String predB;
+        if(this.useStaticInstance) {        	
+        	predA = "STATIC";
+        	predB = "isINTENDED";
+        } else {
+        	predA = predNames != null && predNames.length > 0 && !predNames[0].isEmpty()? predNames[0].replaceAll("\\s+", "_").toUpperCase() : "";
+        	predB = predNames != null && predNames.length > 1 && !predNames[1].isEmpty() ? "is" + predNames[1].replaceAll("\\s+", "_").toUpperCase() : "not is";
+       
+	        // say "not isPREDAInstance" if predA exists
+	        if(predB.equals("not is") && !predA.equals("")) {
+	        	predB += predA;
+	        }
         }
         
         // Finish outer quatifier
@@ -468,8 +497,28 @@ public class OnBorderCodeGenerator {
     private void generatePredNameInstances(String params, String args, PrintWriter out, String...predNames) {
 
     	if(predNames == null) return;
-    	
+
         this.out = out;
+    	if(this.useStaticInstance) {
+
+        	ln();
+	        println("pred isSTATICInstance [%s] {", params);
+	        indent();
+	        println("isInstance[%s]", args);
+	        println("%s", predNames[0]);
+	        outdent();
+	        println("}");
+
+        	ln();
+	        println("pred isINTENDEDInstance [%s] {", params);
+	        indent();
+	        println("isInstance[%s]", args);
+	        println("%s", predNames[1]);
+	        outdent();
+	        println("}");
+    		return;
+    	}
+    	
     	for(String predName : predNames) {
     		
     		if(predName == null || predName.isEmpty()) continue;

@@ -22,7 +22,7 @@ public class BordeauxEngineTest {
 		File inpath = new File(MIN_DIST_DIRECTORY, filename);
 		
 		File outpath = new File(TMP_DIRECTORY, "bare_linked_list.hola.als");
-		engine.getBorderInstances(inpath, outpath, "hello", "hi");
+		engine.getBorderInstancesFromStaticInstance(inpath, outpath, "p", "hello");
 		
 		String output = Utils.readFile(outpath.getAbsolutePath());
 		System.out.println(output);

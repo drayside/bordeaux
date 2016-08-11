@@ -30,5 +30,5 @@ assert instanceCheck {
 check instanceCheck for 10
 */
 
-run {} for 10
+run p {} for 10
 

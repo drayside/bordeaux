@@ -661,7 +661,7 @@ public class A4Solution {
     public Iterable<ExprVar> getAllAtoms() { return atoms.dup(); }
 
     /** Returns the short unique name corresponding to the given atom if the problem is solved and is satisfiable; else returns atom.toString(). */
-    String atom2name(Object atom) { String ans=atom2name.get(atom); return ans==null ? atom.toString() : ans; }
+    public String atom2name(Object atom) { String ans=atom2name.get(atom); return ans==null ? atom.toString() : ans; }
 
     /** Returns the most specific sig corresponding to the given atom if the problem is solved and is satisfiable; else returns UNIV. */
     public PrimSig atom2sig(Object atom) { PrimSig sig=atom2sig.get(atom); return sig==null ? UNIV : sig; }
