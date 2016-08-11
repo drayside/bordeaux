@@ -39,19 +39,19 @@ public class CommandScope {
     public final Sig sig;
 
     /** True iff the scope is an exact scope. */
-    private final boolean isExact;
+    public final boolean isExact;
     
     /** True iff the scope was specified (syntactically) as a range (as opposed to a single integer). */
-    private final boolean isRange;
+    public final boolean isRange;
 
     /** The starting scope. */
-    private final int startingScope;
+    public final int startingScope;
 
     /** The ending scope; if this sig is not a growing sig, then this.startingScope==this.endingScope. */
-    private final int endingScope;
+    public final int endingScope;
 
     /** The scope increment; if this sig is not a growing sig, then this.increment is ignored. */
-    private final int increment;
+    public final int increment;
 
     /** Construct a new CommandScope object.
      * @param sig - the sig for this scope

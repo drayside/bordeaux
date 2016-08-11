@@ -29,6 +29,7 @@ import kodkod.ast.operator.ExprCompOperator;
 import kodkod.ast.operator.ExprOperator;
 import kodkod.ast.operator.FormulaOperator;
 import kodkod.instance.TupleSet;
+import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.IA4Reporter;
 import edu.mit.csail.sdg.alloy4.MailBug;
@@ -277,5 +278,39 @@ public class Simplifier {
           }
        }
        return true;
+    }
+
+    /**
+     * Alloy 
+     * Simplify sol.bounds() based on the set of formulas, or to modify the formulas list itself.
+     * Subclasses should override this method to implement different simplification algorithms.
+     * (Note: this method is allowed to modify the "formulas" array if it sees an opportunity for optimization)
+     */
+    public boolean simplify(A4Reporter rep, A4Solution sol, List<Formula> formulas) throws Err {
+       this.rep = rep;
+       this.sol = sol;
+       while(true) {
+          //equiv.clear();
+          for(Formula f: formulas) if (!simplify_eq(f)) return false;
+          for(Formula f: formulas) if (!simplify_in(f)) return false;
+          /*
+          if (equiv.size()==0) return true;
+          // We have to construct this replacer from scratch, since each time it will retain some info we don't want
+          final AbstractReplacer ar = new AbstractReplacer(new kodkod.util.collections.IdentityHashSet<Node>()) {
+              @Override public Expression visit(Relation relation) {
+                  List<Expression> list = equiv.get(relation);
+                  if (list!=null) return list.get(0); else return relation;
+              }
+          };
+          for(Map.Entry<Node,List<Expression>> e: equiv.entrySet()) System.out.println("Equiv: "+e); System.out.flush();
+          for(int i=formulas.size()-1; i>=0; i--) {
+              Formula OLD = formulas.get(i);
+              Formula NEW = OLD.accept(ar);
+              if (OLD!=NEW) { System.out.println("OLD->NEW: "+OLD+" ===> "+NEW); System.out.flush(); }
+              formulas.set(i, NEW);
+          }
+          */
+          return true;
+       }
     }
 }

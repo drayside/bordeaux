@@ -57,6 +57,7 @@ import edu.mit.csail.sdg.alloy4.SafeList;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4.Version;
 import edu.mit.csail.sdg.alloy4compiler.ast.Attr;
+import edu.mit.csail.sdg.alloy4compiler.ast.Bounds;
 import edu.mit.csail.sdg.alloy4compiler.ast.Browsable;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.ast.CommandScope;
@@ -503,6 +504,8 @@ public final class CompModule extends Browsable implements Module {
       /** {@inheritDoc} */
       @Override public Expr visit(Field x) { return x; }
 
+      /** {@inheritDoc} */
+	  @Override public Expr visit(Bounds bounds) throws Err { return bounds; }
    }
 
    //============================================================================================================================//

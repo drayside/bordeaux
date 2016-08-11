@@ -216,6 +216,27 @@ public final class AlloyInstance {
       if (!rel2tuples.equals(x.rel2tuples)) return false; return true;
    }
 
+   /** Two instances are equal if they have the same filename, same commands,
+    * same model, and same atoms and tuples relationships.
+    */
+   public boolean equalsWithoutFileName(Object other) {
+      if (!(other instanceof AlloyInstance)) return false;
+      if (other==this) return true;
+      AlloyInstance x=(AlloyInstance)other;
+      System.out.println("!filename.equals(x.filename)"+!filename.equals(x.filename));
+      System.out.println("!commandname.equals(x.commandname)"+!commandname.equals(x.commandname));
+      System.out.println("!model.equals(x.model)"+!model.equals(x.model));
+      System.out.println("!type2atoms.equals(x.type2atoms)"+!type2atoms.equals(x.type2atoms));
+      System.out.println("!set2atoms.equals(x.set2atoms)"+!set2atoms.equals(x.set2atoms));
+      System.out.println("!rel2tuples.equals(x.rel2tuples)"+!rel2tuples.equals(x.rel2tuples));
+
+      if (!model.equals(x.model)) return false;
+      if (!atom2sets.equals(x.atom2sets)) return false;
+      if (!type2atoms.equals(x.type2atoms)) return false;
+      if (!set2atoms.equals(x.set2atoms)) return false;
+      if (!rel2tuples.equals(x.rel2tuples)) return false; return true;
+   }
+   
    /** Computes a hash code based on the same information used in equals(). */
    @Override public int hashCode() {
       int n = 5*filename.hashCode() + 7*commandname.hashCode();

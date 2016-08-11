@@ -40,6 +40,7 @@ import edu.mit.csail.sdg.alloy4.ErrorFatal;
 import edu.mit.csail.sdg.alloy4.ErrorSyntax;
 import edu.mit.csail.sdg.alloy4.Pos;
 import edu.mit.csail.sdg.alloy4.Util;
+import edu.mit.csail.sdg.alloy4compiler.ast.Bounds;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.ast.Decl;
 import edu.mit.csail.sdg.alloy4compiler.ast.Expr;
@@ -198,6 +199,7 @@ public final class CompUtil {
                 public Void visit(Sig x)       throws Err { return null; } 
                 public Void visit(Field x)     throws Err { return null; }
                 public Void visit(ExprFix x)   throws Err { x.cond.accept(this); x.formula.accept(this); return null; }
+				public Void visit(Bounds bounds) throws Err { return null; }
             });
         } catch (Err e) {
             e.printStackTrace();

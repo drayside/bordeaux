@@ -442,6 +442,13 @@ public class A4Solution {
 
     public IntScope intScope() { return intScope; }
 
+	/** Returns the largest allowed integer, or -1 if no integers are allowed. */
+	public int max() { return Util.max(intScope.bitwidth); }
+
+	/** Returns the smallest allowed integer, or 0 if no integers are allowed */
+	public int min() { return Util.min(intScope.bitwidth); }
+
+
     /** Returns the maximum number of allowed loop unrolling or recursion level. */
     public int unrolls() { return unrolls; }
 
@@ -1267,4 +1274,12 @@ public class A4Solution {
         A4Solution sol = new A4Solution(this, inst);
         sol.writeXML(filename);
     }
+
+	/**
+	 * return the translated KK formulas
+	 * @return
+	 */
+	public List<Formula> getKKFormulas(){
+		return Collections.unmodifiableList(formulas);
+	}
 }

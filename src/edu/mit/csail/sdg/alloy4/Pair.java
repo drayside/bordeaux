@@ -22,7 +22,7 @@ import java.io.Serializable;
  * <p><b>Thread Safety:</b>  Safe (since objects of this class are immutable).
  */
 
-public final class Pair<A,B> implements Serializable {
+public class Pair<A,B> implements Serializable {
 
    /** This ensures the class can be serialized reliably. */
    private static final long serialVersionUID = 0;

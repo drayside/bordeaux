@@ -156,6 +156,11 @@ public final class ExprCall extends Expr {
         @Override public Type visit(Field x)        { return x.type; }
         @Override public Type visit(ExprList x)     { return Type.FORMULA; }
         @Override public Type visit(ExprFix x)      { return Type.FORMULA; }
+		@Override
+		public Type visit(Bounds bounds) throws Err {
+			// TODO Auto-generated method stub
+			return null;
+		}
     }
 
     //============================================================================================================//
