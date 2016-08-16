@@ -68,7 +68,10 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4SolutionWriter;
 import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod;
 import edu.mit.csail.sdg.alloy4viz.StaticInstanceReader;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
+import edu.uw.ece.bordeaux.A4CommandExecuter;
+import edu.uw.ece.bordeaux.HolaReporter;
 import edu.uw.ece.bordeaux.engine.BordeauxEngine;
+import edu.uw.ece.bordeaux.util.ExtractorUtils;
 
 /** This helper method is used by SimpleGUI. */
 
@@ -634,7 +637,44 @@ public final class SimpleReporter extends A4Reporter {
                 A4Solution sol;
                 if(options.enableBordeaux) {
                     cb(out, "bold", "Running Bordeaux Solver\n");
-                	sol = BordeauxEngine.get().getBorderInstancesFromStaticInstance(latestRep, new File(options.originalFilename), cmd.label, "");
+//                	sol = BordeauxEngine.get().getBorderInstancesFromStaticInstance(latestRep, new File(options.originalFilename), cmd.label, "");
+//                    latestKodkod = sol;
+//                    edu.uw.ece.bordeaux.tests.BordeauxEngineTest test = new edu.uw.ece.bordeaux.tests.BordeauxEngineTest();
+//                    test.setUp();
+//                    sol = test.tryUsing(latestRep, options.originalFilename, cmd.label);           
+//                    A4Options alloyOpts = options.dup();
+//                    alloyOpts.higherOrderSolver = false;
+//                	TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, alloyOpts);
+//                    A4Solution staticSol = tr.getFrame();
+//                    staticSol = tr.executeCommandFromBook();
+//                    
+//                    cb(out, "bold", "Alloy instance generated...Searching for on-border instances\n");
+//                    BordeauxEngine engine = BordeauxEngine.get();
+//            		sol = engine.getBorderInstancesFromStaticInstance(latestRep, new File(Util.canon(options.originalFilename)), cmd.label, "", staticSol);
+
+                    BordeauxEngine engine = BordeauxEngine.get();
+                    try {
+            			cb(out, "bold", "Generating static instance from Alloy\n");
+            			A4Reporter rep = new SimpleReporter(out, this.tempdir, options.recordKodkod);
+            			A4CommandExecuter.get().runAlloy(options.originalFilename, rep, cmd.label);
+            			A4Solution staticSoln = rep.getA4Solution();
+            			if(staticSoln != null) {
+	            			cb(out, "bold", "Alloy static instance found\nSearching for on-border instances using Higher-Order Solver\n\n");
+	            			String constraint1 = ExtractorUtils.convertA4SolutionToAlloySyntax(staticSoln, true);
+	            			String constraint2 = ExtractorUtils.convertFormulaExprToAlloySyntax(cmd.formula, true);
+	            			sol = engine.getBorderInstancesFromStaticInstance(latestRep, new File(options.originalFilename), constraint1, constraint2);
+	            			if(sol == null) 
+		            			cb(out, "bold", "No Near Instance could be found\n");
+            			} else {
+	            			cb(out, "bold", "No Alloy solution could be found\n");
+            				sol = null;
+            			}
+            		} catch (Err e) {
+            			e.printStackTrace();
+            			sol = null;
+            			cb(out, "bold", "Error!: " + e.dump() + "\n");
+            		}
+                    
                     latestKodkod = sol;
                 }else {
                 	TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options);
@@ -643,7 +683,7 @@ public final class SimpleReporter extends A4Reporter {
                     sol = tr.executeCommandFromBook();
                     //TranslateAlloyToKodkod.execute_commandFromBook(rep, world.getAllReachableSigs(), cmd, options);
                 }
-                
+
                 if (sol==null) result.add(null);
                 else if (sol.satisfiable()) result.add(tempXML);
                 else {

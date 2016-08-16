@@ -1,5 +1,9 @@
 abstract sig Course{reqs: set Course}
-one sig ECE155, ECE240, ECE250, ECE351 extends Course{}
+// one sig ECE155, ECE240, ECE250, ECE351 extends Course{}
+one sig ECE155 extends Course{}
+one sig ECE240 extends Course{}
+one sig ECE250 extends Course{}
+one sig ECE351 extends Course{}
 
 fact preRequisites{
   no ECE155.reqs

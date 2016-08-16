@@ -153,11 +153,7 @@ public final class OurUtil {
 
    /** Load the given image file from an accompanying JAR file, and return it as an Icon object. */
    public static Icon loadIcon(String pathname) {
-	   // TODO: Fix getClassLoader().getResource(pathname) issue
-//      URL url = OurUtil.class.getClassLoader().getResource(pathname);
-      URL url;
-      try { url = new java.io.File(pathname).toURI().toURL(); } catch (MalformedURLException e) {e.printStackTrace();url = OurUtil.class.getClassLoader().getResource(pathname);}
-      
+      URL url = OurUtil.class.getClassLoader().getResource(pathname);
       if (url!=null) return new ImageIcon(Toolkit.getDefaultToolkit().createImage(url));
       return new ImageIcon(new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB));
    }

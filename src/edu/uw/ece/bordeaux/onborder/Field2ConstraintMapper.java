@@ -1,6 +1,8 @@
 package edu.uw.ece.bordeaux.onborder;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
@@ -24,6 +26,7 @@ import edu.mit.csail.sdg.alloy4compiler.ast.Module;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
 import edu.mit.csail.sdg.alloy4compiler.ast.VisitReturn;
+import edu.mit.csail.sdg.alloy4compiler.ast.ExprUnary.Op;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import edu.uw.ece.bordeaux.util.Utils;
@@ -47,7 +50,10 @@ public class Field2ConstraintMapper extends VisitReturn<Object> {
 		for(Sig sig: sol.getAllReachableSigs()) {
 			
 			if(ExtractorUtils.sigToBeIgnored(sig)) continue;
-			allSigs.append("sig " + Utils.readSnippet(sig.span()) + "\n");
+			
+			String prefix = "";
+			if(sig.isAbstract != null) prefix = "abstract ";
+			allSigs.append(prefix + "sig " + Utils.readSnippet(sig.span()) + "\n");
 		}
 
 		return allSigs.toString();
@@ -65,7 +71,7 @@ public class Field2ConstraintMapper extends VisitReturn<Object> {
 		for(Func func: sol.getAllFunc()) {
 			
 			if(!func.isPred) continue;
-			
+
 			String codeSnippet = Utils.readSnippet(func.span());
 			int bracketIndex = codeSnippet.indexOf('[');
 			bracketIndex = bracketIndex == -1 ? codeSnippet.indexOf('{') : bracketIndex;
@@ -84,6 +90,19 @@ public class Field2ConstraintMapper extends VisitReturn<Object> {
 			
 			predName = predName.trim();
 			preds.put(predName, codeSnippet);
+		}
+
+		return preds;
+	}
+	
+
+	public static List<String> getAllFuncDeclarationViaPos(Module sol) {
+		
+		List<String> preds = new ArrayList<>();
+		for(Func func: sol.getAllFunc()) {
+			
+			String codeSnippet = Utils.readSnippet(func.span());
+			preds.add(codeSnippet);
 		}
 
 		return preds;

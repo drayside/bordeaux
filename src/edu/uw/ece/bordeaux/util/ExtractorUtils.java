@@ -7,7 +7,13 @@ import java.util.stream.Collectors;
 
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.ast.CommandScope;
+import edu.mit.csail.sdg.alloy4compiler.ast.Expr;
+import edu.mit.csail.sdg.alloy4compiler.ast.ExprBinary;
+import edu.mit.csail.sdg.alloy4compiler.ast.ExprCall;
+import edu.mit.csail.sdg.alloy4compiler.ast.ExprList;
+import edu.mit.csail.sdg.alloy4compiler.ast.ExprUnary;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig;
+import edu.mit.csail.sdg.alloy4compiler.ast.ExprUnary.Op;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Tuple;
@@ -55,7 +61,7 @@ public class ExtractorUtils {
 
 	public static boolean sigToBeIgnored(Sig sig) {
 		
-		return (sig.builtin || sig.isAbstract != null || sig.isOne != null || isOrdering(sig));
+		return (sig.builtin || isOrdering(sig));
 	}
 	
 	private static boolean isOrdering(Sig sig) {
@@ -153,5 +159,70 @@ public class ExtractorUtils {
 
 		result = result + constraints.stream().collect(Collectors.joining("\n")) + "}";
 		return result;
+	}
+
+	public static String convertFormulaExprToAlloySyntax(Expr formula, boolean useLocalNames) {
+		
+		if(formula instanceof ExprList) {
+
+			StringBuilder builder = new StringBuilder();
+			ExprList exprList = (ExprList)formula;
+			String operator = exprList.op.name().toLowerCase() + " ";
+			for(Expr arg : exprList.args) {
+				String expr = convertFormulaExprToAlloySyntax(arg, useLocalNames);
+				builder.append(operator + expr + "\n\t");
+			}
+			
+			builder.delete(0, operator.length());
+			return builder.toString();
+		}
+
+		if(formula instanceof ExprUnary) {
+			ExprUnary expr = (ExprUnary)formula;
+			String operator = "";
+			if(expr.op != Op.NOOP) {
+				String label = expr.op == Op.NOT ? expr.op.name() : expr.op.toString();
+				operator = label.split("\\s")[0].toLowerCase() + " ";
+			}
+			
+			return operator + convertFormulaExprToAlloySyntax(expr.sub, useLocalNames);
+		}
+		
+		if(formula instanceof ExprBinary) {
+			ExprBinary expr = (ExprBinary)formula;
+			String left = convertFormulaExprToAlloySyntax(expr.left, useLocalNames);
+			String right = convertFormulaExprToAlloySyntax(expr.right, useLocalNames);
+			return left + " " + expr.op.toString() + " " + right;
+		}
+
+		if(formula instanceof ExprCall) {
+			ExprCall expr = (ExprCall)formula;
+			String call = expr.fun.label.replace("this/", "");
+			
+			String p = "";
+			if(expr.args.size() > 0) {
+				StringBuilder params = new StringBuilder();
+				for(Expr arg : expr.args) {
+					params.append(", " + convertFormulaExprToAlloySyntax(arg, useLocalNames));
+				}
+				
+				params.delete(0, 2);
+				p = params.toString();
+			}
+		
+			return String.format("%s[%s]", call, p);
+		}
+		
+		if(formula instanceof Field) {
+			Field field = (Field)formula;
+			if(useLocalNames) {
+				return ExtractorUtils.getLocalFieldName(field.label, field.sig.label.replace("this/", ""));
+			}
+			
+			return field.label;
+		}
+		
+		String name = formula.toString().replace("this/", "");
+		return useLocalNames ? getCamelCase(name) : name;
 	}
 }

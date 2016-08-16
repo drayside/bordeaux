@@ -58,7 +58,7 @@ public class A4CommandExecuter {
 		setUp();
 	}
 
-	public static A4CommandExecuter getInstance() {
+	public static A4CommandExecuter get() {
 		synchronized(lock) {
 			if (instance == null) {
 				instance = new A4CommandExecuter();
@@ -238,7 +238,7 @@ public class A4CommandExecuter {
 		return Collections.unmodifiableMap(result);
 	}
 
-	public Map<Command, A4Solution> executeHola(A4Reporter rep, String tmpDirectory, String... filenames) throws Err {
+	public Map<Command, A4Solution> executeHola(A4Reporter rep, String tmpDirectory, String commandName, String... filenames) throws Err {
 		
         Map<Command, A4Solution> result = new HashMap<>();
 
@@ -251,7 +251,7 @@ public class A4CommandExecuter {
         opt.noOverflow = NoOverflow.get();
         opt.unrolls = Version.experimental ? Unrolls.get() : (-1);
         opt.skolemDepth = SkolemDepth.get();
-        opt.higherOrderSolver = UseHOLSolver.get();
+        opt.higherOrderSolver = true;
         opt.holMaxIter = A4Preferences.HOLMaxIter.get();
         opt.holFullIncrements = !A4Preferences.HOLForceIncInd.get();
         opt.coreMinimization = CoreMinimization.get();
@@ -269,7 +269,9 @@ public class A4CommandExecuter {
             CompModule world = (CompModule) parse(filename, (A4Reporter) rep);
 
             for (Command command : world.getAllCommands()) {
-
+            	
+            	if(commandName != null && !command.label.equals(commandName)) continue;
+            	
                 if (Configuration.IsInDeubbungMode)
                     logger.log(Level.INFO, "[" + Thread.currentThread().getName() + "]" + "============ Command " + command + ": ============");
 
@@ -283,7 +285,7 @@ public class A4CommandExecuter {
 	public void runAlloy(String fileName, A4Reporter rep, String commandName) throws Err {
 		runAlloyThenGetAnswers(fileName, rep, commandName);
 	}
-
+	
 	public void runAlloy(String[] args, A4Reporter rep) throws Err {
 		runAlloyThenGetAnswers(args, rep);
 	}

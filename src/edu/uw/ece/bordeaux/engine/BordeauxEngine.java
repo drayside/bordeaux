@@ -7,14 +7,18 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.management.RuntimeErrorException;
+
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.mit.csail.sdg.alloy4whole.SimpleReporter;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.Configuration;
 import edu.uw.ece.bordeaux.HolaReporter;
 import edu.uw.ece.bordeaux.onborder.OnBorderCodeGenerator;
+import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import edu.uw.ece.bordeaux.util.Utils;
 
 public final class BordeauxEngine {
@@ -32,18 +36,22 @@ public final class BordeauxEngine {
 		return instance;
 	}
 
-	 public A4Solution getBorderInstances(A4Reporter reporter, File inputPath, String...predNames) {
-	
-		 String inputFileName = Utils.getFileName(inputPath.getAbsolutePath());
-		 File outputPath = new File(this.tmpPath.getAbsolutePath(), inputFileName
-		 + "-" + UUID.randomUUID().hashCode());
-		 A4Solution soln = this.getBorderInstances(reporter, inputPath, outputPath, predNames);
-		 
-		 outputPath.delete();		 
-		 return soln;
-	 }
+	public A4Solution getBorderInstances(A4Reporter reporter, File inputPath, String...constraints) {
+					
+		return this.getBorderInstances(reporter, inputPath, new File(""), constraints);
+	}
 
-	 public A4Solution getBorderInstances(A4Reporter reporter, File inputPath, File outputPath, String... predNames) {
+	public A4Solution getBorderInstancesFromStaticInstance(A4Reporter reporter, File inputPath, Command command) {
+	
+		return this.getBorderInstancesFromStaticInstance(reporter, inputPath, new File(""), command);
+	}
+	 
+	public A4Solution getBorderInstancesFromStaticInstance(A4Reporter reporter, File inputPath, String constraint1, String constraint2) {
+	
+		return this.getBorderInstancesFromStaticInstance(reporter, inputPath, new File(""), constraint1, constraint2);
+	}
+	 
+	 public A4Solution getBorderInstances(A4Reporter reporter, File inputPath, File outputPath, String... constraints) {
 
 		// Generate on Border instances
 		String fileName = Utils.getFileName(inputPath.getAbsolutePath());
@@ -58,19 +66,22 @@ public final class BordeauxEngine {
 
 		String fileToGenerate = inputPath.getAbsolutePath();
 		OnBorderCodeGenerator generator = new OnBorderCodeGenerator(fileToGenerate, writer);
-		generator.run(predNames);
+		generator.run(constraints);
 
 		if (Configuration.IsInDeubbungMode) {
-			logger.info("OnBorderFile for: " + fileName + "\n" + Utils.readFile(onBorderFile.getAbsolutePath()));
+			logger.info("==========================================================");
+			logger.info("OnBorderFile for: " + fileName + "\n");
+			logger.info(Utils.readFile(onBorderFile.getAbsolutePath()));
+			logger.info("==========================================================");
 		}
 
 		// Run on-border instances through the higher order solver (alloy*)
 		boolean success = true;
 //		HolaReporter reporter = new HolaReporter();
 		try {
-			A4CommandExecuter.getInstance().executeHola(reporter, this.tmpPath.getAbsolutePath(),
+			A4CommandExecuter.get().executeHola(reporter, this.tmpPath.getAbsolutePath(),
 					onBorderFile.getAbsolutePath());
-		} catch (Err e) {
+		} catch (Exception e) {
 			success = false;
 			e.printStackTrace();
 			logger.severe(
@@ -79,15 +90,20 @@ public final class BordeauxEngine {
 				logger.log(Level.SEVERE, "[" + Thread.currentThread().getName() + "] " + e.getMessage(), e);
 			}
 		}
+		
+
+		if (Configuration.IsInDeubbungMode) {
+			logger.info("Alloy* Complete on : " + onBorderFile + ". Status: " + (success ? "Successful":"Failed"));
+		}
 
 		// Write generated A4Solution to outputPath as xml
-		A4Solution soln = null;
-		if (success) {
+		A4Solution soln = reporter.getA4Solution();
+		if (success && outputPath != null && outputPath.exists()) {
 			soln = reporter.getA4Solution();
 			if (soln != null) {
 				try {
 					soln.writeXML(outputPath.getAbsolutePath());
-				} catch (Err e) {
+				} catch (Exception e) {
 					e.printStackTrace();
 					logger.severe("[" + Thread.currentThread().getName() + "] "
 							+ " Failed to write alloy* solution to XML file: " + outputPath);
@@ -101,17 +117,7 @@ public final class BordeauxEngine {
 		onBorderFile.delete();
 		return soln;
 	}
-
-	 public A4Solution getBorderInstancesFromStaticInstance(A4Reporter reporter, File inputPath, String command, String intendedPred) {
-	
-		 String inputFileName = Utils.getFileName(inputPath.getAbsolutePath());
-		 File outputPath = new File(this.tmpPath.getAbsolutePath(), inputFileName
-		 + "-" + UUID.randomUUID().hashCode());
-		 A4Solution soln = this.getBorderInstancesFromStaticInstance(reporter, inputPath, outputPath, command, intendedPred);
-		 
-		 outputPath.delete();		 
-		 return soln;
-	 }
+	 
 
 	/**
 	 * @param reporter - The SimpleReporter which updates the UI as progress comes in (Note: This reporter is not used to initial calls to Alloy)
@@ -121,14 +127,13 @@ public final class BordeauxEngine {
 	 * @param intendedPred
 	 * @return
 	 */
-	public A4Solution getBorderInstancesFromStaticInstance(A4Reporter reporter, File inputPath, File outputPath, String command, String intendedPred) {
+	public A4Solution getBorderInstancesFromStaticInstance(A4Reporter reporter, File inputPath, File outputPath, Command command) {
 
 		// First generate static A4olution from input path
 		boolean success = true;
-//		HolaReporter a4reporter = new HolaReporter();
 		try {
-			A4CommandExecuter.getInstance().runAlloy(inputPath.getAbsolutePath(), reporter, command);
-		} catch (Err e) {
+			A4CommandExecuter.get().runAlloy(inputPath.getAbsolutePath(), reporter, command.label);
+		} catch (Exception e) {
 			success = false;
 			e.printStackTrace();
 			logger.severe(
@@ -136,11 +141,36 @@ public final class BordeauxEngine {
 			if (Configuration.IsInDeubbungMode) {
 				logger.log(Level.SEVERE, "[" + Thread.currentThread().getName() + "] " + e.getMessage(), e);
 			}
+			
+			throw new RuntimeException();
 		}
 
 		A4Solution staticSoln = reporter.getA4Solution();
-		logger.info("Static A4Solution acquired from Alloy...running OnBorderCodeGenerator");
+		if(success && staticSoln != null) {
+			logger.info("Static A4Solution acquired from Alloy...running OnBorderCodeGenerator");
+	
+			String constraint1 = ExtractorUtils.convertA4SolutionToAlloySyntax(staticSoln, true);
+			String constraint2 = ExtractorUtils.convertFormulaExprToAlloySyntax(command.formula, true);
+			return getBorderInstancesFromStaticInstance(reporter, inputPath, outputPath, constraint1, constraint2);
+		}
+		
+		return null;
+	}
 
+	/**
+	 * This method generates a temp alloy file which will search for instances with min distance away from the static solution provided.
+	 * @param reporter - The SimpleReporter which updates the UI as progress comes in (Note: This reporter is not used to initial calls to Alloy)
+	 * @param inputPath
+	 * @param outputPath
+	 * @param constraint2
+	 * @param staticSoln - The Solution to use as the static instance when finding instances with min distance.
+	 * @return
+	 */
+	public A4Solution getBorderInstancesFromStaticInstance(A4Reporter reporter, File inputPath, File outputPath, String constraint1, String constraint2) {
+
+		logger.info("Generating OnBorder code");
+		
+		boolean success;
 		// Generate on Border instances
 		String fileName = Utils.getFileName(inputPath.getAbsolutePath());
 		String onBorderFileName = fileName + ".hola-" + UUID.randomUUID().hashCode() + ".als";
@@ -152,22 +182,25 @@ public final class BordeauxEngine {
 			e.printStackTrace();
 		}
 
-		String fileToGenerate = inputPath.getAbsolutePath();
-		OnBorderCodeGenerator generator = new OnBorderCodeGenerator(fileToGenerate, writer);
-		generator.runWithStaticIntance(staticSoln, intendedPred);
+		try {
+			String fileToReadFrom = inputPath.getAbsolutePath();
+			OnBorderCodeGenerator generator = new OnBorderCodeGenerator(fileToReadFrom, writer);
+			generator.runWithStaticIntance(constraint1, constraint2);
+		} catch (Exception e) {
+			logger.log(Level.SEVERE, Utils.threadName() + " Failed to generate on border code", e);
+		}
 
 		logger.info("OnBorder Code generated...running Alloy*");
 		if (Configuration.IsInDeubbungMode) {
-			logger.info("OnBorderFile for: " + fileName + "\n" + Utils.readFile(onBorderFile.getAbsolutePath()));
+			logger.info("\n\nOnBorderFile for: " + onBorderFileName + "\n" + Utils.readFile(onBorderFile.getAbsolutePath()) + "\n\n");
 		}
 
 		// Run on-border instances through the higher order solver (alloy*)
 		success = true;
-//		reporter.resetSolution();
 		try {
-			A4CommandExecuter.getInstance().executeHola(reporter, this.tmpPath.getAbsolutePath(),
-					onBorderFile.getAbsolutePath());
-		} catch (Err e) {
+			A4CommandExecuter.get().executeHola(reporter, this.tmpPath.getAbsolutePath(),
+					OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND, onBorderFile.getAbsolutePath());
+		} catch (Exception e) {
 			success = false;
 			e.printStackTrace();
 			logger.severe(
@@ -177,15 +210,18 @@ public final class BordeauxEngine {
 			}
 		}
 
+		if (Configuration.IsInDeubbungMode) {
+			logger.info("Alloy* Complete on : " + onBorderFile + ". Status: " + (success ? "Successful":"Failed"));
+		}
+
 		// Write generated A4Solution to outputPath as xml
-		A4Solution soln = null;
-		if (success) {
-			soln = reporter.getA4Solution();
+		A4Solution soln = reporter.getA4Solution();
+		if (success && outputPath != null && outputPath.exists()) {
 			if (soln != null) {
 				try {
 					soln.writeXML(outputPath.getAbsolutePath());
-					logger.info("Final A4Solution acquired from Alloy*");
-				} catch (Err e) {
+					logger.info("Final A4Solution acquired from Alloy* written to output file");
+				} catch (Exception e) {
 					e.printStackTrace();
 					logger.severe("[" + Thread.currentThread().getName() + "] "
 							+ " Failed to write alloy* solution to XML file: " + outputPath);

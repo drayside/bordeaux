@@ -18,11 +18,13 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.onborder.SigFieldWrapper.FieldInfo;
 import edu.uw.ece.bordeaux.util.ExtractorUtils;
+import edu.uw.ece.bordeaux.util.Utils;
 import kodkod.ast.Formula;
 
 public class OnBorderCodeGenerator {
     
     private static final String RUN = "\npred p[] {}\nrun p";
+    public static final String FIND_MARGINAL_INSTANCES_COMMAND = "findMarginalInstances";
     
     private PrintWriter out;
     private boolean useStaticInstance;
@@ -87,7 +89,7 @@ public class OnBorderCodeGenerator {
         this();
         
         try {
-            this.module = A4CommandExecuter.getInstance().parse(filepath, A4Reporter.NOP);
+            this.module = A4CommandExecuter.get().parse(filepath, A4Reporter.NOP);
         }
         catch (Err e) {
             e.printStackTrace();
@@ -116,20 +118,20 @@ public class OnBorderCodeGenerator {
     }
     
     /**
-     * Runs the generator using the given predNames as valid instances
-     * @param predNames
+     * Runs the generator using the given constraints as valid instances
+     * @param constraints
      */
-    public void run(String...predNames) {
+    public void run(String...constraints) {
             	
         try {
             this.generateSigs(this.out);
-        	this.generatePredicates(this.out, predNames);
+        	this.generatePredicates(this.out);
             this.generateDeltas(this.out);
-            this.generateIsInstance(this.out, predNames);
-            this.generateFindMarginalInstances(out, predNames);
+            this.generateIsInstance(this.out, constraints);
+            this.generateFindMarginalInstances(out, constraints);
             
             ln();
-            println("run findMarginalInstances");
+            println("run " + OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND);
         }
         catch (Err e) {
             e.printStackTrace();
@@ -146,15 +148,10 @@ public class OnBorderCodeGenerator {
      * @param staticSoln
      * @param pred
      */
-    public void runWithStaticIntance(A4Solution staticSoln, String intendedPred) {
+    public void runWithStaticIntance(String...constraints) {
 
     	this.useStaticInstance = true;
-    	String predA = ExtractorUtils.convertA4SolutionToAlloySyntax(staticSoln, true);
-    	String predB = intendedPred;
-
-    	System.out.println(staticSoln.toString() + "\n----\n");
-    	System.out.println(predA);
-    	this.run(predA, predB);
+    	this.run(constraints);
     }
     
     private void generateSigs(PrintWriter out) throws Err {
@@ -162,27 +159,19 @@ public class OnBorderCodeGenerator {
         this.out = out;
         ln();
         
-        println(this.sigDeclaration);
-        
+		String decl = this.sigDeclaration.replaceAll("(one|lone|some)", "set");
+        println(decl);        
     }
     
-    private void generatePredicates(PrintWriter out, String...predNames) {
-    	
-    	if(predNames == null) return;
-    	
+    private void generatePredicates(PrintWriter out) {
+    	    	
     	this.out = out;
     	
-    	MultiValuedMap<String, String> predMap = Field2ConstraintMapper.getPredDeclarationViaPos(this.module);
-    	for(String predName: predNames) {
-
-    		if(predName == null || predName.isEmpty()) continue;
-    		
-    		for(String impl : predMap.get(predName)) {
-        		ln();
-    			println(impl);
-    		}
-    		
-    	}
+    	List<String> preds = Field2ConstraintMapper.getAllFuncDeclarationViaPos(this.module);
+    	for(String impl : preds) {
+    		ln();
+			println(impl);
+		}
     }
     
     private void generateDeltas(PrintWriter out) {
@@ -191,6 +180,8 @@ public class OnBorderCodeGenerator {
         
         for (SigFieldWrapper sigWrap : this.sigs) {
             
+        	if(sigWrap.isAbstract()) continue;
+        	
             ln();
             
             String sigName = this.getCamelCase(sigWrap.getSig());
@@ -221,19 +212,20 @@ public class OnBorderCodeGenerator {
         
     }
     
-    private void generateFindMarginalInstances(PrintWriter out, String...predNames) {
+    private void generateFindMarginalInstances(PrintWriter out, String...contraints) {
         
         this.out = out;
         ln();
-        
-        StringBuilder predAInstanceCall = new StringBuilder();
-        StringBuilder predBInstanceCall = new StringBuilder();
+
+        StringBuilder quantifier = new StringBuilder();
+        StringBuilder constr1InstanceCall = new StringBuilder();
+        StringBuilder constr2InstanceCall = new StringBuilder();
         StringBuilder deltaCalls = new StringBuilder();
         StringBuilder sigmaCall = new StringBuilder();
         
         StringBuilder quantifier_1 = new StringBuilder();
-        StringBuilder predAInstanceCall_1 = new StringBuilder();
-        StringBuilder predBInstanceCall_1 = new StringBuilder();
+        StringBuilder constr1InstanceCall_1 = new StringBuilder();
+        StringBuilder constr2InstanceCall_1 = new StringBuilder();
         StringBuilder deltaCalls_1 = new StringBuilder();
         StringBuilder sigmaCall_1 = new StringBuilder();
         
@@ -241,53 +233,55 @@ public class OnBorderCodeGenerator {
         println("pred findMarginalInstances[] {");
         indent();
         print(indent);
-        print("some ");
         
         Iterator<SigFieldWrapper> sigItr = this.sigs.iterator();
         while (sigItr.hasNext()) {
             
             SigFieldWrapper sigWrap = sigItr.next();
-            String sigName = this.getCamelCase(sigWrap.getSig());
-            print("%1$s, %1$s', %1$s'': set %2$s", sigName, sigWrap.getSig());
-            quantifier_1.append(String.format("%1$s1, %1$s1', %1$s1'': set %2$s", sigName, sigWrap.getSig()));
             
-            predAInstanceCall.append(sigName);
-            predBInstanceCall.append(sigName + "'");
-            sigmaCall.append("#" + sigName + "''");
+            if(sigWrap.isAbstract()) continue;
+            
+            String sigName = this.getCamelCase(sigWrap.getSig());
+            quantifier.append(String.format(", %1$s, %1$s', %1$s'': set %2$s", sigName, sigWrap.getSig()));
+            quantifier_1.append(String.format(", %1$s1, %1$s1', %1$s1'': set %2$s", sigName, sigWrap.getSig()));
+            
+            constr1InstanceCall.append(", " + sigName);
+            constr2InstanceCall.append(", " + sigName + "'");
+            sigmaCall.append(", #" + sigName + "''");
             deltaCalls.append(String.format("and delta%1$s[%2$s, %2$s', %2$s'']\n", this.getPascalCase(sigWrap.getSig()), sigName));
             
-            predAInstanceCall_1.append(sigName + "1");
-            predBInstanceCall_1.append(sigName + "1'");
-            sigmaCall_1.append("#" + sigName + "1''");
+            constr1InstanceCall_1.append(", " + sigName + "1");
+            constr2InstanceCall_1.append(", " + sigName + "1'");
+            sigmaCall_1.append(", #" + sigName + "1''");
             deltaCalls_1.append(String.format("and delta%1$s[%2$s1, %2$s1', %2$s1'']\n", this.getPascalCase(sigWrap.getSig()), sigName));
             
             sigmaParamLength++;
-            if (sigItr.hasNext()) {
-                print(", ");
-                predAInstanceCall.append(", ");
-                predBInstanceCall.append(", ");
-                sigmaCall.append(", ");
-                
-                quantifier_1.append(", ");
-                predAInstanceCall_1.append(", ");
-                predBInstanceCall_1.append(", ");
-                sigmaCall_1.append(", ");
-            }
+//            if (sigItr.hasNext()) {
+//                print(", ");
+//                predAInstanceCall.append(", ");
+//                predBInstanceCall.append(", ");
+//                sigmaCall.append(", ");
+//                
+//                quantifier_1.append(", ");
+//                predAInstanceCall_1.append(", ");
+//                predBInstanceCall_1.append(", ");
+//                sigmaCall_1.append(", ");
+//            }
             
             Iterator<FieldInfo> itr = sigWrap.getFields().iterator();
             while (itr.hasNext()) {
                 
                 FieldInfo field = itr.next();
-                print(", %1$s, %1$s', %1$s'': set %2$s", field.getLabel(), field.getType());
+                quantifier.append(String.format(", %1$s, %1$s', %1$s'': set %2$s", field.getLabel(), field.getType()));
                 quantifier_1.append(String.format(", %1$s1, %1$s1', %1$s1'': set %2$s", field.getLabel(), field.getType()));
                 
-                predAInstanceCall.append(", " + field.getLabel());
-                predBInstanceCall.append(", " + field.getLabel() + "'");
+                constr1InstanceCall.append(", " + field.getLabel());
+                constr2InstanceCall.append(", " + field.getLabel() + "'");
                 sigmaCall.append(", #" + field.getLabel() + "''");
                 deltaCalls.append(String.format("and delta%1$s[%2$s, %2$s', %2$s'']\n", this.getPascalCase(field.getLabel()), field.getLabel()));
                 
-                predAInstanceCall_1.append(", " + field.getLabel() + "1");
-                predBInstanceCall_1.append(", " + field.getLabel() + "1'");
+                constr1InstanceCall_1.append(", " + field.getLabel() + "1");
+                constr2InstanceCall_1.append(", " + field.getLabel() + "1'");
                 sigmaCall_1.append(", #" + field.getLabel() + "1''");
                 deltaCalls_1.append(String.format("and delta%1$s[%2$s1, %2$s1', %2$s1'']\n", this.getPascalCase(field.getLabel()), field.getLabel()));
                 
@@ -307,29 +301,38 @@ public class OnBorderCodeGenerator {
             
         }
         
-        String predA;
-        String predB;
+        quantifier.delete(0, 2); 
+        quantifier_1.delete(0, 2);
+        constr1InstanceCall.delete(0, 2);
+        constr1InstanceCall_1.delete(0, 2);
+        constr2InstanceCall.delete(0, 2);
+        constr2InstanceCall_1.delete(0, 2);
+        sigmaCall.delete(0, 2);     
+        sigmaCall_1.delete(0, 2);
+        
+        String constr1;
+        String constr2;
         if(this.useStaticInstance) {        	
-        	predA = "STATIC";
-        	predB = "isINTENDED";
+        	constr1 = "STATIC";
+        	constr2 = "isINTENDED";
         } else {
-        	predA = predNames != null && predNames.length > 0 && !predNames[0].isEmpty()? predNames[0].replaceAll("\\s+", "_").toUpperCase() : "";
-        	predB = predNames != null && predNames.length > 1 && !predNames[1].isEmpty() ? "is" + predNames[1].replaceAll("\\s+", "_").toUpperCase() : "not is";
+        	constr1 = contraints != null && contraints.length > 0 && !contraints[0].isEmpty()? contraints[0].replaceAll("\\s+", "_").toUpperCase() : "";
+        	constr2 = contraints != null && contraints.length > 1 && !contraints[1].isEmpty() ? "is" + contraints[1].replaceAll("\\s+", "_").toUpperCase() : "not is";
        
 	        // say "not isPREDAInstance" if predA exists
-	        if(predB.equals("not is") && !predA.equals("")) {
-	        	predB += predA;
+	        if(constr2.equals("not is") && !constr1.equals("")) {
+	        	constr2 += constr1;
 	        }
         }
         
-        // Finish outer quatifier
-        print(" | {");
+        // Finish outer quantifier
+        print("some %s | {", quantifier);
         ln();
         indent();
         indent();
         println("(");
-        println("is%sInstance[%s]", predA, predAInstanceCall);
-        println("and %sInstance[%s]", predB, predBInstanceCall);
+        println("is%sInstance[%s]", constr1, constr1InstanceCall);
+        println("and %sInstance[%s]", constr2, constr2InstanceCall);
         println("%s)", deltaCalls.toString().replaceAll("\n", "\n" + indent));
         
         outdent();
@@ -341,8 +344,8 @@ public class OnBorderCodeGenerator {
         indent();
         indent();
         println("(");
-        println("is%sInstance[%s]", predA, predAInstanceCall_1);
-        println("and %sInstance[%s]", predB, predBInstanceCall_1);
+        println("is%sInstance[%s]", constr1, constr1InstanceCall_1);
+        println("and %sInstance[%s]", constr2, constr2InstanceCall_1);
         println("%s)", deltaCalls_1.toString().replaceAll("\n", "\n" + indent));
         
         outdent();
@@ -370,7 +373,7 @@ public class OnBorderCodeGenerator {
         this.generateSigmaFunction(sigmaParamLength, out);
     }
     
-    private void generateIsInstance(PrintWriter out, String...predNames) throws Err, IOException {
+    private void generateIsInstance(PrintWriter out, String...contraints) throws Err, IOException {
         
         this.out = out;
         
@@ -379,7 +382,9 @@ public class OnBorderCodeGenerator {
         StringBuilder params = new StringBuilder();
         for (SigFieldWrapper sigWrap : this.sigs) {
             
-            String sigName = this.getCamelCase(sigWrap.getSig());
+        	if(sigWrap.isAbstract()) continue;
+        	
+        	String sigName = this.getCamelCase(sigWrap.getSig());
             args.append(String.format(", %s", sigName));
             params.append(String.format(", %s: set %s", sigName, sigWrap.getSig()));
             
@@ -402,11 +407,10 @@ public class OnBorderCodeGenerator {
         println("pred isInstance [%s] {", parameters);
         indent();
         println("includeInstance[%s]", arguments);
-        println("structuralConstraints[%s]", arguments);
         outdent();
         println("}");
         
-        generatePredNameInstances(parameters, arguments, out, predNames);
+        generateConstrainedInstances(parameters, arguments, out, contraints);
     }
     
     private void generateStructuralConstraint(String params, PrintWriter out) throws Err, IOException {
@@ -423,16 +427,21 @@ public class OnBorderCodeGenerator {
         Util.writeAll(file.getAbsolutePath(), sigs);
         
         // Translate signatures to KodKod
-        List<Formula> formulas = A4CommandExecuter.getInstance().translateAlloy2KK(file.getAbsolutePath(), A4Reporter.NOP, "p");
+        List<Formula> formulas = A4CommandExecuter.get().translateAlloy2KK(file.getAbsolutePath(), A4Reporter.NOP, "p");
                 
         // Use Structural formulas from KodKod and make them pretty
         for (Formula f : formulas) {
             
-            // Replace all this.SigName.field with sigName_field            
             String constraint = f.toString();
+            
+        	// Start by replacing " remainder" with empty string
+            constraint = constraint.replace(" remainder", "");
+        	
+            // Replace all this.SigName.field with sigName_field 
             Matcher m = Pattern.compile("this\\/([A-Za-z])((\\w)*)\\.((\\w)*)").matcher(constraint);
             StringBuffer sb = new StringBuffer();
                         
+            // Replace each occurrence
             while (m.find()) {
                 m.appendReplacement(sb, String.format("%s%s_%s", m.group(1).toLowerCase(), m.group(2), m.group(4)));
             }
@@ -443,7 +452,8 @@ public class OnBorderCodeGenerator {
             // Replace remaining this/SigName with sigNane            
             m = Pattern.compile("this\\/([A-Za-z])((\\w)*)").matcher(constraint);
             sb = new StringBuffer();
-                        
+
+            // Replace each occurrence
             while (m.find()) {
                 m.appendReplacement(sb, String.format("%s%s", m.group(1).toLowerCase(), m.group(2)));
             }
@@ -452,6 +462,14 @@ public class OnBorderCodeGenerator {
             constraint = sb.toString();
 
             println(constraint);
+        }
+
+        for (SigFieldWrapper sig : this.sigs) {
+        	
+        	String mult = sig.getMultString();
+        	if(sig.isAbstract() || mult.isEmpty()) continue;
+        	
+        	println("%s %s", mult, this.getCamelCase(sig.getSig()));
         }
         
         outdent();
@@ -495,9 +513,9 @@ public class OnBorderCodeGenerator {
         println("}");
     }
 
-    private void generatePredNameInstances(String params, String args, PrintWriter out, String...predNames) {
+    private void generateConstrainedInstances(String params, String args, PrintWriter out, String...contraints) {
 
-    	if(predNames == null) return;
+    	if(contraints == null) return;
 
         this.out = out;
     	if(this.useStaticInstance) {
@@ -506,7 +524,8 @@ public class OnBorderCodeGenerator {
 	        println("pred isSTATICInstance [%s] {", params);
 	        indent();
 	        println("isInstance[%s]", args);
-	        println("%s", predNames[0]);
+	        println("structuralConstraints[%s]", args);
+	        println("%s", contraints[0]);
 	        outdent();
 	        println("}");
 
@@ -514,21 +533,22 @@ public class OnBorderCodeGenerator {
 	        println("pred isINTENDEDInstance [%s] {", params);
 	        indent();
 	        println("isInstance[%s]", args);
-	        println("%s", predNames[1]);
+	        println("not structuralConstraints[%s]", args);
+	        println("%s", contraints[1]);
 	        outdent();
 	        println("}");
     		return;
     	}
     	
-    	for(String predName : predNames) {
+    	for(String constraint : contraints) {
     		
-    		if(predName == null || predName.isEmpty()) continue;
+    		if(constraint == null || constraint.isEmpty()) continue;
     		
         	ln();
-	        println("pred is%sInstance [%s] {", predName.replaceAll("\\s+", "_").toUpperCase(), params);
+	        println("pred is%sInstance [%s] {", constraint.replaceAll("\\s+", "_").toUpperCase(), params);
 	        indent();
 	        println("isInstance[%s]", args);
-	        println("%s", predName);
+	        println("%s", constraint);
 	        outdent();
 	        println("}");
     	}

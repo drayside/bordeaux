@@ -28,7 +28,7 @@ public class Field2ConstraintMapperTest {
 
 		String[] files = { alloy4Home + "/models/debugger/min_dist/" + fileName };
 		// alloy4Home + "/models/examples/toys/birthday.als" };
-		Map<Command, A4Solution> map = A4CommandExecuter.getInstance()
+		Map<Command, A4Solution> map = A4CommandExecuter.get()
 				.runAlloyThenGetAnswers(files, A4Reporter.NOP);
 
 		System.out.println("Listing commands and solutions:");
@@ -71,7 +71,7 @@ public class Field2ConstraintMapperTest {
 		Util.writeAll(sigFile, sigs);
 		System.out.println("Sigs writted to: " + sigFile);
 
-		List<Formula> formulas = A4CommandExecuter.getInstance()
+		List<Formula> formulas = A4CommandExecuter.get()
 				.translateAlloy2KK(sigFile, A4Reporter.NOP, "p");
 
 		System.out.println("\nFormulas: ");
@@ -86,7 +86,7 @@ public class Field2ConstraintMapperTest {
 
     private String getSigString(String file) throws Err {
 
-        Module module = A4CommandExecuter.getInstance().parse(file, A4Reporter.NOP);
+        Module module = A4CommandExecuter.get().parse(file, A4Reporter.NOP);
 
         String run = "\npred p[] {}\nrun p";
         String sigs = Field2ConstraintMapper.getSigDeclarationViaPos(module);

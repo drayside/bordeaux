@@ -58,7 +58,7 @@ public class ExtractorUtilsTest {
 		final HolaReporter rep = new HolaReporter();
 		A4Solution solution = null;
 		try {
-			solution = A4CommandExecuter.getInstance().runAlloyThenGetAnswers(testFile.getAbsolutePath(), rep, "gen");
+			solution = A4CommandExecuter.get().runAlloyThenGetAnswers(testFile.getAbsolutePath(), rep, "gen");
 		} catch (Err e) {
 			e.printStackTrace();
 			fail(e.getMessage());
@@ -73,7 +73,7 @@ public class ExtractorUtilsTest {
 			fail(e.getMessage());
 		}
 		try {
-			solution = A4CommandExecuter.getInstance().runAlloyThenGetAnswers(testFile.getAbsolutePath(), rep, "alloysol");
+			solution = A4CommandExecuter.get().runAlloyThenGetAnswers(testFile.getAbsolutePath(), rep, "alloysol");
 		} catch (Err e) {
 			System.err.println(alloySolution);
 			e.printStackTrace();

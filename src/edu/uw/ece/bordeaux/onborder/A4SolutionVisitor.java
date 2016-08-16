@@ -7,6 +7,7 @@ import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4compiler.ast.Decl;
 import edu.mit.csail.sdg.alloy4compiler.ast.ExprHasName;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig;
+import edu.mit.csail.sdg.alloy4compiler.ast.Sig.PrimSig;
 import edu.uw.ece.bordeaux.onborder.SigFieldWrapper.FieldInfo;
 import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import edu.mit.csail.sdg.alloy4compiler.ast.Module; 
@@ -21,7 +22,7 @@ public class A4SolutionVisitor {
 			if(ExtractorUtils.sigToBeIgnored(sig)) continue;
 			
 			String sigType = sig.label.replace("this/", "");
-			SigFieldWrapper sigWrapper = new SigFieldWrapper(sigType);
+			SigFieldWrapper sigWrapper = new SigFieldWrapper(sigType, sig.decl.expr.mult(), sig.isAbstract != null);
 			
 			for (Decl decl : sig.getFieldDecls()) {
 

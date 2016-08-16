@@ -1,42 +1,119 @@
 package edu.uw.ece.bordeaux.tests;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.logging.Level;
 
+import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 
+import edu.mit.csail.sdg.alloy4.A4Reporter;
+import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerCallback;
+import edu.mit.csail.sdg.alloy4compiler.ast.Command;
+import edu.mit.csail.sdg.alloy4compiler.parser.CompModule;
+import edu.mit.csail.sdg.alloy4compiler.translator.A4Options;
+import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
+import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod;
+import edu.uw.ece.bordeaux.A4CommandExecuter;
+import edu.uw.ece.bordeaux.Configuration;
 import edu.uw.ece.bordeaux.HolaReporter;
 import edu.uw.ece.bordeaux.engine.BordeauxEngine;
 import edu.uw.ece.bordeaux.util.Utils;
+
 
 public class BordeauxEngineTest {
 
 	public final String TMP_DIRECTORY = "./tmp/";
 	public final String TOY_EXAMPLES_DIRECTORY = "./models/examples/toys/";
 	public final String MIN_DIST_DIRECTORY = "./models/debugger/min_dist/";
+	public final String BORDEUX_MODELS_DIRECTORY = "./models/bordeaux/";
 	
-	private HolaReporter reporter;
+	private A4Reporter reporter;
+	private WorkerCallback cb;
 	
 	@Before
 	public void setUp() {
-		this.reporter = new HolaReporter();
+		this.cb = new WorkerCallback() {
+            public void callback(Object x) { }
+            public void done() { }
+            public void fail() { }
+         };
+         
+ 		this.reporter = new HolaReporter();
 	}
 	
 	@Test
-	public void testLinkedList() {
+	public void testBareLinkedList() {
+		
+		String filename = "bare_linked_list.als";
+		File inpath = new File(MIN_DIST_DIRECTORY, filename);		
+		A4Solution sol = this.tryUsing(this.reporter, inpath.getAbsolutePath(), "p");
+		assertNotNull("Solution is null...An error occurred or model is UNSAT", sol);
+	}
+	
+	@Test
+	public void testCourses() {
+		
+		String filename = "courses.als";
+		File inpath = new File(BORDEUX_MODELS_DIRECTORY, filename);		
+		A4Solution sol = this.tryUsing(this.reporter, inpath.getAbsolutePath(), "showSuccesfullPrograms");
+		assertNotNull("Solution is null...An error occurred or model is UNSAT", sol);
+	}
+
+	@Test
+	public void testSinglyLinkedList() {
+		
+		String filename = "sll.als";
+		File inpath = new File(BORDEUX_MODELS_DIRECTORY, filename);		
+		A4Solution sol = this.tryUsing(this.reporter, inpath.getAbsolutePath(), "SinglyLinkedLists");
+		assertNotNull("Solution is null...An error occurred or model is UNSAT", sol);
+	}
+
+	@Test
+	public void testDijkstra() {
+		
+		String filename = "dijkstra.buggy.als";
+		File inpath = new File(BORDEUX_MODELS_DIRECTORY, filename);		
+		A4Solution sol = this.tryUsing(this.reporter, inpath.getAbsolutePath(), "check$1");
+		assertNotNull("Solution is null...An error occurred or model is UNSAT", sol);
+	}
+	
+	public A4Solution tryUsing(A4Reporter reporter, String filepath, String commandName) {
+		
+		assertNotNull(commandName);
+		
+		Command command = getCommandFromNamePainfully(reporter, filepath, commandName);
+		assertNotNull("Cannot find command from command name", command);
 		
 		BordeauxEngine engine = BordeauxEngine.get();
 		
-		String filename = "bare_linked_list.als";
-		File inpath = new File(MIN_DIST_DIRECTORY, filename);
+		try {
+			return engine.getBorderInstancesFromStaticInstance(reporter, new File(filepath), command);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		
-		File outpath = new File(TMP_DIRECTORY, "bare_linked_list.hola.als");
-		engine.getBorderInstances(this.reporter, inpath, outpath, "hello", "hi");
-//		engine.getBorderInstancesFromStaticInstance(this.reporter, inpath, outpath, "p", "hello");
+		return null;
+	}
+	
+	private Command getCommandFromNamePainfully(A4Reporter reporter, String filepath, String commandName) {
 		
-		String output = Utils.readFile(outpath.getAbsolutePath());
-		System.out.println(output);
+		CompModule world = null;
+		try {
+			world = (CompModule) A4CommandExecuter.get().parse(filepath, reporter);
+		} catch (Err e) {
+			e.printStackTrace();
+			return null;
+		}
+
+		for (Command command : world.getAllCommands()) {
+			if (command.label.equals(commandName)) {
+				return command;
+			}
+		}
 		
-		outpath.delete();
+		return null;
 	}
 }
