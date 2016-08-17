@@ -92,6 +92,7 @@ public class ExtractorUtils {
 	 * @return
 	 */
 	public static String convertA4SolutionToAlloySyntax(A4Solution solution, boolean useLocalNames) {
+		if(solution == null) return "";
 		List<String> emptySigs = new ArrayList<>();
 		List<String> constraints = new ArrayList<>();
 		List<String> quantifiers = new ArrayList<>();

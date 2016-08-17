@@ -102,7 +102,7 @@ public final class VizGUI implements ComponentListener {
    /** The buttons on the toolbar. */
    private final JButton projectionButton, openSettingsButton, closeSettingsButton,
    magicLayout, loadSettingsButton, saveSettingsButton, saveAsSettingsButton,
-   resetSettingsButton, updateSettingsButton, openEvaluatorButton, closeEvaluatorButton, enumerateButton,
+   resetSettingsButton, updateSettingsButton, openEvaluatorButton, closeEvaluatorButton, enumerateNextButton, enumerateNearMissButton, enumerateNearHitButton,
    vizButton, treeButton, txtButton/*, dotButton, xmlButton*/;
 
    /** This list must contain all the display mode buttons (that is, vizButton, xmlButton...) */
@@ -115,8 +115,16 @@ public final class VizGUI implements ComponentListener {
    private final JMenu windowmenu;
 
    /** The "show next" menu item. */
-   private final JMenuItem enumerateMenu;
+   private final JMenuItem enumerateNextMenu;
+   
+   /** The "show next near-miss" menu item. */
+   private final JMenuItem enumerateNearMissMenu;
 
+   /** The "show next near-hit" menu item. */
+   private final JMenuItem enumerateNearHitMenu;
+
+   private boolean enableBordeaux;
+   
    /** Current font size. */
    private int fontSize=12;
 
@@ -161,8 +169,13 @@ public final class VizGUI implements ComponentListener {
    private final Computer evaluator;
 
    /** If nonnull, you can pass in an XML file to find the next solution. */
-   private final Computer enumerator;
+   private final Computer nextEnumerator;
+   
+   /** If nonnull, you can pass in an XML file to find the next near-miss solution. */
+   private final Computer nearMissEnumerator;
 
+   /** If nonnull, you can pass in an XML file to find the next near-hit solution. */
+   private final Computer nearHitEnumerator;
    //==============================================================================================//
 
    /** The current theme file; "" if there is no theme file loaded. */
@@ -317,35 +330,41 @@ public final class VizGUI implements ComponentListener {
     * <p> Note: if standalone==false and xmlFileName.length()==0, then we will initially hide the window.
     */
    public VizGUI(boolean standalone, String xmlFileName, JMenu windowmenu) {
-      this(standalone, xmlFileName, windowmenu, null, null);
+      this(standalone, xmlFileName, windowmenu, null, null, null, null);
    }
 
    /** Creates a new visualization GUI window; this method can only be called by the AWT event thread.
     * @param standalone - whether the JVM should shutdown after the last file is closed
     * @param xmlFileName - the filename of the incoming XML file; "" if there's no file to open
     * @param windowmenu - if standalone==false and windowmenu!=null, then this will be added as a menu on the menubar
-    * @param enumerator - if it's not null, it provides solution enumeration ability
+    * @param nextEnumerator - if it's not null, it provides solution enumeration ability
+    * @param nearMissEnumerator - if it's not null, it provides near-miss solution enumeration ability
+    * @param nearHitEnumerator - if it's not null, it provides near-hit solution enumeration ability
     * @param evaluator - if it's not null, it provides solution evaluation ability
     *
     * <p> Note: if standalone==false and xmlFileName.length()==0, then we will initially hide the window.
     */
-   public VizGUI(boolean standalone, String xmlFileName, JMenu windowmenu, Computer enumerator, Computer evaluator) {
-      this(standalone, xmlFileName, windowmenu, enumerator, evaluator, true);
+   public VizGUI(boolean standalone, String xmlFileName, JMenu windowmenu, Computer nextEnumerator, Computer nearMissEnumerator, Computer nearHitEnumerator, Computer evaluator) {
+      this(standalone, xmlFileName, windowmenu, nextEnumerator, nearMissEnumerator, nearHitEnumerator, evaluator, true);
    }
 
    /** Creates a new visualization GUI window; this method can only be called by the AWT event thread.
     * @param standalone - whether the JVM should shutdown after the last file is closed
     * @param xmlFileName - the filename of the incoming XML file; "" if there's no file to open
     * @param windowmenu - if standalone==false and windowmenu!=null, then this will be added as a menu on the menubar
-    * @param enumerator - if it's not null, it provides solution enumeration ability
+    * @param nextEnumerator - if it's not null, it provides solution enumeration ability
+    * @param nearMissEnumerator - if it's not null, it provides near-miss solution enumeration ability
+    * @param nearHitEnumerator - if it's not null, it provides near-hit solution enumeration ability
     * @param evaluator - if it's not null, it provides solution evaluation ability
     * @param makeWindow - if false, then we will only construct the JSplitPane, without making the window
     *
     * <p> Note: if standalone==false and xmlFileName.length()==0 and makeWindow==true, then we will initially hide the window.
     */
-   public VizGUI(boolean standalone, String xmlFileName, JMenu windowmenu, Computer enumerator, Computer evaluator, boolean makeWindow) {
+   public VizGUI(boolean standalone, String xmlFileName, JMenu windowmenu, Computer nextEnumerator, Computer nearMissEnumerator, Computer nearHitEnumerator, Computer evaluator, boolean makeWindow) {
 
-      this.enumerator = enumerator;
+      this.nextEnumerator = nextEnumerator;
+      this.nearMissEnumerator = nearMissEnumerator;
+      this.nearHitEnumerator = nearHitEnumerator;
       this.standalone = standalone;
       this.evaluator = evaluator;
       this.frame = makeWindow ? new JFrame("Alloy Visualizer") : null;
@@ -374,7 +393,9 @@ public final class VizGUI implements ComponentListener {
          menuItem(fileMenu, "Close",   'W', 'W', doClose());
          if (standalone) menuItem(fileMenu, "Quit", 'Q', 'Q', doCloseAll()); else menuItem(fileMenu, "Close All", 'A', doCloseAll());
          JMenu instanceMenu = menu(mb, "&Instance", null);
-         enumerateMenu = menuItem(instanceMenu, "Show Next Solution", 'N', 'N', doNext());
+         enumerateNextMenu = menuItem(instanceMenu, "Show Next Solution", 'N', 'N', doNextSolution());
+         enumerateNearMissMenu = menuItem(instanceMenu, "Show Next Near-Miss Solution", 'M', 'M', doNextNearMiss());
+         enumerateNearHitMenu = menuItem(instanceMenu, "Show Next Near-Hit Solution", 'H', 'H', doNextNearHit());
          thememenu = menu(mb, "&Theme", doRefreshTheme());
          if (standalone || windowmenu==null) windowmenu = menu(mb, "&Window", doRefreshWindow());
          this.windowmenu = windowmenu;
@@ -415,7 +436,9 @@ public final class VizGUI implements ComponentListener {
          toolbar.add(magicLayout=OurUtil.button("Magic Layout", "Automatic theme customization (will reset current theme)", "images/24_settings_apply2.gif", doMagicLayout()));
          toolbar.add(openEvaluatorButton=OurUtil.button("Evaluator", "Open the evaluator", "images/24_settings.gif", doOpenEvalPanel()));
          toolbar.add(closeEvaluatorButton=OurUtil.button("Close Evaluator", "Close the evaluator", "images/24_settings_close2.gif", doCloseEvalPanel()));
-         toolbar.add(enumerateButton=OurUtil.button("Next", "Show the next solution", "images/24_history.gif", doNext()));
+         toolbar.add(enumerateNextButton=OurUtil.button("Next", "Show the next solution", "images/24_history.gif", doNextSolution()));
+         toolbar.add(enumerateNearMissButton=OurUtil.button("Next Near-Miss", "Show the next near-miss solution", "images/24_history.gif", doNextNearMiss()));
+         toolbar.add(enumerateNearHitButton=OurUtil.button("Next Near-Hit", "Show the next near-hit solution", "images/24_history.gif", doNextNearHit()));
          toolbar.add(projectionButton);
          toolbar.add(loadSettingsButton=OurUtil.button("Load", "Load the theme customization from a theme file", "images/24_open.gif", doLoadTheme()));
          toolbar.add(saveSettingsButton=OurUtil.button("Save", "Save the current theme customization", "images/24_save.gif", doSaveTheme()));
@@ -453,6 +476,10 @@ public final class VizGUI implements ComponentListener {
       if (xmlFileName.length()>0) doLoadInstance(xmlFileName);
    }
 
+   public void enableBordeaux(boolean enable) {
+	   this.enableBordeaux = enable;
+   }
+   
    /** Invoked when the Visualizationwindow is resized. */
    public void componentResized(ComponentEvent e) {
       componentMoved(e);
@@ -527,8 +554,12 @@ public final class VizGUI implements ComponentListener {
       updateSettingsButton.setVisible(settingsOpen==1 && currentMode==VisualizerMode.Viz);
       openEvaluatorButton.setVisible(!isMeta && settingsOpen==0 && evaluator!=null);
       closeEvaluatorButton.setVisible(!isMeta && settingsOpen==2 && evaluator!=null);
-      enumerateMenu.setEnabled(!isMeta && settingsOpen==0 && enumerator!=null);
-      enumerateButton.setVisible(!isMeta && settingsOpen==0 && enumerator!=null);
+      enumerateNextMenu.setEnabled(!enableBordeaux && !isMeta && settingsOpen==0 && nextEnumerator!=null);
+      enumerateNearMissMenu.setEnabled(enableBordeaux && !isMeta && settingsOpen==0 && nearMissEnumerator!=null);
+      enumerateNearHitMenu.setEnabled(enableBordeaux &&!isMeta && settingsOpen==0 && nearHitEnumerator!=null);
+      enumerateNextButton.setVisible(!enableBordeaux && !isMeta && settingsOpen==0 && nextEnumerator!=null);
+      enumerateNearMissButton.setVisible(enableBordeaux && !isMeta && settingsOpen==0 && nearMissEnumerator!=null);
+      enumerateNearHitButton.setVisible(enableBordeaux && !isMeta && settingsOpen==0 && nearHitEnumerator!=null);
       toolbar.setVisible(true);
       // Now, generate the graph or tree or textarea that we want to display on the right
       if (frame!=null) frame.setTitle(makeVizTitle());
@@ -952,17 +983,39 @@ public final class VizGUI implements ComponentListener {
       return wrapMe();
    }
 
-   /** This method attempts to derive the next satisfying instance. */
-   private Runner doNext() {
-      if (wrap) return wrapMe();
+   /** This method attempts to derive the next satisfying near-miss instance. */
+   private Runner doNextSolution() {
+
+	   if (wrap) return wrapMe();
+	   return this.doNext(nextEnumerator, "");
+   }
+   
+   /** This method attempts to derive the next satisfying near-miss instance. */
+   private Runner doNextNearMiss() {
+
+	   if (wrap) return wrapMe();
+	   return this.doNext(nearMissEnumerator, "near-miss");
+   }
+   
+
+   /** This method attempts to derive the next satisfying near-hit instance. */
+   private Runner doNextNearHit() {
+
+	   if (wrap) return wrapMe();
+	   return this.doNext(nearHitEnumerator, "near-hit");
+   }
+
+   private Runner doNext(Computer enumerator, final String enumType) {
+	   
       if (settingsOpen!=0) return null;
       if (xmlFileName.length()==0) {
-         OurDialog.alert("Cannot display the next solution since no instance is currently loaded.");
+         OurDialog.alert("Cannot display the next " + enumType + " solution since no instance is currently loaded.");
       } else if (enumerator==null) {
-         OurDialog.alert("Cannot display the next solution since the analysis engine is not loaded with the visualizer.");
+         OurDialog.alert("Cannot display the next " + enumType + " solution since the analysis engine is not loaded with the visualizer.");
       } else {
          try { enumerator.compute(xmlFileName); } catch(Throwable ex) { OurDialog.alert(ex.getMessage()); }
       }
+      
       return null;
    }
 

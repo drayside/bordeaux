@@ -1094,10 +1094,11 @@ public final class SimpleGUI implements ComponentListener, Listener {
             stopbutton.setVisible(true);
             int newmem = SubMemory.get(), newstack = SubStack.get();
             if (newmem != subMemoryNow || newstack != subStackNow) WorkerEngine.stop();
-            if (Util.isDebug() && VerbosityPref.get().geq(Verbosity.FULLDEBUG))
-                WorkerEngine.runLocally(task, cb);
-            else
-                WorkerEngine.run(task, newmem, newstack, alloyHome() + fs + "binary", "", cb);
+            WorkerEngine.runLocally(task, cb);
+//            if (Util.isDebug() && VerbosityPref.get().geq(Verbosity.FULLDEBUG))
+//                WorkerEngine.runLocally(task, cb);
+//            else
+//                WorkerEngine.run(task, newmem, newstack, alloyHome() + fs + "binary", "", cb);
             subMemoryNow = newmem;
             subStackNow = newstack;
         } catch(Throwable ex) {
@@ -1294,7 +1295,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
             addToMenu(optmenu, !UseHOLSolver.get(), SkolemDepth);
             JMenuItem cmMenu = addToMenu(optmenu, CoreMinimization); cmMenu.setEnabled(Solver.get() == SatSolver.MiniSatProverJNI);
             JMenuItem cgMenu = addToMenu(optmenu, CoreGranularity); cgMenu.setEnabled(Solver.get() == SatSolver.MiniSatProverJNI);
-
+            
             addToMenu(optmenu, AutoVisualize, RecordKodkod);
 
             if (Version.experimental) {
@@ -1312,7 +1313,16 @@ public final class SimpleGUI implements ComponentListener, Listener {
             optmenu.addSeparator();
             
             // Bordeaux Options
-            addToMenu(optmenu, UseBordeauxSolver);
+            JMenuItem borMenu = addToMenu(optmenu, UseBordeauxSolver);
+            borMenu.addActionListener(new ActionListener() {
+				
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					if(viz != null) {
+						viz.enableBordeaux(UseBordeauxSolver.get());
+					}					
+				}
+			});
             
         } finally {
             wrap = false;
@@ -1552,41 +1562,62 @@ public final class SimpleGUI implements ComponentListener, Listener {
     }
 
     /** This object performs solution enumeration. */
-    private final Computer enumerator = new Computer() {
+    private final Computer nextEnumerator = new Computer() {
         public String compute(Object input) {
-            final String arg = (String)input;
-            OurUtil.show(frame);
-            if (WorkerEngine.isBusy())
-                throw new RuntimeException("Alloy4 is currently executing a SAT solver command. Please wait until that command has finished.");
-            SimpleCallback1 cb = new SimpleCallback1(SimpleGUI.this, viz, log, VerbosityPref.get().ordinal(), latestAlloyVersionName, latestAlloyVersion);
-            SimpleTask2 task = new SimpleTask2();
-            task.filename = arg;
-            try {
-                if (Util.isDebug() && VerbosityPref.get().geq(Verbosity.FULLDEBUG))
-                    WorkerEngine.runLocally(task, cb);
-                else
-                    WorkerEngine.run(task, SubMemory.get(), SubStack.get(), alloyHome() + fs + "binary", "", cb);
-//                task.run(cb);
-            } catch(Throwable ex) {
-                WorkerEngine.stop();
-                log.logBold("Fatal Error: Solver failed due to unknown reason.\n" +
-                  "One possible cause is that, in the Options menu, your specified\n" +
-                  "memory size is larger than the amount allowed by your OS.\n" +
-                  "Also, please make sure \"java\" is in your program path.\n");
-                log.logDivider();
-                log.flush();
-                doStop(2);
-                return arg;
-            }
-            subrunningTask=2;
-            runmenu.setEnabled(false);
-            runbutton.setVisible(false);
-            showbutton.setEnabled(false);
-            stopbutton.setVisible(true);
-            return arg;
+        	return computeNext(input, false, false);
+        }
+    };    
+
+    /** This object performs near-miss solution enumeration. */
+    private final Computer nearMissEnumerator = new Computer() {
+        public String compute(Object input) {
+        	return computeNext(input, true, true);
+        }
+    };
+    
+    /** This object performs near-hit solution enumeration. */
+    private final Computer nearHitEnumerator = new Computer() {
+        public String compute(Object input) {
+        	return computeNext(input, true, false);
         }
     };
 
+    public String computeNext(Object input, final boolean useBordeaxEngine, final boolean findNearMiss) {
+        final String arg = (String)input;
+        OurUtil.show(frame);
+        if (WorkerEngine.isBusy())
+            throw new RuntimeException("Alloy4 is currently executing a SAT solver command. Please wait until that command has finished.");
+        SimpleCallback1 cb = new SimpleCallback1(SimpleGUI.this, viz, log, VerbosityPref.get().ordinal(), latestAlloyVersionName, latestAlloyVersion);
+        SimpleTask2 task = new SimpleTask2();
+        task.filename = arg;
+        task.useBordeaxEngine = useBordeaxEngine;
+        task.findNearMiss = findNearMiss;
+        try {
+            WorkerEngine.runLocally(task, cb);
+//            if (Util.isDebug() && VerbosityPref.get().geq(Verbosity.FULLDEBUG))
+//                WorkerEngine.runLocally(task, cb);
+//            else
+//                WorkerEngine.run(task, SubMemory.get(), SubStack.get(), alloyHome() + fs + "binary", "", cb);
+//            task.run(cb);
+        } catch(Throwable ex) {
+            WorkerEngine.stop();
+            log.logBold("Fatal Error: Solver failed due to unknown reason.\n" +
+              "One possible cause is that, in the Options menu, your specified\n" +
+              "memory size is larger than the amount allowed by your OS.\n" +
+              "Also, please make sure \"java\" is in your program path.\n");
+            log.logDivider();
+            log.flush();
+            doStop(2);
+            return arg;
+        }
+        subrunningTask=2;
+        runmenu.setEnabled(false);
+        runbutton.setVisible(false);
+        showbutton.setEnabled(false);
+        stopbutton.setVisible(true);
+        return arg;
+    }
+    
     /** Converts an A4TupleSet into a SimTupleset object. */
     private static SimTupleset convert(Object object) throws Err {
         if (!(object instanceof A4TupleSet)) throw new ErrorFatal("Unexpected type error: expecting an A4TupleSet.");
@@ -1829,8 +1860,9 @@ public final class SimpleGUI implements ComponentListener, Listener {
         }
 
         // Pre-load the visualizer
-        viz = new VizGUI(false, "", windowmenu2, enumerator, evaluator);
+        viz = new VizGUI(false, "", windowmenu2, nextEnumerator, nearMissEnumerator, nearHitEnumerator, evaluator);
         viz.doSetFontSize(FontSize.get());
+        viz.enableBordeaux(UseBordeauxSolver.get());
 
         // Create the toolbar
         try {

@@ -25,17 +25,56 @@ public final class BordeauxEngine {
 
 	private final static Logger logger = Logger
 			.getLogger(BordeauxEngine.class.getName() + "--" + Thread.currentThread().getName());
-	private final File tmpPath = new File("./tmp/");
+	private File tmpPath = new File("./tmp/");
 
+	private final File inputPath;
+	private final A4Reporter reporter;
+	
+	private boolean firstNearMiss = true;
+	private String currentMiss = "";
+	private String currentHit = "";
+	private A4Solution previousHit;
+	private A4Solution previousMiss;
+	private A4Solution initialSolution;
+	
 	private static BordeauxEngine instance = new BordeauxEngine();
 
 	private BordeauxEngine() {
+		this.reporter = null;
+		this.inputPath = null;
 	}
 
+	public BordeauxEngine(A4Reporter reporter, File inputPath) {
+		this.reporter = reporter;
+		this.inputPath = inputPath;
+	}
+	
+	public BordeauxEngine(A4Reporter reporter, File inputPath, Command command, A4Solution initialSolution) {
+		this(reporter, inputPath);
+		this.initialSolution = initialSolution;
+		if(initialSolution != null) {
+			this.currentHit =  ExtractorUtils.convertA4SolutionToAlloySyntax(initialSolution, true);
+			this.currentMiss = BordeauxEngine.not(ExtractorUtils.convertFormulaExprToAlloySyntax(command.formula, true));
+		}
+	}
+
+	public BordeauxEngine(A4Reporter reporter, File inputPath, File tmpPath, Command command, A4Solution initialSolution) {
+		this(reporter, inputPath, command, initialSolution);
+		this.tmpPath = tmpPath;
+	}
+	
+	private static String not(String s) {
+		return String.format("not\n\t(\n\t\t%s\n\t)", s);
+	}
+	
 	public static BordeauxEngine get() {
 		return instance;
 	}
 
+	public A4Solution getInitialSolution() {
+		return this.initialSolution;
+	}
+	
 	public A4Solution getBorderInstances(A4Reporter reporter, File inputPath, String...constraints) {
 					
 		return this.getBorderInstances(reporter, inputPath, new File(""), constraints);
@@ -118,7 +157,6 @@ public final class BordeauxEngine {
 		return soln;
 	}
 	 
-
 	/**
 	 * @param reporter - The SimpleReporter which updates the UI as progress comes in (Note: This reporter is not used to initial calls to Alloy)
 	 * @param inputPath
@@ -190,10 +228,11 @@ public final class BordeauxEngine {
 			logger.log(Level.SEVERE, Utils.threadName() + " Failed to generate on border code", e);
 		}
 
-		logger.info("OnBorder Code generated...running Alloy*");
 		if (Configuration.IsInDeubbungMode) {
 			logger.info("\n\nOnBorderFile for: " + onBorderFileName + "\n" + Utils.readFile(onBorderFile.getAbsolutePath()) + "\n\n");
 		}
+		
+		logger.info("OnBorder Code generated...running Alloy*");
 
 		// Run on-border instances through the higher order solver (alloy*)
 		success = true;
@@ -236,4 +275,49 @@ public final class BordeauxEngine {
 		return soln;
 	}
 
+	public static BordeauxEngine executeAlloy(A4Reporter reporter, File inputPath, Command command) {
+
+		try {
+			A4CommandExecuter.get().runAlloy(inputPath.getAbsolutePath(), reporter, command.label);
+			A4Solution initialSoln = reporter.getA4Solution();
+			return new BordeauxEngine(reporter, inputPath, command, initialSoln);
+		} catch (Exception e) {
+			e.printStackTrace();
+			logger.severe(
+					"[" + Thread.currentThread().getName() + "] " + " Failed to execute alloy on file: " + inputPath);
+			if (Configuration.IsInDeubbungMode) {
+				logger.log(Level.SEVERE, "[" + Thread.currentThread().getName() + "] " + e.getMessage(), e);
+			}
+			
+			throw new RuntimeException();
+		}
+	}
+	
+	public A4Solution nextNearMiss() {
+		
+		if(firstNearMiss) {
+			this.previousMiss = this.getBorderInstancesFromStaticInstance(this.reporter, this.inputPath, currentHit, currentMiss);
+			firstNearMiss = false;
+			return this.previousMiss;			
+		}
+		
+		if(this.previousMiss != null) {
+			String exclude = BordeauxEngine.not(ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousMiss, true));
+			currentMiss += "\n\t and " + exclude;
+			this.previousMiss = this.getBorderInstancesFromStaticInstance(this.reporter, this.inputPath, currentHit, currentMiss);
+		}
+		
+		return this.previousMiss;
+	}
+	
+	public A4Solution nextNearHit() {
+
+		if(this.previousHit != null) {
+			String exclude = BordeauxEngine.not(ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousHit, true));
+			currentHit += "\n\t and " + exclude;
+			this.previousHit = this.getBorderInstancesFromStaticInstance(this.reporter, this.inputPath, currentHit, currentMiss);
+		}
+		
+		return this.previousHit;
+	}
 }
