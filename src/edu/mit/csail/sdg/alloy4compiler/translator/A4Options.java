@@ -235,4 +235,19 @@ public final class A4Options implements Serializable {
         x.enableBordeaux = enableBordeaux;
         return x;
     }
+
+	@Override
+	public String toString() {
+		return "A4Options [symmetry=" + symmetry + ", skolemDepth=" + skolemDepth + ", coreMinimization="
+				+ coreMinimization + ", coreGranularity=" + coreGranularity + ", solver=" + solver + ", solverThreads="
+				+ solverThreads + ", solverThreadsShareClauses=" + solverThreadsShareClauses + ", solverDirectory="
+				+ solverDirectory + ", tempDirectory=" + tempDirectory + ", originalFilename=" + originalFilename
+				+ ", recordKodkod=" + recordKodkod + ", noOverflow=" + noOverflow + ", unrolls=" + unrolls
+				+ ", partialInstance=" + partialInstance + ", renameAtoms=" + renameAtoms + ", higherOrderSolver="
+				+ higherOrderSolver + ", holFullIncrements=" + holFullIncrements + ", holMaxIter=" + holMaxIter
+				+ ", convertHolInst2A4Sol=" + convertHolInst2A4Sol + ", enableBordeaux=" + enableBordeaux + "]";
+	}
+    
+    
+    
 }

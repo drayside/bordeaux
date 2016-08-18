@@ -103,7 +103,13 @@ public class ExtractorUtils {
 			// The ordering sig should be skipped
 			if (isOrdering(sig))
 				continue;
-
+			
+			// TODO: Trying to exlcude atons that are defined as signatures. Find a better condition.
+			if(!sig.label.startsWith("this/")) {
+				System.out.println("" + (sig.isAtom == null ? "not" : "") + "atom");
+				continue;
+			}
+			
 			String sigName = sig.label.replace("this/", "");
 			sigName = useLocalNames ? getCamelCase(sigName) : sigName;
 

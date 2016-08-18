@@ -705,15 +705,7 @@ public final class SimpleReporter extends A4Reporter {
 //                    //TranslateAlloyToKodkod.execute_commandFromBook(rep, world.getAllReachableSigs(), cmd, options);
 //                }
                 
-                TranslateAlloyToKodkod tr;
-                if(options.enableBordeaux) {
-                	A4Options opt = options.dup();
-                	opt.higherOrderSolver = false;
-                    tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, opt);
-                }else{
-                	tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options);
-                }
-                
+                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options);
                 sol = tr.getFrame();
                 latestKodkod = sol;
                 sol = tr.executeCommandFromBook();

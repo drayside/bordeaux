@@ -64,6 +64,7 @@ public final class BordeauxEngine {
 	}
 	
 	private static String not(String s) {
+		if(s == null || s.isEmpty()) return "";
 		return String.format("not\n\t(\n\t\t%s\n\t)", s);
 	}
 	
@@ -271,7 +272,7 @@ public final class BordeauxEngine {
 			}
 		}
 
-		onBorderFile.delete();
+		onBorderFile.deleteOnExit();
 		return soln;
 	}
 

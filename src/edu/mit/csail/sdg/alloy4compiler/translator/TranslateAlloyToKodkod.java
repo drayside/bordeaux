@@ -1077,6 +1077,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
             Pos p = frame.kv2typepos(ex.decl().variable()).b;
             throw new ErrorType(p, "Analysis cannot be performed since it requires higher-order quantification that could not be skolemized.", ex);
         } catch(Throwable ex) {
+        	ex.printStackTrace();
             if (ex instanceof Err) throw (Err)ex; else throw new ErrorFatal("Unknown exception occurred: "+ex, ex);
         }
     }

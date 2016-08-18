@@ -244,8 +244,8 @@ public class A4CommandExecuter {
 
         // Choose some default options for how you want to execute the commands
         A4Options opt = new A4Options();
-        //// opt.tempDirectory = alloyHome() + fs + "tmp";
-        opt.tempDirectory = tmpDirectory;
+         opt.tempDirectory = alloyHome() + fs + "tmp";
+        //opt.tempDirectory = tmpDirectory;
         opt.solverDirectory = alloyHome() + fs + "binary";
         opt.recordKodkod = RecordKodkod.get();
         opt.noOverflow = NoOverflow.get();
@@ -259,7 +259,10 @@ public class A4CommandExecuter {
         opt.solver = Solver.get();
         opt.solverThreads = SolverThreads.get();
         opt.solverThreadsShareClauses = SolverThreadsShareClauses.get();
-
+        
+        opt.renameAtoms = false;
+        System.out.println(opt);
+        
         for (String filename : filenames) {
 
             if (Configuration.IsInDeubbungMode)
@@ -275,7 +278,12 @@ public class A4CommandExecuter {
                 if (Configuration.IsInDeubbungMode)
                     logger.log(Level.INFO, "[" + Thread.currentThread().getName() + "]" + "============ Command " + command + ": ============");
 
-                result.put(command, TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, opt));
+//                result.put(command, TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, opt));
+
+                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(rep, world.getAllReachableSigs(), command, opt);
+                A4Solution sol = tr.executeCommand();
+//                System.exit(0);
+                result.put(command, sol);
             }
         }
 

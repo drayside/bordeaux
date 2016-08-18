@@ -554,10 +554,10 @@ public final class VizGUI implements ComponentListener {
       updateSettingsButton.setVisible(settingsOpen==1 && currentMode==VisualizerMode.Viz);
       openEvaluatorButton.setVisible(!isMeta && settingsOpen==0 && evaluator!=null);
       closeEvaluatorButton.setVisible(!isMeta && settingsOpen==2 && evaluator!=null);
-      enumerateNextMenu.setEnabled(!enableBordeaux && !isMeta && settingsOpen==0 && nextEnumerator!=null);
+      enumerateNextMenu.setEnabled(!isMeta && settingsOpen==0 && nextEnumerator!=null);
       enumerateNearMissMenu.setEnabled(enableBordeaux && !isMeta && settingsOpen==0 && nearMissEnumerator!=null);
       enumerateNearHitMenu.setEnabled(enableBordeaux &&!isMeta && settingsOpen==0 && nearHitEnumerator!=null);
-      enumerateNextButton.setVisible(!enableBordeaux && !isMeta && settingsOpen==0 && nextEnumerator!=null);
+      enumerateNextButton.setVisible(!isMeta && settingsOpen==0 && nextEnumerator!=null);
       enumerateNearMissButton.setVisible(enableBordeaux && !isMeta && settingsOpen==0 && nearMissEnumerator!=null);
       enumerateNearHitButton.setVisible(enableBordeaux && !isMeta && settingsOpen==0 && nearHitEnumerator!=null);
       toolbar.setVisible(true);

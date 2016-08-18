@@ -18,8 +18,9 @@ pred hi {
 }
 
 fact {
-	isAcyclic[Node, next]
-	singleParent[Node, next]
+//	isAcyclic[Node, next]
+	//singleParent[Node, next]
+//eq[#Node,  3]
 }
 
 /*
