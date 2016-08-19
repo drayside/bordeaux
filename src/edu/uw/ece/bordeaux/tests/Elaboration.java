@@ -42,31 +42,29 @@ public class Elaboration {
 	public void setUp() {
 		tmpFolder.mkdirs();
 	}
-	
+
 	@Test
-	public void test(){
+	public void test() {
 		String content = "sig A{r: A}\nfact {some r}\npred p{some A}\nfun f[a:A]:A{{aa:a| some a.r}}\npred p2[]{p and some f[A]}\nrun p2";
-		
+
 		final File test = new File(tmpFolder, "a.als");
-		final String alloySample = content ;
+		final String alloySample = content;
 		try {
 			Util.writeAll(test.getAbsolutePath(), alloySample);
 		} catch (Err e) {
 			e.printStackTrace();
 			fail(e.msg);
 		}
-		
-		
-		//System.out.println(
-				createBodyOfInstance_Structural_Constraint_Predicates(test, tmpFolder)
-				//)
-				;
+
+		// System.out.println(
+		createBodyOfInstance_Structural_Constraint_Predicates(test, tmpFolder)
+		// )
+		;
 	}
-	
 
 	// ---------------------------------------------
 
-	protected CompModule parseToCompModule(File src){
+	protected CompModule parseToCompModule(File src) {
 		CompModule module = null;
 		try {
 			module = (CompModule) A4CommandExecuter.get().parse(src.getAbsolutePath(), A4Reporter.NOP);
@@ -75,8 +73,8 @@ public class Elaboration {
 		}
 		return module;
 	}
-	
-	protected List<Formula> convertConstraintsToFormulas(CompModule module, Command command){
+
+	protected List<Formula> convertConstraintsToFormulas(CompModule module, Command command) {
 		A4Options options = new A4Options();
 		options.solver = A4Options.SatSolver.KK;
 		List<Formula> formulas = new ArrayList<>();
@@ -88,7 +86,7 @@ public class Elaboration {
 		}
 		return Collections.unmodifiableList(formulas);
 	}
-	
+
 	public List<Formula> convertSigsdeclarationToFormula(File src) {
 		CompModule module = parseToCompModule(src);
 
@@ -97,8 +95,8 @@ public class Elaboration {
 
 		return convertConstraintsToFormulas(module, command);
 	}
-	
-	public List<Formula> convertAllConstraintsToFormula(File src){
+
+	public List<Formula> convertAllConstraintsToFormula(File src) {
 		CompModule module = parseToCompModule(src);
 
 		if (module.getAllCommands().size() != 1)
@@ -112,26 +110,26 @@ public class Elaboration {
 	}
 
 	/**
-	 * Given a the src file, the function returns a pair, where result.get(0) is the
-	 * body of 'instance' predicate, and result.get(1) is the body of structural
-	 * predicate. result.get(2) body of instance predicate.
+	 * Given a the src file, the function returns a list, where result.get(0) is
+	 * the body of 'instance' predicate, and result.get(1) is the body of
+	 * structural predicate. result.get(2) body of constraint predicate.
 	 * 
 	 * tmpfolder is used for storing src transformed files.
 	 * 
 	 * @param src
 	 * @param tmpFolder
-	 * @return
+	 * @return 
 	 */
 	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder) {
 
 		final String elabCommandName = "_s__igsp_";
-		
-		final String sigsWithStructuralConstraints = createAllSigsdeclaration(src, true, false)
-				+ "\npred "+elabCommandName+"[]{}\nrun "+elabCommandName;
-		final String sigsWithoutStructuralConstraints = createAllSigsdeclaration(src, false, false)
-				+ "\npred "+elabCommandName+"[]{}\nrun "+elabCommandName;
+
+		final String sigsWithStructuralConstraints = createAllSigsdeclaration(src, true, false) + "\npred "
+				+ elabCommandName + "[]{}\nrun " + elabCommandName;
+		final String sigsWithoutStructuralConstraints = createAllSigsdeclaration(src, false, false) + "\npred "
+				+ elabCommandName + "[]{}\nrun " + elabCommandName;
 		final String sigsWithoutStructuralConstraintsWithOneSigs = createAllSigsdeclaration(src, false, true)
-				+ "\npred "+elabCommandName+"[]{}\nrun "+elabCommandName;
+				+ "\npred " + elabCommandName + "[]{}\nrun " + elabCommandName;
 
 		final File sigsWithStructuralConstraintsFile = new File(tmpFolder,
 				"with_" + Math.abs(sigsWithStructuralConstraints.hashCode()) + ".als");
@@ -178,7 +176,7 @@ public class Elaboration {
 				convertSigsdeclarationToFormula(sigsWithStructuralConstraintsFile));
 
 		Set<String> structuralFormulas = withStructurals.stream().map(f -> f.toString()).collect(Collectors.toSet());
-		
+
 		structuralFormulas.removeAll(allunivs);
 		structuralFormulas.removeAll(allExtends);
 
@@ -222,20 +220,24 @@ public class Elaboration {
 		sigsWithoutStructuralConstraintsFile.delete();
 		sigsWithoutStructuralConstraintsWithOneSigsFile.delete();
 
-		// remove the structural constraints from the rest of constraints in the formula.
+		// remove the structural constraints from the rest of constraints in the
+		// formula.
 		List<Formula> constraintFormulas = convertAllConstraintsToFormula(src);
-		
+
 		// Fetch the command name
 		CompModule module = parseToCompModule(src);
 		String commandLabel = module.getAllCommands().get(0).label;
 		// commandname does not have a name
-		final String commandName = commandLabel.contains("$") ? "this" : commandLabel+"_this";
-		Set<String> constraintFormulasAsSet = constraintFormulas.stream().map(f->f.toString()).collect(Collectors.toSet());
-		Set<String> strucuralsAsSet = withStructurals.stream().map(f->f.toString()).map(s->s.replace(elabCommandName+"_this", commandName)).collect(Collectors.toSet());
+		final String commandName = commandLabel.contains("$") ? "this" : commandLabel + "_this";
+		Set<String> constraintFormulasAsSet = constraintFormulas.stream().map(f -> f.toString())
+				.collect(Collectors.toSet());
+		Set<String> strucuralsAsSet = withStructurals.stream().map(f -> f.toString())
+				.map(s -> s.replace(elabCommandName + "_this", commandName)).collect(Collectors.toSet());
 		constraintFormulasAsSet.removeAll(strucuralsAsSet);
-		
-		final String constraintsBody = constraintFormulasAsSet.stream().map(s->sanitizer(s)).collect(Collectors.joining("\n"));
-		
+
+		final String constraintsBody = constraintFormulasAsSet.stream().map(s -> sanitizer(s))
+				.collect(Collectors.joining("\n"));
+
 		return Arrays.asList(instanceBody, structuralConstraintBody, constraintsBody);
 	}
 
@@ -343,7 +345,19 @@ public class Elaboration {
 	 * @param withOne
 	 * @return
 	 */
-	public String createAllSigsdeclaration(File src, boolean withMult, boolean withOne) {
+	public String createAllSigsdeclaration(File src) {
+		return createAllSigsdeclaration(src, false, false);
+	}
+	
+	/**
+	 * Given an Alloy source code, an Alloy code per each signature is created.
+	 * 
+	 * @param src
+	 * @param withMult
+	 * @param withOne
+	 * @return
+	 */
+	protected String createAllSigsdeclaration(File src, boolean withMult, boolean withOne) {
 		CompModule module = null;
 		try {
 			module = (CompModule) A4CommandExecuter.get().parse(src.getAbsolutePath(), A4Reporter.NOP);
@@ -384,7 +398,6 @@ public class Elaboration {
 		assertEquals(expectedContentWithoutMult, allsigs);
 	}
 
-	
 	public void testWithStructuralConstraints(String content, String expected) {
 		CompModule module = creatAndParseAlloyCodeForTest(content);
 		String allsigs = module.getAllReachableUserDefinedSigs().stream()
@@ -416,7 +429,7 @@ public class Elaboration {
 	public void testStructuralBody(String content, String expected) {
 		assertEquals(expected, getInstanceBodyStruralConstraintsBodies(content).get(1));
 	}
-	
+
 	public void testConstratinsBody(String content, String expected) {
 		assertEquals(expected, getInstanceBodyStruralConstraintsBodies(content).get(2));
 	}
@@ -475,43 +488,43 @@ public class Elaboration {
 	@Test
 	public void testInstanceBodySingleBinaryOneRelation() {
 		testInstanceBody("sig A{r: A}\nfact{some A}\nrun{}",
-				"(all sigsp_this: one A | ((sigsp_this . r) in A))\n((r . univ) in A)");
+				"(all _s__igsp__this: one A | ((_s__igsp__this . r) in A))\n((r . univ) in A)");
 	}
 
 	@Test
 	public void testInstanceBodySingleBinarySetRelation() {
 		testInstanceBody("sig A{r: set A}\nrun{}",
-				"(all sigsp_this: one A | ((sigsp_this . r) in A))\n((r . univ) in A)");
+				"(all _s__igsp__this: one A | ((_s__igsp__this . r) in A))\n((r . univ) in A)");
 	}
 
 	@Test
 	public void testInstanceBodySingleBinaryloneRelation() {
 		testInstanceBody("sig A{r: lone A}\nrun{}",
-				"(all sigsp_this: one A | ((sigsp_this . r) in A))\n((r . univ) in A)");
+				"(all _s__igsp__this: one A | ((_s__igsp__this . r) in A))\n((r . univ) in A)");
 	}
 
 	@Test
 	public void testInstanceBodySingleTernaryRelation() {
 		testInstanceBody("sig A{r:A->A}\nrun{}",
-				"(all sigsp_this: one A | ((sigsp_this . r) in (A -> A)))\n(((r . univ) . univ) in A)");
+				"(all _s__igsp__this: one A | ((_s__igsp__this . r) in (A -> A)))\n(((r . univ) . univ) in A)");
 	}
 
 	@Test
 	public void testInstanceBodySingleTernaryLoneSetRelation() {
 		testInstanceBody("sig A{r:A lone->A}\nrun{}",
-				"(all sigsp_this: one A | ((sigsp_this . r) in (A -> A)))\n(((r . univ) . univ) in A)");
+				"(all _s__igsp__this: one A | ((_s__igsp__this . r) in (A -> A)))\n(((r . univ) . univ) in A)");
 	}
 
 	@Test
 	public void testInstanceBodySingleTernaryOneLoneRelation() {
 		testInstanceBody("sig A{r:A one->lone A}\nrun{}",
-				"(all sigsp_this: one A | ((sigsp_this . r) in (A -> A)))\n(((r . univ) . univ) in A)");
+				"(all _s__igsp__this: one A | ((_s__igsp__this . r) in (A -> A)))\n(((r . univ) . univ) in A)");
 	}
 
 	@Test
 	public void testInstanceBodyMultipleBinaryRelations() {
 		testInstanceBody("sig A{r:A, s: lone A}\nrun{}",
-				"(all sigsp_this: one A | ((sigsp_this . r) in A))\n((r . univ) in A)\n(all sigsp_this: one A | ((sigsp_this . s) in A))\n((s . univ) in A)");
+				"(all _s__igsp__this: one A | ((_s__igsp__this . r) in A))\n((r . univ) in A)\n(all _s__igsp__this: one A | ((_s__igsp__this . s) in A))\n((s . univ) in A)");
 	}
 
 	@Test
@@ -522,23 +535,21 @@ public class Elaboration {
 	@Test
 	public void testInstanceBodyOneSingleOneRelation() {
 		testInstanceBody("one sig A{r: A}\nrun{}",
-				"(all sigsp_this: one A | ((sigsp_this . r) in A))\n((r . univ) in A)");
+				"(all _s__igsp__this: one A | ((_s__igsp__this . r) in A))\n((r . univ) in A)");
 	}
 
 	@Test
 	public void testInstanceBodyAbstractSingleOneRelation() {
 		testInstanceBody("abstract sig A{r: A}\nrun{}",
-				"(all sigsp_this: one A | ((sigsp_this . r) in A))\n((r . univ) in A)");
+				"(all _s__igsp__this: one A | ((_s__igsp__this . r) in A))\n((r . univ) in A)");
 	}
 
 	@Test
 	public void testInstanceBodyAbstractSingleExtendedSigOneRelation() {
 		testInstanceBody("abstract sig A{r: A}\nsig B extends A{}\nrun{}",
-				"(all sigsp_this: one B | ((sigsp_this . r) in B))\n((r . univ) in B)");
+				"(all _s__igsp__this: one B | ((_s__igsp__this . r) in B))\n((r . univ) in B)");
 	}
-	
-	
-	
+
 	@Test
 	public void testStructuralBodySingleSig() {
 		testStructuralBody("sig A{}\nfact{some A}\nrun{}", "");
@@ -547,46 +558,43 @@ public class Elaboration {
 	@Test
 	public void testStructuralBodySingleBinaryOneRelation() {
 		testStructuralBody("sig A{r: A}\nfact{some A}\nrun{}",
-				"(all sigsp_this: one A | (one (sigsp_this . r) ))");
+				"(all _s__igsp__this: one A | (one (_s__igsp__this . r) ))");
 	}
 
 	@Test
 	public void testStructuralBodySingleBinarySetRelation() {
-		testStructuralBody("sig A{r: set A}\nrun{}",
-				"");
+		testStructuralBody("sig A{r: set A}\nrun{}", "");
 	}
 
 	@Test
 	public void testStructuralBodySingleBinaryloneRelation() {
-		testStructuralBody("sig A{r: lone A}\nrun{}",
-				"(all sigsp_this: one A | (lone (sigsp_this . r) ))");
+		testStructuralBody("sig A{r: lone A}\nrun{}", "(all _s__igsp__this: one A | (lone (_s__igsp__this . r) ))");
 	}
 
 	@Test
 	public void testStructuralBodySingleTernaryRelation() {
-		testStructuralBody("sig A{r:A->A}\nrun{}",
-				"");
+		testStructuralBody("sig A{r:A->A}\nrun{}", "");
 	}
 
 	@Test
 	public void testStructuralBodySingleTernaryLoneSetRelation() {
-		
+
 		String content = "sig A{r:A lone->A}\nrun{}";
-		String expected = "\\(all sigsp_this: one A \\| \\(\\( \\(all v\\d+: one A \\| \\(\\(v\\d+ \\. \\(sigsp_this \\. r\\)\\) in A\\)\\)\\) && \\(all v\\d+: one A \\| \\(lone \\(\\(sigsp_this \\. r\\) \\. v\\d+\\) && \\(\\(\\(sigsp_this \\. r\\) \\. v\\d+\\) in A\\)\\)\\)\\)\\)";
+		String expected = "\\(all _s__igsp__this: one A \\| \\(\\( \\(all v\\d+: one A \\| \\(\\(v\\d+ \\. \\(_s__igsp__this \\. r\\)\\) in A\\)\\)\\) && \\(all v\\d+: one A \\| \\(lone \\(\\(_s__igsp__this \\. r\\) \\. v\\d+\\) && \\(\\(\\(_s__igsp__this \\. r\\) \\. v\\d+\\) in A\\)\\)\\)\\)\\)";
 		assertTrue(getInstanceBodyStruralConstraintsBodies(content).get(1).matches(expected));
 	}
 
 	@Test
 	public void testStructuralBodySingleTernaryOneLoneRelation() {
 		String content = "sig A{r:A one->lone A}\nrun{}";
-		String expected = "\\(all sigsp_this: one A \\| \\(\\( \\(all v\\d+: one A \\| \\(lone \\(v\\d+ \\. \\(sigsp_this \\. r\\)\\) && \\(\\(v\\d+ \\. \\(sigsp_this \\. r\\)\\) in A\\)\\)\\)\\) && \\(all v\\d+: one A \\| \\(one \\(\\(sigsp_this \\. r\\) \\. v\\d+\\) && \\(\\(\\(sigsp_this \\. r\\) \\. v\\d+\\) in A\\)\\)\\)\\)\\)";
+		String expected = "\\(all _s__igsp__this: one A \\| \\(\\( \\(all v\\d+: one A \\| \\(lone \\(v\\d+ \\. \\(_s__igsp__this \\. r\\)\\) && \\(\\(v\\d+ \\. \\(_s__igsp__this \\. r\\)\\) in A\\)\\)\\)\\) && \\(all v\\d+: one A \\| \\(one \\(\\(_s__igsp__this \\. r\\) \\. v\\d+\\) && \\(\\(\\(_s__igsp__this \\. r\\) \\. v\\d+\\) in A\\)\\)\\)\\)\\)";
 		assertTrue(getInstanceBodyStruralConstraintsBodies(content).get(1).matches(expected));
 	}
 
 	@Test
 	public void testStructuralBodyMultipleBinaryRelations() {
 		testStructuralBody("sig A{r:A, s: lone A}\nrun{}",
-				"(all sigsp_this: one A | (one (sigsp_this . r) ))\n(all sigsp_this: one A | (lone (sigsp_this . s) ))");
+				"(all _s__igsp__this: one A | (one (_s__igsp__this . r) ))\n(all _s__igsp__this: one A | (lone (_s__igsp__this . s) ))");
 	}
 
 	@Test
@@ -596,39 +604,49 @@ public class Elaboration {
 
 	@Test
 	public void testStructuralBodyOneSingleOneRelation() {
-		testStructuralBody("one sig A{r: A}\nrun{}",
-				"(one (A . (A -> r)) && )");
+		testStructuralBody("one sig A{r: A}\nrun{}", "(one (A . (A -> r)) && )");
 	}
 
 	@Test
 	public void testStructuralBodyAbstractSingleOneRelation() {
-		testStructuralBody("abstract sig A{r: A}\nrun{}",
-				"(all sigsp_this: one A | (one (sigsp_this . r) ))");
+		testStructuralBody("abstract sig A{r: A}\nrun{}", "(all _s__igsp__this: one A | (one (_s__igsp__this . r) ))");
 	}
 
 	@Test
 	public void testStructuralBodyAbstractSingleExtendedSigOneRelation() {
 		testStructuralBody("abstract sig A{r: A}\nsig B extends A{}\nrun{}",
-				"(all sigsp_this: one B | (one (sigsp_this . r) ))");
+				"(all _s__igsp__this: one B | (one (_s__igsp__this . r) ))");
 	}
-	
-	
+
 	@Test
 	public void testSigSimpleRun() {
-		testConstratinsBody("sig A{}\nrun{}",
-				"");
+		testConstratinsBody("sig A{}\nrun{}", "");
 	}
-	
+
 	@Test
 	public void testSigSomeSimpleRun() {
-		testConstratinsBody("sig A{}\nrun{ some A}",
-				"some A");
+		testConstratinsBody("sig A{}\nrun{ some A}", "some A");
 	}
-	
+
 	@Test
 	public void testSigSomePredRun() {
-		testConstratinsBody("sig A{}\npred p[]{some A}\nrun p",
-				"some A");
+		testConstratinsBody("sig A{}\npred p[]{some A}\nrun p", "some A");
+	}
+
+	@Test
+	public void testSigSomeFactPredRun() {
+		testConstratinsBody("sig A{r:A}\nfact{p and some r}pred p[]{some A}\nrun {}", "some r\nsome A");
+	}
+
+	@Test
+	public void testSigSomeFactPredWithParamRun() {
+		testConstratinsBody("sig A{r:A}\nfact{p[A] and some r}pred p[a: A]{some a}\nrun {}", "some r\nsome A");
+	}
+
+	@Test
+	public void testSigSomeFactPredWithParamAppendedFactRun() {
+		testConstratinsBody("sig A{r:A}{#r=2}\nfact{p[A] and some r}pred p[a: A]{some a}\nrun {}",
+				"(all this: one A | (#((this . r)) = 2))\nsome r\nsome A");
 	}
 
 }
