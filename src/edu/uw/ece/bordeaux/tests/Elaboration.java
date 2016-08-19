@@ -101,7 +101,9 @@ public class Elaboration {
 	}
 
 	protected String sanitizer(String statement) {
-		return statement.replaceAll("this/[a-zA-Z_$][a-zA-Z_$0-9]*\\.", "").replace("this/", "");
+		String s = statement.replace(" remainder", "");
+		s = s.replaceAll("this/[a-zA-Z_$][a-zA-Z_$0-9]*\\.", "").replace("this/", "");
+		return s;
 	}
 
 	/**

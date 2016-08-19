@@ -13,6 +13,7 @@ import org.apache.commons.collections4.MultiValuedMap;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Util;
+import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.ast.Module;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
@@ -37,39 +38,12 @@ public class OnBorderCodeGenerator {
 	private String commandScope;
 	private String includeConstraints;
 	private String structuralConstraints;
+	private String formulaConstraints;
     
     private OnBorderCodeGenerator() {
         this.indent = "";
         this.commandScope = "";
         this.out = new PrintWriter(System.out);
-    }
-    
-    /**
-     * Creates a new instance of {@link OnBorderCodeGenerator}.
-     * 
-     * The default {@link PrintWriter} used is System.out. Use the
-     * OnBorderCodeGenerator(Module, PrintWriter) to specify a different
-     * {@link PrintWriter}.
-     * 
-     * @param module
-     *            - The Alloy {@link Module} to be used.
-     */
-    public OnBorderCodeGenerator(Module module) {
-        this();
-        this.initModule(module);
-    }
-    
-    /**
-     * Creates a new instance of {@link OnBorderCodeGenerator}.
-     * 
-     * @param module
-     *            - The Alloy {@link Module} to be used.
-     * @param writer
-     *            - Specifies the {@link PrintWriter} to be used.
-     */
-    public OnBorderCodeGenerator(Module module, PrintWriter writer) {
-        this(module);
-        this.out = writer;
     }
     
     /**
@@ -83,10 +57,11 @@ public class OnBorderCodeGenerator {
      *            - The path to the alloy file to be used.
      * @throws Err 
      */
-    public OnBorderCodeGenerator(String filepath) throws Err {
+    public OnBorderCodeGenerator(String filepath, Command command) throws Err {
     	this();
         this.filepath = filepath;
         this.initModule(A4CommandExecuter.get().parse(filepath, A4Reporter.NOP));
+        this.initialiseContraints(new File("tmp/"), command);
     }
     
     /**
@@ -98,8 +73,8 @@ public class OnBorderCodeGenerator {
      *            - Specifies the {@link PrintWriter} to be used.
      * @throws Err 
      */
-    public OnBorderCodeGenerator(String filepath, PrintWriter writer) throws Err {
-        this(filepath);
+    public OnBorderCodeGenerator(String filepath, Command command, PrintWriter writer) throws Err {
+        this(filepath, command);
         this.out = writer;
     }
     
@@ -114,6 +89,36 @@ public class OnBorderCodeGenerator {
         catch (Err e) {
             e.printStackTrace();
         }
+    }
+    
+    private void initialiseContraints(File tmpFolder, Command command) {
+    	
+        Elaboration elaboration = new Elaboration();
+
+        List<String> strs = elaboration.createBodyOfInstance_Structural_Constraint_Predicates(new File(filepath), tmpFolder, command.label);
+        this.includeConstraints = strs.get(0).replace("\n", "\n\t");
+        this.structuralConstraints = strs.get(1).replace("\n", "\n\t");
+        this.formulaConstraints = strs.get(2).replace("\n", "\n\t");
+        
+        for(SigFieldWrapper sigWrap : this.sigs) {
+        	
+        	includeConstraints = includeConstraints.replace(sigWrap.getSig(), ExtractorUtils.getLocalSigName(sigWrap.getSig()));
+        	structuralConstraints = structuralConstraints.replace(sigWrap.getSig(), ExtractorUtils.getLocalSigName(sigWrap.getSig()));
+        	formulaConstraints = formulaConstraints.replace(sigWrap.getSig(), ExtractorUtils.getLocalSigName(sigWrap.getSig()));
+        	
+        	for(FieldInfo field : sigWrap.getFields()) {
+        		
+        		includeConstraints = includeConstraints.replace(field.getName(), field.getLabel());
+        		structuralConstraints = structuralConstraints.replace(field.getName(), field.getLabel());
+        		formulaConstraints = formulaConstraints.replace(field.getName(), field.getLabel());
+        	}
+        }
+        
+        this.commandScope = ExtractorUtils.extractScopeFromCommand(command);
+    }
+    
+    public String getForumlaContstraints() {
+    	return this.formulaConstraints;
     }
     
     /**
@@ -153,33 +158,6 @@ public class OnBorderCodeGenerator {
     	this.run(constraints);
     }
     
-    public void run(File tmpFolder, String staticConstraint, String commandName) {
-    	
-        Elaboration elaboration = new Elaboration();
-
-        List<String> strs = elaboration.createBodyOfInstance_Structural_Constraint_Predicates(new File(filepath), tmpFolder, commandName);
-        this.includeConstraints = strs.get(0).replace("\n", "\n\t");
-        this.structuralConstraints = strs.get(1).replace("\n", "\n\t");
-        String formulaConstraints = Utils.not(strs.get(2).replace("\n", "\n\t"));
-        
-        for(SigFieldWrapper sigWrap : this.sigs) {
-        	
-        	includeConstraints = includeConstraints.replace(sigWrap.getSig(), ExtractorUtils.getLocalSigName(sigWrap.getSig()));
-        	structuralConstraints = structuralConstraints.replace(sigWrap.getSig(), ExtractorUtils.getLocalSigName(sigWrap.getSig()));
-        	formulaConstraints = formulaConstraints.replace(sigWrap.getSig(), ExtractorUtils.getLocalSigName(sigWrap.getSig()));
-        	
-        	for(FieldInfo field : sigWrap.getFields()) {
-        		
-        		includeConstraints = includeConstraints.replace(field.getName(), field.getLabel());
-        		structuralConstraints = structuralConstraints.replace(field.getName(), field.getLabel());
-        		formulaConstraints = formulaConstraints.replace(field.getName(), field.getLabel());
-        	}
-        }
-        
-        this.commandScope = ExtractorUtils.extractScopeFromCommand(this.filepath, commandName);
-    	runWithStaticIntance(staticConstraint, formulaConstraints);
-    }
-
     private void generateSigs(PrintWriter out) throws Err {
         
         this.out = out;
@@ -567,8 +545,6 @@ public class OnBorderCodeGenerator {
         	ln();
 	        println("pred isSTATICInstance [%s] {", params);
 	        indent();
-	        println("isInstance[%s]", args);
-	        println("structuralConstraints[%s]", args);
 	        println("%s", contraints[0]);
 	        outdent();
 	        println("}");

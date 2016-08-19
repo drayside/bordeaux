@@ -33,7 +33,25 @@ import edu.uw.ece.bordeaux.A4CommandExecuter;
  */
 public class ExtractorUtils {
 
+	public static Command getCommandFromNamePainfully(String filepath, String commandName) {
+		
+		CompModule world = null;
+		try {
+			world = (CompModule) A4CommandExecuter.get().parse(filepath, A4Reporter.NOP);
+		} catch (Err e) {
+			e.printStackTrace();
+			return null;
+		}
 
+		for (Command command : world.getAllCommands()) {
+			if (command.label.equals(commandName)) {
+				return command;
+			}
+		}
+		
+		return null;
+	}
+	
 	public static String extractScopeFromCommand(final String srcFile, final String commandName) {
 		
 		CompModule module = null;

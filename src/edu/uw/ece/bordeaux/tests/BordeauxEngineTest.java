@@ -20,6 +20,7 @@ import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.Configuration;
 import edu.uw.ece.bordeaux.HolaReporter;
 import edu.uw.ece.bordeaux.engine.BordeauxEngine;
+import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import edu.uw.ece.bordeaux.util.Utils;
 
 
@@ -48,72 +49,87 @@ public class BordeauxEngineTest {
 	public void testBareLinkedList() {
 		
 		String filename = "bare_linked_list.als";
-		File inpath = new File(MIN_DIST_DIRECTORY, filename);		
-		A4Solution sol = this.tryUsing(this.reporter, inpath.getAbsolutePath(), "p");
-		assertNotNull("Solution is null...An error occurred or model is UNSAT", sol);
+		String commandName = "p";
+		File filepath = new File(MIN_DIST_DIRECTORY, filename);			
+		
+		testMiss(commandName, filepath);
 	}
 	
 	@Test
 	public void testCourses() {
 		
 		String filename = "courses.als";
-		File inpath = new File(BORDEUX_MODELS_DIRECTORY, filename);		
-		A4Solution sol = this.tryUsing(this.reporter, inpath.getAbsolutePath(), "showSuccesfullPrograms");
-		assertNotNull("Solution is null...An error occurred or model is UNSAT", sol);
+		String commandName = "showSuccesfullPrograms";
+		File filepath = new File(BORDEUX_MODELS_DIRECTORY, filename);			
+		
+		testMiss(commandName, filepath);
 	}
 
 	@Test
 	public void testSinglyLinkedList() {
 		
 		String filename = "sll.als";
-		File inpath = new File(BORDEUX_MODELS_DIRECTORY, filename);		
-		A4Solution sol = this.tryUsing(this.reporter, inpath.getAbsolutePath(), "SinglyLinkedLists");
-		assertNotNull("Solution is null...An error occurred or model is UNSAT", sol);
+		String commandName = "SinglyLinkedLists";
+		File filepath = new File(BORDEUX_MODELS_DIRECTORY, filename);	
+		
+		testMiss(commandName, filepath);
 	}
 
 	@Test
 	public void testDijkstra() {
 		
 		String filename = "dijkstra.buggy.als";
-		File inpath = new File(BORDEUX_MODELS_DIRECTORY, filename);		
-		A4Solution sol = this.tryUsing(this.reporter, inpath.getAbsolutePath(), "check$1");
-		assertNotNull("Solution is null...An error occurred or model is UNSAT", sol);
+		String commandName = "check$1";
+		File filepath = new File(BORDEUX_MODELS_DIRECTORY, filename);		
+
+		testMiss(commandName, filepath);
 	}
-	
-	public A4Solution tryUsing(A4Reporter reporter, String filepath, String commandName) {
+
+	private void testMiss(String commandName, File filepath) {
+		HolaReporter reporter = new HolaReporter();
+		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
+		assertNotNull(engine);
+		
+		A4Solution nearMiss = engine.nextNearMiss(reporter);
+		assertNotNull(nearMiss);
+		
+		assertNotEquals(nearMiss, engine.getInitialSolution());
+	}
+
+	public BordeauxEngine createBordeauxEngine(A4Reporter reporter, File filepath, String commandName) {
+
 		assertNotNull(commandName);
 		
-		Command command = getCommandFromNamePainfully(reporter, filepath, commandName);
+		Command command = ExtractorUtils.getCommandFromNamePainfully(filepath.getAbsolutePath(), commandName);
 		assertNotNull("Cannot find command from command name", command);
 		
-		BordeauxEngine engine = BordeauxEngine.get();
-		
 		try {
-			return engine.getBorderInstancesFromStaticInstance(reporter, new File(filepath), command);
+			A4CommandExecuter.get().runAlloy(filepath.getAbsolutePath(), reporter, command.label);
+			A4Solution initialSoln = reporter.getA4Solution();
+			return new BordeauxEngine(filepath, command, initialSoln);
 		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-		return null;
-	}
-	
-	private Command getCommandFromNamePainfully(A4Reporter reporter, String filepath, String commandName) {
-		
-		CompModule world = null;
-		try {
-			world = (CompModule) A4CommandExecuter.get().parse(filepath, reporter);
-		} catch (Err e) {
 			e.printStackTrace();
 			return null;
 		}
-
-		for (Command command : world.getAllCommands()) {
-			if (command.label.equals(commandName)) {
-				return command;
-			}
-		}
-		
-		return null;
 	}
+//	
+//	public A4Solution tryUsing(A4Reporter reporter, String filepath, String commandName) {
+//		
+//		assertNotNull(commandName);
+//		
+//		Command command = getCommandFromNamePainfully(reporter, filepath, commandName);
+//		assertNotNull("Cannot find command from command name", command);
+//		
+//		BordeauxEngine engine = BordeauxEngine.get();
+//		
+//		try {
+//			return engine.getBorderInstancesFromStaticInstance(reporter, new File(filepath), command);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+//		return null;
+//	}
+	
 }

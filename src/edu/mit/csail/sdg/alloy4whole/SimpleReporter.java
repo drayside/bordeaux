@@ -568,7 +568,7 @@ public final class SimpleReporter extends A4Reporter {
             while(true) {
             	boolean none = false;
             	if(useBordeaxEngine) {cb("bold", "eyo.\n");
-            		sol = findNearMiss ? engine.nextNearMiss() : engine.nextNearHit();
+            		sol = findNearMiss ? engine.nextNearMiss(latestRep) : engine.nextNearHit(latestRep);
             		none = sol == null;
             		tries = 100;
             	} else {
@@ -712,7 +712,7 @@ public final class SimpleReporter extends A4Reporter {
                 //TranslateAlloyToKodkod.execute_commandFromBook(rep, world.getAllReachableSigs(), cmd, options);
                 
                 if(options.enableBordeaux) {
-                	bordeauxEngine = new BordeauxEngine(latestRep, new File(options.originalFilename), cmd, sol);
+                	bordeauxEngine = new BordeauxEngine(new File(options.originalFilename), cmd, sol);
                 }
                 
                 if (sol==null) result.add(null);

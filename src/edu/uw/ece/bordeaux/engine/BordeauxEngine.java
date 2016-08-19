@@ -28,7 +28,6 @@ public final class BordeauxEngine {
 	private File tmpPath = new File("./tmp/");
 
 	private final File inputPath;
-	private final A4Reporter reporter;
 	
 	private boolean firstNearMiss = true;
 	private String currentMiss = "";
@@ -36,46 +35,61 @@ public final class BordeauxEngine {
 	private A4Solution previousHit;
 	private A4Solution previousMiss;
 	private A4Solution initialSolution;
+	private Command command;
+	private OnBorderCodeGenerator generator;
+	private File onBorderFile;
+
 	
-	private static BordeauxEngine instance = new BordeauxEngine();
+	public BordeauxEngine(File inputPath, Command command, A4Solution initialSolution) {
 
-	private BordeauxEngine() {
-		this.reporter = null;
-		this.inputPath = null;
-	}
-
-	public BordeauxEngine(A4Reporter reporter, File inputPath) {
-		this.reporter = reporter;
 		this.inputPath = inputPath;
-	}
-	
-	public BordeauxEngine(A4Reporter reporter, File inputPath, Command command, A4Solution initialSolution) {
-		this(reporter, inputPath);
 		this.initialSolution = initialSolution;
+		this.command = command;
+		this.createCodeGenerator(inputPath, command);
+		
 		if(initialSolution != null) {
 			this.currentHit =  ExtractorUtils.convertA4SolutionToAlloySyntax(initialSolution, true);
-			this.currentMiss = BordeauxEngine.not(ExtractorUtils.convertFormulaExprToAlloySyntax(command.formula, true));
+			this.currentMiss = Utils.not(ExtractorUtils.convertFormulaExprToAlloySyntax(command.formula, true));
 		}
 	}
 
-	public BordeauxEngine(A4Reporter reporter, File inputPath, File tmpPath, Command command, A4Solution initialSolution) {
-		this(reporter, inputPath, command, initialSolution);
+	public BordeauxEngine(File inputPath, File tmpPath, Command command, A4Solution initialSolution) {
+		this(inputPath, command, initialSolution);
 		this.tmpPath = tmpPath;
 	}
 	
-	private static String not(String s) {
-		if(s == null || s.isEmpty()) return "";
-		return String.format("not\n\t(\n\t\t%s\n\t)", s);
+	private void createCodeGenerator(File inputPath, Command command) {
+
+		logger.info("Generating OnBorder code");
+		
+		// Generate on Border instances
+		String fileName = Utils.getFileName(inputPath.getAbsolutePath());
+		String onBorderFileName = fileName + ".hola-" + UUID.randomUUID().hashCode() + ".als";
+		this.onBorderFile = new File(tmpPath, onBorderFileName);
+		PrintWriter writer = null;
+		try {
+			writer = new PrintWriter(onBorderFile);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			String fileToReadFrom = inputPath.getAbsolutePath();
+			this.generator = new OnBorderCodeGenerator(fileToReadFrom, command, writer);
+		} catch (Exception e) {
+			logger.log(Level.SEVERE, Utils.threadName() + " Failed to generate on border code", e);
+		}
+
+		if (Configuration.IsInDeubbungMode) {
+			logger.info("\n\nOnBorderFile for: " + onBorderFileName + "\n" + Utils.readFile(onBorderFile.getAbsolutePath()) + "\n\n");
+		}
 	}
-	
-	public static BordeauxEngine get() {
-		return instance;
-	}
+		
 
 	public A4Solution getInitialSolution() {
 		return this.initialSolution;
 	}
-	
+	/*
 	public A4Solution getBorderInstances(A4Reporter reporter, File inputPath, String...constraints) {
 					
 		return this.getBorderInstances(reporter, inputPath, new File(""), constraints);
@@ -163,14 +177,14 @@ public final class BordeauxEngine {
 		return soln;
 	}
 	 
-	/**
+	*//**
 	 * @param reporter - The SimpleReporter which updates the UI as progress comes in (Note: This reporter is not used to initial calls to Alloy)
 	 * @param inputPath
 	 * @param outputPath
 	 * @param command
 	 * @param intendedPred
 	 * @return
-	 */
+	 *//*
 	public A4Solution getBorderInstancesFromStaticInstance(A4Reporter reporter, File inputPath, File outputPath, Command command) {
 
 		// First generate static A4olution from input path
@@ -201,7 +215,7 @@ public final class BordeauxEngine {
 		return null;
 	}
 
-	/**
+	*//**
 	 * This method generates a temp alloy file which will search for instances with min distance away from the static solution provided.
 	 * @param reporter - The SimpleReporter which updates the UI as progress comes in (Note: This reporter is not used to initial calls to Alloy)
 	 * @param inputPath
@@ -209,7 +223,7 @@ public final class BordeauxEngine {
 	 * @param constraint2
 	 * @param staticSoln - The Solution to use as the static instance when finding instances with min distance.
 	 * @return
-	 */
+	 *//*
 	public A4Solution getBorderInstancesFromStaticInstance(A4Reporter reporter, File inputPath, File outputPath, String constraint1, String constraint2) {
 
 		logger.info("Generating OnBorder code");
@@ -286,7 +300,7 @@ public final class BordeauxEngine {
 		try {
 			A4CommandExecuter.get().runAlloy(inputPath.getAbsolutePath(), reporter, command.label);
 			A4Solution initialSoln = reporter.getA4Solution();
-			return new BordeauxEngine(reporter, inputPath, command, initialSoln);
+			return new BordeauxEngine(inputPath, command, initialSoln);
 		} catch (Exception e) {
 			e.printStackTrace();
 			logger.severe(
@@ -297,33 +311,50 @@ public final class BordeauxEngine {
 			
 			throw new RuntimeException();
 		}
+	}*/
+	
+	private A4Solution func(A4Reporter reporter, File inputPath, String staticConstraint, String intendedConstraint) {
+		
+		this.generator.runWithStaticIntance(staticConstraint, intendedConstraint);
+		logger.info("OnBorder Code generated...running Alloy*");
+
+		// Run on-border instances through the higher order solver (alloy*)
+		boolean success = true;
+		try {
+			A4CommandExecuter.get().executeHola(reporter, this.tmpPath.getAbsolutePath(),
+					OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND, onBorderFile.getAbsolutePath());
+		} catch (Exception e) {
+			success = false;
+			e.printStackTrace();
+			logger.severe(
+					"[" + Thread.currentThread().getName() + "] " + " Failed to execute alloy* on file: " + inputPath);
+			if (Configuration.IsInDeubbungMode) {
+				logger.log(Level.SEVERE, "[" + Thread.currentThread().getName() + "] " + e.getMessage(), e);
+			}
+		}
+
+		if (Configuration.IsInDeubbungMode) {
+			logger.info("Alloy* Complete on : " + onBorderFile + ". Status: " + (success ? "Successful":"Failed"));
+		}
+
+		onBorderFile.deleteOnExit();
+		return reporter.getA4Solution();
 	}
 	
-	public A4Solution nextNearMiss() {
+	public A4Solution nextNearMiss(A4Reporter rep) {
 		
-		if(firstNearMiss) {
-			this.previousMiss = this.getBorderInstancesFromStaticInstance(this.reporter, this.inputPath, currentHit, currentMiss);
-			firstNearMiss = false;
-			return this.previousMiss;			
-		}
+		String staticConstraint;
+		String intendedConstraint;
 		
-		if(this.previousMiss != null) {
-			String exclude = BordeauxEngine.not(ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousMiss, true));
-			currentMiss += "\n\t and " + exclude;
-			this.previousMiss = this.getBorderInstancesFromStaticInstance(this.reporter, this.inputPath, currentHit, currentMiss);
-		}
-		
+		staticConstraint = ExtractorUtils.convertA4SolutionToAlloySyntax(initialSolution, true);
+		intendedConstraint = Utils.not(this.generator.getForumlaContstraints());
+		this.previousMiss = this.func(rep, this.inputPath, staticConstraint, intendedConstraint);
+		firstNearMiss = false;
 		return this.previousMiss;
 	}
 	
-	public A4Solution nextNearHit() {
+	public A4Solution nextNearHit(A4Reporter rep) {
 
-		if(this.previousHit != null) {
-			String exclude = BordeauxEngine.not(ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousHit, true));
-			currentHit += "\n\t and " + exclude;
-			this.previousHit = this.getBorderInstancesFromStaticInstance(this.reporter, this.inputPath, currentHit, currentMiss);
-		}
-		
-		return this.previousHit;
+		return null;
 	}
 }
