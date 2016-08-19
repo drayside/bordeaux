@@ -156,12 +156,24 @@ public class OnBorderCodeGenerator {
     public void run(File tmpFolder, String staticConstraint, String commandName) {
     	
         Elaboration elaboration = new Elaboration();
+
         List<String> strs = elaboration.createBodyOfInstance_Structural_Constraint_Predicates(new File(filepath), tmpFolder, commandName);
-        this.includeConstraints = strs.get(0);
-        this.structuralConstraints = strs.get(1);
-        String formulaConstraints = Utils.not(strs.get(2));
+        this.includeConstraints = strs.get(0).replace("\n", "\n\t");
+        this.structuralConstraints = strs.get(1).replace("\n", "\n\t");
+        String formulaConstraints = Utils.not(strs.get(2).replace("\n", "\n\t"));
+        
         for(SigFieldWrapper sigWrap : this.sigs) {
         	
+        	includeConstraints = includeConstraints.replace(sigWrap.getSig(), ExtractorUtils.getLocalSigName(sigWrap.getSig()));
+        	structuralConstraints = structuralConstraints.replace(sigWrap.getSig(), ExtractorUtils.getLocalSigName(sigWrap.getSig()));
+        	formulaConstraints = formulaConstraints.replace(sigWrap.getSig(), ExtractorUtils.getLocalSigName(sigWrap.getSig()));
+        	
+        	for(FieldInfo field : sigWrap.getFields()) {
+        		
+        		includeConstraints = includeConstraints.replace(field.getName(), field.getLabel());
+        		structuralConstraints = structuralConstraints.replace(field.getName(), field.getLabel());
+        		formulaConstraints = formulaConstraints.replace(field.getName(), field.getLabel());
+        	}
         }
         
         this.commandScope = ExtractorUtils.extractScopeFromCommand(this.filepath, commandName);
@@ -176,7 +188,7 @@ public class OnBorderCodeGenerator {
 //		String decl = this.sigDeclaration.replaceAll("(one|lone|some)", "set");
 
     	Elaboration elaboration = new Elaboration();
-    	String decl = elaboration.createAllSigsdeclaration(new File(filepath), ExtractorUtils.elementName);
+    	String decl = elaboration.createAllSigsdeclaration(new File(filepath));
         println(decl);        
     }
     

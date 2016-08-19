@@ -1,6 +1,7 @@
 package edu.uw.ece.bordeaux.onborder;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import edu.mit.csail.sdg.alloy4.Err;
@@ -21,8 +22,8 @@ public class A4SolutionVisitor {
 
 			if(ExtractorUtils.sigToBeIgnored(sig)) continue;
 			
-			String sigType = sig.shortLabel();
-			SigFieldWrapper sigWrapper = new SigFieldWrapper(sigType, sig.decl.expr.mult(), sig.isAbstract != null);
+			String sigName = sig.shortLabel();
+			SigFieldWrapper sigWrapper = new SigFieldWrapper(sigName, sig.decl.expr.mult(), sig.isAbstract != null);
 			
 			for (Decl decl : sig.getFieldDecls()) {
 

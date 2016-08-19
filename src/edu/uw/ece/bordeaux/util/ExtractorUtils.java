@@ -64,13 +64,13 @@ public class ExtractorUtils {
 	public static String extractScopeFromCommand(Command command) {
 		boolean first = true;
 		StringBuilder sb = new StringBuilder();
-		if (command.overall >= 0 && (command.intScope.bitwidth >= 0 || command.maxseq >= 0 || command.scope.size() > 0))
+		if (command.overall >= 0 && ((command.intScope != null && command.intScope.bitwidth >= 0) || command.maxseq >= 0 || (command.scope != null && command.scope.size() > 0)))
 			sb.append(" for ").append(command.overall).append(" but");
 		else if (command.overall >= 0)
 			sb.append(" for ").append(command.overall);
-		else if (command.intScope.bitwidth >= 0 || command.maxseq >= 0 || command.scope.size() > 0)
+		else if ((command.intScope != null && command.intScope.bitwidth >= 0) || command.maxseq >= 0 || (command.scope != null && command.scope.size() > 0))
 			sb.append(" for");
-		if (command.intScope.bitwidth >= 0) {
+		if (command.intScope != null && command.intScope.bitwidth >= 0) {
 			sb.append(" ").append(command.intScope.bitwidth).append(" int");
 			first = false;
 		}
@@ -78,9 +78,11 @@ public class ExtractorUtils {
 			sb.append(first ? " " : ", ").append(command.maxseq).append(" seq");
 			first = false;
 		}
-		for (CommandScope e : command.scope) {
-			sb.append(first ? " " : ", ").append(e);
-			first = false;
+		if(command.scope != null) {
+			for (CommandScope e : command.scope) {
+				sb.append(first ? " " : ", ").append(e);
+				first = false;
+			}
 		}
 		if (command.expects >= 0)
 			sb.append(" expect ").append(command.expects);
@@ -116,25 +118,7 @@ public class ExtractorUtils {
 
 		return getCamelCase(sigName) + "_" + fieldLabel;
 	}
-	
-	public static BiFunction<String, String, String> identityName = (a, b) -> { 
-		if(a != null && !a.isEmpty() && b != null && !b.isEmpty()) return a;
 		
-		return a + b; 
-	};
-	
-	public static BiFunction<String, String, String> elementName = new BiFunction<String, String, String>() {
-
-		@Override
-		public String apply(String fieldName, String sigName) {
-			if(fieldName == null || fieldName.isEmpty()) {
-				return getLocalSigName(sigName);
-			}
-			
-			return getLocalFieldName(fieldName, sigName);
-		}
-	};
-	
 	/**
 	 * Given an A4solution object from AlloyExecuter, it converts it to a Alloy
 	 * syntax

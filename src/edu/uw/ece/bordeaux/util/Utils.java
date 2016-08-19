@@ -155,7 +155,7 @@ public class Utils {
 	
 	public static String not(String s) {
 		if(s == null || s.isEmpty()) return "";
-		return String.format("not\n\t(\n\t\t%s\n\t)", s);
+		return String.format("not\n\t{\n\t\t%s\n\t}", s);
 	}
 	
 	/**
