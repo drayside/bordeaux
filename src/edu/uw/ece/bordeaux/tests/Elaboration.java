@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -41,20 +42,41 @@ public class Elaboration {
 	public void setUp() {
 		tmpFolder.mkdirs();
 	}
+	
+	@Test
+	public void test(){
+		String content = "sig A{r: A}\nfact {some r}\npred p{some A}\nfun f[a:A]:A{{aa:a| some a.r}}\npred p2[]{p and some f[A]}\nrun p2";
+		
+		final File test = new File(tmpFolder, "a.als");
+		final String alloySample = content ;
+		try {
+			Util.writeAll(test.getAbsolutePath(), alloySample);
+		} catch (Err e) {
+			e.printStackTrace();
+			fail(e.msg);
+		}
+		
+		
+		//System.out.println(
+				createBodyOfInstance_Structural_Constraint_Predicates(test, tmpFolder)
+				//)
+				;
+	}
+	
 
 	// ---------------------------------------------
 
-	public List<Formula> convertSigsdeclarationToFormula(File src) {
+	protected CompModule parseToCompModule(File src){
 		CompModule module = null;
 		try {
 			module = (CompModule) A4CommandExecuter.get().parse(src.getAbsolutePath(), A4Reporter.NOP);
 		} catch (Err e) {
 			e.printStackTrace();
 		}
-
-		Command command = module.getAllCommands().get(0);
-		command = command.change(ExprList.make(command.pos, command.pos, Op.AND, Collections.emptyList()));
-
+		return module;
+	}
+	
+	protected List<Formula> convertConstraintsToFormulas(CompModule module, Command command){
 		A4Options options = new A4Options();
 		options.solver = A4Options.SatSolver.KK;
 		List<Formula> formulas = new ArrayList<>();
@@ -66,15 +88,33 @@ public class Elaboration {
 		}
 		return Collections.unmodifiableList(formulas);
 	}
+	
+	public List<Formula> convertSigsdeclarationToFormula(File src) {
+		CompModule module = parseToCompModule(src);
+
+		Command command = module.getAllCommands().get(0);
+		command = command.change(ExprList.make(command.pos, command.pos, Op.AND, Collections.emptyList()));
+
+		return convertConstraintsToFormulas(module, command);
+	}
+	
+	public List<Formula> convertAllConstraintsToFormula(File src){
+		CompModule module = parseToCompModule(src);
+
+		if (module.getAllCommands().size() != 1)
+			throw new RuntimeException("MORE THAN ONE COMMAND IS NOT ALLOWED NOW!");
+		Command command = module.getAllCommands().get(0);
+		return convertConstraintsToFormulas(module, command);
+	}
 
 	protected String sanitizer(String statement) {
 		return statement.replaceAll("this/[a-zA-Z_$][a-zA-Z_$0-9]*\\.", "").replace("this/", "");
 	}
 
 	/**
-	 * Given a the src file, the function returns a pair, where pair.a is the
-	 * body of 'instance' predicate, and pair.b is the body of structural
-	 * predicate.
+	 * Given a the src file, the function returns a pair, where result.get(0) is the
+	 * body of 'instance' predicate, and result.get(1) is the body of structural
+	 * predicate. result.get(2) body of instance predicate.
 	 * 
 	 * tmpfolder is used for storing src transformed files.
 	 * 
@@ -82,14 +122,16 @@ public class Elaboration {
 	 * @param tmpFolder
 	 * @return
 	 */
-	public Pair<String, String> createBodyOfInstancePredicate(final File src, final File tmpFolder) {
+	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder) {
 
+		final String elabCommandName = "_s__igsp_";
+		
 		final String sigsWithStructuralConstraints = createAllSigsdeclaration(src, true, false)
-				+ "\npred sigsp[]{}\nrun sigsp";
+				+ "\npred "+elabCommandName+"[]{}\nrun "+elabCommandName;
 		final String sigsWithoutStructuralConstraints = createAllSigsdeclaration(src, false, false)
-				+ "\npred sigsp[]{}\nrun sigsp";
+				+ "\npred "+elabCommandName+"[]{}\nrun "+elabCommandName;
 		final String sigsWithoutStructuralConstraintsWithOneSigs = createAllSigsdeclaration(src, false, true)
-				+ "\npred sigsp[]{}\nrun sigsp";
+				+ "\npred "+elabCommandName+"[]{}\nrun "+elabCommandName;
 
 		final File sigsWithStructuralConstraintsFile = new File(tmpFolder,
 				"with_" + Math.abs(sigsWithStructuralConstraints.hashCode()) + ".als");
@@ -180,7 +222,21 @@ public class Elaboration {
 		sigsWithoutStructuralConstraintsFile.delete();
 		sigsWithoutStructuralConstraintsWithOneSigsFile.delete();
 
-		return new Pair<>(instanceBody, structuralConstraintBody);
+		// remove the structural constraints from the rest of constraints in the formula.
+		List<Formula> constraintFormulas = convertAllConstraintsToFormula(src);
+		
+		// Fetch the command name
+		CompModule module = parseToCompModule(src);
+		String commandLabel = module.getAllCommands().get(0).label;
+		// commandname does not have a name
+		final String commandName = commandLabel.contains("$") ? "this" : commandLabel+"_this";
+		Set<String> constraintFormulasAsSet = constraintFormulas.stream().map(f->f.toString()).collect(Collectors.toSet());
+		Set<String> strucuralsAsSet = withStructurals.stream().map(f->f.toString()).map(s->s.replace(elabCommandName+"_this", commandName)).collect(Collectors.toSet());
+		constraintFormulasAsSet.removeAll(strucuralsAsSet);
+		
+		final String constraintsBody = constraintFormulasAsSet.stream().map(s->sanitizer(s)).collect(Collectors.joining("\n"));
+		
+		return Arrays.asList(instanceBody, structuralConstraintBody, constraintsBody);
 	}
 
 	public String getMult(Sig sig) {
@@ -337,7 +393,7 @@ public class Elaboration {
 
 	}
 
-	public Pair<String, String> getInstanceBodyStruralBody(String content) {
+	public List<String> getInstanceBodyStruralConstraintsBodies(String content) {
 		File src = new File("tmp/tests", "s.als");
 		File tmp = new File("tmp/tests");
 		tmp.mkdirs();
@@ -349,16 +405,20 @@ public class Elaboration {
 		}
 		tmp.deleteOnExit();
 
-		return createBodyOfInstancePredicate(src, tmp);
+		return createBodyOfInstance_Structural_Constraint_Predicates(src, tmp);
 
 	}
 
 	public void testInstanceBody(String content, String expected) {
-		assertEquals(expected, getInstanceBodyStruralBody(content).a);
+		assertEquals(expected, getInstanceBodyStruralConstraintsBodies(content).get(0));
 	}
 
 	public void testStructuralBody(String content, String expected) {
-		assertEquals(expected, getInstanceBodyStruralBody(content).b);
+		assertEquals(expected, getInstanceBodyStruralConstraintsBodies(content).get(1));
+	}
+	
+	public void testConstratinsBody(String content, String expected) {
+		assertEquals(expected, getInstanceBodyStruralConstraintsBodies(content).get(2));
 	}
 
 	@Test
@@ -513,14 +573,14 @@ public class Elaboration {
 		
 		String content = "sig A{r:A lone->A}\nrun{}";
 		String expected = "\\(all sigsp_this: one A \\| \\(\\( \\(all v\\d+: one A \\| \\(\\(v\\d+ \\. \\(sigsp_this \\. r\\)\\) in A\\)\\)\\) && \\(all v\\d+: one A \\| \\(lone \\(\\(sigsp_this \\. r\\) \\. v\\d+\\) && \\(\\(\\(sigsp_this \\. r\\) \\. v\\d+\\) in A\\)\\)\\)\\)\\)";
-		assertTrue(getInstanceBodyStruralBody(content).b.matches(expected));
+		assertTrue(getInstanceBodyStruralConstraintsBodies(content).get(1).matches(expected));
 	}
 
 	@Test
 	public void testStructuralBodySingleTernaryOneLoneRelation() {
 		String content = "sig A{r:A one->lone A}\nrun{}";
 		String expected = "\\(all sigsp_this: one A \\| \\(\\( \\(all v\\d+: one A \\| \\(lone \\(v\\d+ \\. \\(sigsp_this \\. r\\)\\) && \\(\\(v\\d+ \\. \\(sigsp_this \\. r\\)\\) in A\\)\\)\\)\\) && \\(all v\\d+: one A \\| \\(one \\(\\(sigsp_this \\. r\\) \\. v\\d+\\) && \\(\\(\\(sigsp_this \\. r\\) \\. v\\d+\\) in A\\)\\)\\)\\)\\)";
-		assertTrue(getInstanceBodyStruralBody(content).b.matches(expected));
+		assertTrue(getInstanceBodyStruralConstraintsBodies(content).get(1).matches(expected));
 	}
 
 	@Test
@@ -550,6 +610,25 @@ public class Elaboration {
 	public void testStructuralBodyAbstractSingleExtendedSigOneRelation() {
 		testStructuralBody("abstract sig A{r: A}\nsig B extends A{}\nrun{}",
 				"(all sigsp_this: one B | (one (sigsp_this . r) ))");
+	}
+	
+	
+	@Test
+	public void testSigSimpleRun() {
+		testConstratinsBody("sig A{}\nrun{}",
+				"");
+	}
+	
+	@Test
+	public void testSigSomeSimpleRun() {
+		testConstratinsBody("sig A{}\nrun{ some A}",
+				"some A");
+	}
+	
+	@Test
+	public void testSigSomePredRun() {
+		testConstratinsBody("sig A{}\npred p[]{some A}\nrun p",
+				"some A");
 	}
 
 }
