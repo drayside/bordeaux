@@ -18,7 +18,6 @@ import org.junit.Test;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
-import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.ast.Expr;
@@ -41,25 +40,6 @@ public class Elaboration {
 	@Before
 	public void setUp() {
 		tmpFolder.mkdirs();
-	}
-
-	@Test
-	public void test() {
-		String content = "sig A{r: A}\nfact {some r}\npred p{some A}\nfun f[a:A]:A{{aa:a| some a.r}}\npred p2[]{p and some f[A]}\nrun p2";
-
-		final File test = new File(tmpFolder, "a.als");
-		final String alloySample = content;
-		try {
-			Util.writeAll(test.getAbsolutePath(), alloySample);
-		} catch (Err e) {
-			e.printStackTrace();
-			fail(e.msg);
-		}
-
-		// System.out.println(
-		createBodyOfInstance_Structural_Constraint_Predicates(test, tmpFolder)
-		// )
-		;
 	}
 
 	// ---------------------------------------------
@@ -243,6 +223,15 @@ public class Elaboration {
 					break;
 				}
 			}
+			// if the inclusion with and is not seen, so it might be the only
+			// clause
+			// in the quantifier body or there is no quantifier.
+			for (String inclusion : allStructuralsOneFormulas) {
+				if (seen.contains(inclusion)) {
+					seen = "";
+					break;
+				}
+			}
 
 			if (seen.length() > 0)
 				tmpStructuralBody.add(seen);
@@ -260,8 +249,6 @@ public class Elaboration {
 		// formula.
 		List<Formula> constraintFormulas = convertAllConstraintsToFormula(src, commandName);
 
-		// Fetch the command name
-		CompModule module = parseToCompModule(src);
 		// String commandLabel = module.getAllCommands().get(0).label;
 		// commandname does not have a name
 		final String tmpCommandName = commandName.contains("$") ? "this" : commandName + "_this";
@@ -670,20 +657,26 @@ public class Elaboration {
 	public void testStructuralBodyOneSingleOneRelation() {
 		testStructuralBody("one sig A{r: A}\nrun{}", "one A\n(one (A . (A -> r)) )");
 	}
-	
+
+	@Test
+	public void testStructuralBodySetSingleOneRelation() {
+		testStructuralBody("one sig A{r: set A}\nrun{}", "one A");
+	}
+
 	@Test
 	public void testStructuralBodyLoneSingleSig() {
 		testStructuralBody("lone sig A{}\nrun{}", "lone A");
 	}
-	
+
 	@Test
 	public void testStructuralBodySomeSingleSig() {
 		testStructuralBody("some sig A{}\nrun{}", "some A");
 	}
-	
+
 	@Test
 	public void testStructuralBodySomeSingleOneRelation() {
-		testStructuralBody("some sig A{r: A}\nrun{}", "(all _s__igsp__this: one A | (one (_s__igsp__this . r) ))\nsome A");
+		testStructuralBody("some sig A{r: A}\nrun{}",
+				"(all _s__igsp__this: one A | (one (_s__igsp__this . r) ))\nsome A");
 	}
 
 	@Test
