@@ -268,6 +268,8 @@ public class Elaboration {
 		// formula.
 		List<Formula> constraintFormulas = convertAllConstraintsToFormula(src, commandName);
 
+		System.out.println(constraintFormulas);
+		
 		// String commandLabel = module.getAllCommands().get(0).label;
 		// commandname does not have a name
 		final String tmpCommandName = commandName.contains("$") ? "this" : commandName + "_this";

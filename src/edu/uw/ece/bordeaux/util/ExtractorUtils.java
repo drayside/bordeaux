@@ -117,7 +117,11 @@ public class ExtractorUtils {
 		return getCamelCase(sigName) + "_" + fieldLabel;
 	}
 	
-	public static BiFunction<String, String, String> identityName = (a, b) -> { return a + b; };
+	public static BiFunction<String, String, String> identityName = (a, b) -> { 
+		if(a != null && !a.isEmpty() && b != null && !b.isEmpty()) return a;
+		
+		return a + b; 
+	};
 	
 	public static BiFunction<String, String, String> elementName = new BiFunction<String, String, String>() {
 
