@@ -17,6 +17,7 @@ import edu.mit.csail.sdg.alloy4compiler.ast.Module;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.onborder.SigFieldWrapper.FieldInfo;
+import edu.uw.ece.bordeaux.tests.Elaboration;
 import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import edu.uw.ece.bordeaux.util.Utils;
 import kodkod.ast.Formula;
@@ -32,9 +33,14 @@ public class OnBorderCodeGenerator {
     private Module module;
     private String sigDeclaration;
     private List<SigFieldWrapper> sigs;
+	private String filepath;
+	private String commandScope;
+	private String includeConstraints;
+	private String structuralConstraints;
     
     private OnBorderCodeGenerator() {
         this.indent = "";
+        this.commandScope = "";
         this.out = new PrintWriter(System.out);
     }
     
@@ -50,15 +56,7 @@ public class OnBorderCodeGenerator {
      */
     public OnBorderCodeGenerator(Module module) {
         this();
-        this.module = module;
-        
-        try {
-            this.sigDeclaration = Field2ConstraintMapper.getSigDeclarationViaPos(this.module);
-            this.sigs = A4SolutionVisitor.getSigs(module);
-        }
-        catch (Err e) {
-            e.printStackTrace();
-        }
+        this.initModule(module);
     }
     
     /**
@@ -83,25 +81,12 @@ public class OnBorderCodeGenerator {
      * 
      * @param filepath
      *            - The path to the alloy file to be used.
+     * @throws Err 
      */
-    public OnBorderCodeGenerator(String filepath) {
-        
-        this();
-        
-        try {
-            this.module = A4CommandExecuter.get().parse(filepath, A4Reporter.NOP);
-        }
-        catch (Err e) {
-            e.printStackTrace();
-        }
-        
-        try {
-            this.sigDeclaration = Field2ConstraintMapper.getSigDeclarationViaPos(this.module);
-            this.sigs = A4SolutionVisitor.getSigs(module);
-        }
-        catch (Err e) {
-            e.printStackTrace();
-        }
+    public OnBorderCodeGenerator(String filepath) throws Err {
+    	this();
+        this.filepath = filepath;
+        this.initModule(A4CommandExecuter.get().parse(filepath, A4Reporter.NOP));
     }
     
     /**
@@ -111,10 +96,24 @@ public class OnBorderCodeGenerator {
      *            - The path to the alloy file to be used.
      * @param writer
      *            - Specifies the {@link PrintWriter} to be used.
+     * @throws Err 
      */
-    public OnBorderCodeGenerator(String filepath, PrintWriter writer) {
+    public OnBorderCodeGenerator(String filepath, PrintWriter writer) throws Err {
         this(filepath);
         this.out = writer;
+    }
+    
+    private void initModule(Module module) {
+
+    	this.module = module;
+        
+        try {
+            this.sigDeclaration = Field2ConstraintMapper.getSigDeclarationViaPos(this.module);
+            this.sigs = A4SolutionVisitor.getSigs(module);
+        }
+        catch (Err e) {
+            e.printStackTrace();
+        }
     }
     
     /**
@@ -131,7 +130,7 @@ public class OnBorderCodeGenerator {
             this.generateFindMarginalInstances(out, constraints);
             
             ln();
-            println("run " + OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND);
+            println("run " + OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND + " " + this.commandScope);
         }
         catch (Err e) {
             e.printStackTrace();
@@ -154,12 +153,30 @@ public class OnBorderCodeGenerator {
     	this.run(constraints);
     }
     
+    public void run(File tmpFolder, String staticConstraint, String commandName) {
+    	
+        Elaboration elaboration = new Elaboration();
+        List<String> strs = elaboration.createBodyOfInstance_Structural_Constraint_Predicates(new File(filepath), tmpFolder, commandName);
+        this.includeConstraints = strs.get(0);
+        this.structuralConstraints = strs.get(1);
+        String formulaConstraints = Utils.not(strs.get(2));
+        for(SigFieldWrapper sigWrap : this.sigs) {
+        	
+        }
+        
+        this.commandScope = ExtractorUtils.extractScopeFromCommand(this.filepath, commandName);
+    	runWithStaticIntance(staticConstraint, formulaConstraints);
+    }
+
     private void generateSigs(PrintWriter out) throws Err {
         
         this.out = out;
         ln();
         
-		String decl = this.sigDeclaration.replaceAll("(one|lone|some)", "set");
+//		String decl = this.sigDeclaration.replaceAll("(one|lone|some)", "set");
+
+    	Elaboration elaboration = new Elaboration();
+    	String decl = elaboration.createAllSigsdeclaration(new File(filepath), ExtractorUtils.elementName);
         println(decl);        
     }
     
@@ -180,26 +197,27 @@ public class OnBorderCodeGenerator {
         
         for (SigFieldWrapper sigWrap : this.sigs) {
             
-        	if(sigWrap.isAbstract()) continue;
+        	if(!sigWrap.isAbstract()) {
         	
-            ln();
-            
-            String sigName = this.getCamelCase(sigWrap.getSig());
-            String s1 = String.format("%s: set %s", sigName, sigWrap.getSig());
-            String s2 = String.format("%s': set %s", sigName, sigWrap.getSig());
-            String s3 = String.format("%s'': set %s", sigName, sigWrap.getSig());
-            
-            println("pred delta%s[%s, %s, %s] {", this.getPascalCase(sigWrap.getSig()), s1, s2, s3);
-            indent();
-            println("%1$s != %1$s' implies (%1$s'' = %1$s' - %1$s and %1$s'' + %1$s = %1$s') else no %1$s''", sigName);
-            outdent();
-            println("}");
-            
+	            ln();
+	            
+	            String sigName = this.getCamelCase(sigWrap.getSig());
+	            String s1 = String.format("%s: set %s", sigName, sigWrap.getSig());
+	            String s2 = String.format("%s': set %s", sigName, sigWrap.getSig());
+	            String s3 = String.format("%s'': set %s", sigName, sigWrap.getSig());
+	            
+	            println("pred delta%s[%s, %s, %s] {", this.getPascalCase(sigWrap.getSig()), s1, s2, s3);
+	            indent();
+	            println("%1$s != %1$s' implies (%1$s'' = %1$s' - %1$s and %1$s'' + %1$s = %1$s') else no %1$s''", sigName);
+	            outdent();
+	            println("}");
+        	}
+        	
             for (FieldInfo field : sigWrap.getFields()) {
                 ln();
-                s1 = String.format("%s: %s", field.getLabel(), field.getType());
-                s2 = String.format("%s': %s", field.getLabel(), field.getType());
-                s3 = String.format("%s'': %s", field.getLabel(), field.getType());
+                String s1 = String.format("%s: %s", field.getLabel(), field.getType());
+                String s2 = String.format("%s': %s", field.getLabel(), field.getType());
+                String s3 = String.format("%s'': %s", field.getLabel(), field.getType());
                 
                 println("pred delta%s[%s, %s, %s] {", this.getPascalCase(field.getLabel()), s1, s2, s3);
                 indent();
@@ -239,34 +257,24 @@ public class OnBorderCodeGenerator {
             
             SigFieldWrapper sigWrap = sigItr.next();
             
-            if(sigWrap.isAbstract()) continue;
+            if(!sigWrap.isAbstract()){
             
-            String sigName = this.getCamelCase(sigWrap.getSig());
-            quantifier.append(String.format(", %1$s, %1$s', %1$s'': set %2$s", sigName, sigWrap.getSig()));
-            quantifier_1.append(String.format(", %1$s1, %1$s1', %1$s1'': set %2$s", sigName, sigWrap.getSig()));
-            
-            constr1InstanceCall.append(", " + sigName);
-            constr2InstanceCall.append(", " + sigName + "'");
-            sigmaCall.append(", #" + sigName + "''");
-            deltaCalls.append(String.format("and delta%1$s[%2$s, %2$s', %2$s'']\n", this.getPascalCase(sigWrap.getSig()), sigName));
-            
-            constr1InstanceCall_1.append(", " + sigName + "1");
-            constr2InstanceCall_1.append(", " + sigName + "1'");
-            sigmaCall_1.append(", #" + sigName + "1''");
-            deltaCalls_1.append(String.format("and delta%1$s[%2$s1, %2$s1', %2$s1'']\n", this.getPascalCase(sigWrap.getSig()), sigName));
-            
-            sigmaParamLength++;
-//            if (sigItr.hasNext()) {
-//                print(", ");
-//                predAInstanceCall.append(", ");
-//                predBInstanceCall.append(", ");
-//                sigmaCall.append(", ");
-//                
-//                quantifier_1.append(", ");
-//                predAInstanceCall_1.append(", ");
-//                predBInstanceCall_1.append(", ");
-//                sigmaCall_1.append(", ");
-//            }
+	            String sigName = this.getCamelCase(sigWrap.getSig());
+	            quantifier.append(String.format(", %1$s, %1$s', %1$s'': set %2$s", sigName, sigWrap.getSig()));
+	            quantifier_1.append(String.format(", %1$s1, %1$s1', %1$s1'': set %2$s", sigName, sigWrap.getSig()));
+	            
+	            constr1InstanceCall.append(", " + sigName);
+	            constr2InstanceCall.append(", " + sigName + "'");
+	            sigmaCall.append(", #" + sigName + "''");
+	            deltaCalls.append(String.format("and delta%1$s[%2$s, %2$s', %2$s'']\n", this.getPascalCase(sigWrap.getSig()), sigName));
+	            
+	            constr1InstanceCall_1.append(", " + sigName + "1");
+	            constr2InstanceCall_1.append(", " + sigName + "1'");
+	            sigmaCall_1.append(", #" + sigName + "1''");
+	            deltaCalls_1.append(String.format("and delta%1$s[%2$s1, %2$s1', %2$s1'']\n", this.getPascalCase(sigWrap.getSig()), sigName));
+	            
+	            sigmaParamLength++;
+            }
             
             Iterator<FieldInfo> itr = sigWrap.getFields().iterator();
             while (itr.hasNext()) {
@@ -286,17 +294,6 @@ public class OnBorderCodeGenerator {
                 deltaCalls_1.append(String.format("and delta%1$s[%2$s1, %2$s1', %2$s1'']\n", this.getPascalCase(field.getLabel()), field.getLabel()));
                 
                 sigmaParamLength++;
-//                if (itr.hasNext()) {
-//                    print(", ");
-//                    predAInstanceCall.append(", ");
-//                    predBInstanceCall.append(", ");
-//                    sigmaCall.append(", ");
-//                    
-//                    quantifier_1.append(", ");
-//                    predAInstanceCall_1.append(", ");
-//                    predBInstanceCall_1.append(", ");
-//                    sigmaCall_1.append(", ");
-//                }
             }
             
         }
@@ -382,12 +379,12 @@ public class OnBorderCodeGenerator {
         StringBuilder params = new StringBuilder();
         for (SigFieldWrapper sigWrap : this.sigs) {
             
-        	if(sigWrap.isAbstract()) continue;
+        	if(!sigWrap.isAbstract()) {        	
+	        	String sigName = this.getCamelCase(sigWrap.getSig());
+	            args.append(String.format(", %s", sigName));
+	            params.append(String.format(", %s: set %s", sigName, sigWrap.getSig()));
+        	}
         	
-        	String sigName = this.getCamelCase(sigWrap.getSig());
-            args.append(String.format(", %s", sigName));
-            params.append(String.format(", %s: set %s", sigName, sigWrap.getSig()));
-            
             for (FieldInfo field : sigWrap.getFields()) {
                 args.append(String.format(", %s", field.getLabel()));
                 params.append(String.format(", %s: %s", field.getLabel(), field.getType()));
@@ -414,6 +411,41 @@ public class OnBorderCodeGenerator {
     }
     
     private void generateStructuralConstraint(String params, PrintWriter out) throws Err, IOException {
+
+        if(this.structuralConstraints == null || this.structuralConstraints.isEmpty()) {
+        	this.generateStructuralConstraintOld(params, out);
+        	return;
+        }
+        
+        this.out = out;
+        ln();
+
+        println("pred structuralConstraints [%s] {", params);
+        indent();
+        println(this.structuralConstraints);
+        outdent();
+        println("}");
+    }
+    
+    private void generateIncludeInstance(String params, PrintWriter out) {
+
+        if(this.includeConstraints == null || this.includeConstraints.isEmpty()) {
+        	this.generateIncludeInstanceOld(params, out);
+        	return;
+        }
+        
+        
+        this.out = out;
+        ln();
+
+        println("pred includeInstance [%s] {", params);
+        indent();
+        println(this.includeConstraints);
+        outdent();
+        println("}");
+    }
+    
+    private void generateStructuralConstraintOld(String params, PrintWriter out) throws Err, IOException {
         
         this.out = out;
         ln();
@@ -478,7 +510,7 @@ public class OnBorderCodeGenerator {
         file.delete();
     }
     
-    private void generateIncludeInstance(String params, PrintWriter out) {
+    private void generateIncludeInstanceOld(String params, PrintWriter out) {
         
         this.out = out;
         ln();

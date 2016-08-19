@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,6 +12,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.junit.Before;
@@ -32,6 +35,7 @@ import edu.mit.csail.sdg.alloy4compiler.parser.CompModule;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Options;
 import edu.mit.csail.sdg.alloy4compiler.translator.TranslateDeclarativeConstriant2DeclarativeFormula;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
+import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import kodkod.ast.Formula;
 
 public class Elaboration {
@@ -133,9 +137,10 @@ public class Elaboration {
 	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder) {
 
 		CompModule module = parseToCompModule(src);
-		String commandLabel = module.getAllCommands().get(0).label;
-		return createBodyOfInstance_Structural_Constraint_Predicates(src, tmpFolder, commandLabel);
+		String commandName = module.getAllCommands().get(0).label;
+		return createBodyOfInstance_Structural_Constraint_Predicates(src, tmpFolder, commandName);
 	}
+	
 	/**
 	 * Given a the src file, the function returns a list, where result.get(0) is
 	 * the body of 'instance' predicate, and result.get(1) is the body of
@@ -148,14 +153,30 @@ public class Elaboration {
 	 * @return 
 	 */
 	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder, String commandName) {
+	
+		return createBodyOfInstance_Structural_Constraint_Predicates(src, tmpFolder, commandName, ExtractorUtils.identityName);
+	}
+	
+	/**
+	 * Given a the src file, the function returns a list, where result.get(0) is
+	 * the body of 'instance' predicate, and result.get(1) is the body of
+	 * structural predicate. result.get(2) body of constraint predicate.
+	 * 
+	 * tmpfolder is used for storing src transformed files.
+	 * 
+	 * @param src
+	 * @param tmpFolder
+	 * @return 
+	 */
+	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder, String commandName, BiFunction<String, String, String> func) {
 
 		final String elabCommandName = "_s__igsp_";
 
-		final String sigsWithStructuralConstraints = createAllSigsdeclaration(src, true, false) + "\npred "
+		final String sigsWithStructuralConstraints = createAllSigsdeclaration(src, true, false, func) + "\npred "
 				+ elabCommandName + "[]{}\nrun " + elabCommandName;
-		final String sigsWithoutStructuralConstraints = createAllSigsdeclaration(src, false, false) + "\npred "
+		final String sigsWithoutStructuralConstraints = createAllSigsdeclaration(src, false, false, func) + "\npred "
 				+ elabCommandName + "[]{}\nrun " + elabCommandName;
-		final String sigsWithoutStructuralConstraintsWithOneSigs = createAllSigsdeclaration(src, false, true)
+		final String sigsWithoutStructuralConstraintsWithOneSigs = createAllSigsdeclaration(src, false, true, func)
 				+ "\npred " + elabCommandName + "[]{}\nrun " + elabCommandName;
 
 		final File sigsWithStructuralConstraintsFile = new File(tmpFolder,
@@ -328,7 +349,7 @@ public class Elaboration {
 	 * @param withOne
 	 * @return
 	 */
-	public String convertSigToStringDeclaration(Sig sig, boolean withMult, boolean withOne) {
+	public String convertSigToStringDeclaration(Sig sig, boolean withMult, boolean withOne, BiFunction<String, String, String> func) {
 		String result = "";
 
 		if (sig.isAbstract != null) {
@@ -343,7 +364,8 @@ public class Elaboration {
 
 		result = result + " sig ";
 
-		result = result + sig.shortLabel();
+		String sigName = sig.shortLabel();
+		result = result + func.apply("", sigName);
 
 		if (sig instanceof Sig.SubsetSig) {
 			result = result + " in ";
@@ -352,16 +374,33 @@ public class Elaboration {
 		} else if (sig instanceof Sig.PrimSig) {
 			PrimSig pPsig = (Sig.PrimSig) sig;
 			if (!pPsig.parent.builtin) {
-				result = result + " extends " + pPsig.parent.shortLabel();
+				result = result + " extends " + func.apply("", pPsig.parent.shortLabel());
 			}
 		}
 		result = result + "{";
 		result = result + sig.getFields().makeCopy().stream()
-				.map(f -> f.label + ":" + convertFieldToStringDeclaration(f, withMult))
+				.map(f -> func.apply(f.label, sigName) + ":" + convertFieldToStringDeclaration(f, withMult))
 				.collect(Collectors.joining(","));
 		result = result + "}";
 
 		return result.replace("  ", " ").trim();
+	}
+	
+	/**
+	 * Given a signature object from AST, a source code is generated back. If
+	 * !withMult, all the multiplicity constraints are removed. every relations
+	 * is turned to cross-products of set->set. If withOne, the multiplicity of
+	 * signatures become one, regardless of their current state. In any case
+	 * appended fact is removed.
+	 * 
+	 * @param sig
+	 * @param withMult
+	 * @param withOne
+	 * @return
+	 */
+	public String convertSigToStringDeclaration(Sig sig, boolean withMult, boolean withOne) {
+
+		return convertSigToStringDeclaration(sig, withMult, withOne, ExtractorUtils.identityName);
 	}
 
 	/**
@@ -372,8 +411,8 @@ public class Elaboration {
 	 * @param withOne
 	 * @return
 	 */
-	public String createAllSigsdeclaration(File src) {
-		return createAllSigsdeclaration(src, false, false);
+	public String createAllSigsdeclaration(File src, BiFunction<String, String, String> func) {
+		return createAllSigsdeclaration(src, false, false, func);
 	}
 	
 	/**
@@ -384,7 +423,7 @@ public class Elaboration {
 	 * @param withOne
 	 * @return
 	 */
-	protected String createAllSigsdeclaration(File src, boolean withMult, boolean withOne) {
+	protected String createAllSigsdeclaration(File src, boolean withMult, boolean withOne, BiFunction<String, String, String> func) {
 		CompModule module = null;
 		try {
 			module = (CompModule) A4CommandExecuter.get().parse(src.getAbsolutePath(), A4Reporter.NOP);
@@ -393,7 +432,7 @@ public class Elaboration {
 		}
 
 		return module.getAllReachableUserDefinedSigs().stream()
-				.map(s -> convertSigToStringDeclaration(s, withMult, withOne)).collect(Collectors.joining("\n"));
+				.map(s -> convertSigToStringDeclaration(s, withMult, withOne, func)).collect(Collectors.joining("\n"));
 	}
 
 	// ------------------------------------
@@ -421,14 +460,14 @@ public class Elaboration {
 	public void testWithoutStructuralConstraints(String content, String expectedContentWithoutMult) {
 		CompModule module = creatAndParseAlloyCodeForTest(content);
 		String allsigs = module.getAllReachableUserDefinedSigs().stream()
-				.map(s -> convertSigToStringDeclaration(s, false, false)).collect(Collectors.joining("\n"));
+				.map(s -> convertSigToStringDeclaration(s, false, false, ExtractorUtils.identityName)).collect(Collectors.joining("\n"));
 		assertEquals(expectedContentWithoutMult, allsigs);
 	}
 
 	public void testWithStructuralConstraints(String content, String expected) {
 		CompModule module = creatAndParseAlloyCodeForTest(content);
 		String allsigs = module.getAllReachableUserDefinedSigs().stream()
-				.map(s -> convertSigToStringDeclaration(s, true, false)).collect(Collectors.joining("\n"));
+				.map(s -> convertSigToStringDeclaration(s, true, false, ExtractorUtils.identityName)).collect(Collectors.joining("\n"));
 		assertEquals(expected, allsigs);
 
 	}

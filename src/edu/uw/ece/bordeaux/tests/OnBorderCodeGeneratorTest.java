@@ -16,17 +16,18 @@ public class OnBorderCodeGeneratorTest {
 
         String fileName = "linked_list.als";
 //        String directory = alloy4Home + "/models/debugger/min_dist/";
-      String directory = alloy4Home + "/models/examples/toys/";
-        fileName = "birthday.als";
+      String directory = alloy4Home + "/models/bordeaux/";
+        fileName = "courses.als";
 //        fileName = "ceilingsAndFloors.als";
 //        fileName = "railway.als";
 //        fileName = "bare_linked_list.als";
         
         String file = directory + fileName;
         
+        String commandName = "showSuccesfullPrograms";
         System.out.println("\n\nGenerating for " + new File(file).getAbsolutePath() + "\n\n");
         OnBorderCodeGenerator generator = new OnBorderCodeGenerator(file);
-        generator.run();
+        generator.run(new File("tmp/tests/"), "", commandName);
         
     }
 }

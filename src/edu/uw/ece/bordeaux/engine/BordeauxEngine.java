@@ -105,7 +105,12 @@ public final class BordeauxEngine {
 		}
 
 		String fileToGenerate = inputPath.getAbsolutePath();
-		OnBorderCodeGenerator generator = new OnBorderCodeGenerator(fileToGenerate, writer);
+		OnBorderCodeGenerator generator = null;
+		try {
+			generator = new OnBorderCodeGenerator(fileToGenerate, writer);
+		} catch (Err e1) {
+			e1.printStackTrace();
+		}
 		generator.run(constraints);
 
 		if (Configuration.IsInDeubbungMode) {

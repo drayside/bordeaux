@@ -3,8 +3,11 @@ package edu.uw.ece.bordeaux.util;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
+import edu.mit.csail.sdg.alloy4.A4Reporter;
+import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.ast.CommandScope;
 import edu.mit.csail.sdg.alloy4compiler.ast.Expr;
@@ -15,9 +18,11 @@ import edu.mit.csail.sdg.alloy4compiler.ast.ExprUnary;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig;
 import edu.mit.csail.sdg.alloy4compiler.ast.ExprUnary.Op;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
+import edu.mit.csail.sdg.alloy4compiler.parser.CompModule;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Tuple;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4TupleSet;
+import edu.uw.ece.bordeaux.A4CommandExecuter;
 
 /**
  * The class contains static methods that are helpful for extracting Alloy
@@ -27,6 +32,29 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4TupleSet;
  *
  */
 public class ExtractorUtils {
+
+
+	public static String extractScopeFromCommand(final String srcFile, final String commandName) {
+		
+		CompModule module = null;
+		try {
+			module = (CompModule) A4CommandExecuter.get().parse(srcFile, A4Reporter.NOP);
+		} catch (Err e) {
+			e.printStackTrace();
+		}
+		
+		if(module != null) {
+			
+			for(Command c : module.getAllCommands()) {
+				if(c.label.equals(commandName)) {
+					return extractScopeFromCommand(c);
+				}
+			}
+		}
+		
+		return null;
+	}
+	
 	/**
 	 * Given a command, its scope is returned as String
 	 * 
@@ -80,10 +108,29 @@ public class ExtractorUtils {
 		return Character.toLowerCase(in.charAt(0)) + (lenG1 ? in.substring(1) : "");
 	}
 	
+	public static String getLocalSigName(String sigName) {
+		return ExtractorUtils.getCamelCase(sigName);
+	}
+	
 	public static String getLocalFieldName(String fieldLabel, String sigName) {
 
 		return getCamelCase(sigName) + "_" + fieldLabel;
 	}
+	
+	public static BiFunction<String, String, String> identityName = (a, b) -> { return a + b; };
+	
+	public static BiFunction<String, String, String> elementName = new BiFunction<String, String, String>() {
+
+		@Override
+		public String apply(String fieldName, String sigName) {
+			if(fieldName == null || fieldName.isEmpty()) {
+				return getLocalSigName(sigName);
+			}
+			
+			return getLocalFieldName(fieldName, sigName);
+		}
+	};
+	
 	/**
 	 * Given an A4solution object from AlloyExecuter, it converts it to a Alloy
 	 * syntax

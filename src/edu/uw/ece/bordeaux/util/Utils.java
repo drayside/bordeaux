@@ -36,9 +36,13 @@ import java.util.stream.Collectors;
 
 import javax.sql.rowset.serial.SerialException;
 
+import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.alloy4.Pos;
+import edu.mit.csail.sdg.alloy4compiler.ast.Command;
+import edu.mit.csail.sdg.alloy4compiler.parser.CompModule;
+import edu.uw.ece.bordeaux.A4CommandExecuter;
 
 public class Utils {
 
@@ -148,7 +152,12 @@ public class Utils {
 		return snippet.toString();
 
 	}
-
+	
+	public static String not(String s) {
+		if(s == null || s.isEmpty()) return "";
+		return String.format("not\n\t(\n\t\t%s\n\t)", s);
+	}
+	
 	/**
 	 * Read non-blank lines from file into a list of strings.
 	 * 

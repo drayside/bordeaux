@@ -21,7 +21,7 @@ public class A4SolutionVisitor {
 
 			if(ExtractorUtils.sigToBeIgnored(sig)) continue;
 			
-			String sigType = sig.label.replace("this/", "");
+			String sigType = sig.shortLabel();
 			SigFieldWrapper sigWrapper = new SigFieldWrapper(sigType, sig.decl.expr.mult(), sig.isAbstract != null);
 			
 			for (Decl decl : sig.getFieldDecls()) {
