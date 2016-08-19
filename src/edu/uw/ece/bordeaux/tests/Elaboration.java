@@ -96,12 +96,22 @@ public class Elaboration {
 		return convertConstraintsToFormulas(module, command);
 	}
 
-	public List<Formula> convertAllConstraintsToFormula(File src) {
+	public List<Formula> convertAllConstraintsToFormula(File src, String commandName) {
+		if(commandName == null || commandName.isEmpty())
+			throw new RuntimeException("Command Name cannot be empty or null");
+		
 		CompModule module = parseToCompModule(src);
 
-		if (module.getAllCommands().size() != 1)
-			throw new RuntimeException("MORE THAN ONE COMMAND IS NOT ALLOWED NOW!");
-		Command command = module.getAllCommands().get(0);
+		Command command = null;
+		for(Command c : module.getAllCommands()) {
+			if(c.label.equals(commandName)) {
+				command = c;
+				break;
+			}
+		}
+		
+		if (command == null) throw new NullPointerException("Command cannot be null");
+		
 		return convertConstraintsToFormulas(module, command);
 	}
 
@@ -121,6 +131,23 @@ public class Elaboration {
 	 * @return 
 	 */
 	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder) {
+
+		CompModule module = parseToCompModule(src);
+		String commandLabel = module.getAllCommands().get(0).label;
+		return createBodyOfInstance_Structural_Constraint_Predicates(src, tmpFolder, commandLabel);
+	}
+	/**
+	 * Given a the src file, the function returns a list, where result.get(0) is
+	 * the body of 'instance' predicate, and result.get(1) is the body of
+	 * structural predicate. result.get(2) body of constraint predicate.
+	 * 
+	 * tmpfolder is used for storing src transformed files.
+	 * 
+	 * @param src
+	 * @param tmpFolder
+	 * @return 
+	 */
+	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder, String commandName) {
 
 		final String elabCommandName = "_s__igsp_";
 
@@ -222,17 +249,17 @@ public class Elaboration {
 
 		// remove the structural constraints from the rest of constraints in the
 		// formula.
-		List<Formula> constraintFormulas = convertAllConstraintsToFormula(src);
+		List<Formula> constraintFormulas = convertAllConstraintsToFormula(src, commandName);
 
 		// Fetch the command name
 		CompModule module = parseToCompModule(src);
-		String commandLabel = module.getAllCommands().get(0).label;
+//		String commandLabel = module.getAllCommands().get(0).label;
 		// commandname does not have a name
-		final String commandName = commandLabel.contains("$") ? "this" : commandLabel + "_this";
+		final String tmpCommandName = commandName.contains("$") ? "this" : commandName + "_this";
 		Set<String> constraintFormulasAsSet = constraintFormulas.stream().map(f -> f.toString())
 				.collect(Collectors.toSet());
 		Set<String> strucuralsAsSet = withStructurals.stream().map(f -> f.toString())
-				.map(s -> s.replace(elabCommandName + "_this", commandName)).collect(Collectors.toSet());
+				.map(s -> s.replace(elabCommandName + "_this", tmpCommandName)).collect(Collectors.toSet());
 		constraintFormulasAsSet.removeAll(strucuralsAsSet);
 
 		final String constraintsBody = constraintFormulasAsSet.stream().map(s -> sanitizer(s))
