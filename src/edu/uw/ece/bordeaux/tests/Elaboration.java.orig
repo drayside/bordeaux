@@ -121,7 +121,11 @@ public class Elaboration {
 		String commandName = module.getAllCommands().get(0).label;
 		return createBodyOfInstance_Structural_Constraint_Predicates(src, tmpFolder, commandName);
 	}
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> a7fb3353b6a1cb573d110e68097e24cdc8b509aa
 	/**
 	 * Given a the src file, the function returns a list, where result.get(0) is
 	 * the body of 'instance' predicate, and result.get(1) is the body of
@@ -133,6 +137,7 @@ public class Elaboration {
 	 * @param tmpFolder
 	 * @return
 	 */
+<<<<<<< HEAD
 	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder, String commandName) {
 	
 		return createBodyOfInstance_Structural_Constraint_Predicates(src, tmpFolder, commandName, ExtractorUtils.identityName);
@@ -150,6 +155,10 @@ public class Elaboration {
 	 * @return 
 	 */
 	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder, String commandName, BiFunction<String, String, String> func) {
+=======
+	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder,
+			String commandName) {
+>>>>>>> a7fb3353b6a1cb573d110e68097e24cdc8b509aa
 
 		final String elabCommandName = "_s__igsp_";
 
