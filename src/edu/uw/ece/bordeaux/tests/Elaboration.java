@@ -97,21 +97,22 @@ public class Elaboration {
 	}
 
 	public List<Formula> convertAllConstraintsToFormula(File src, String commandName) {
-		if(commandName == null || commandName.isEmpty())
+		if (commandName == null || commandName.isEmpty())
 			throw new RuntimeException("Command Name cannot be empty or null");
-		
+
 		CompModule module = parseToCompModule(src);
 
 		Command command = null;
-		for(Command c : module.getAllCommands()) {
-			if(c.label.equals(commandName)) {
+		for (Command c : module.getAllCommands()) {
+			if (c.label.equals(commandName)) {
 				command = c;
 				break;
 			}
 		}
-		
-		if (command == null) throw new NullPointerException("Command cannot be null");
-		
+
+		if (command == null)
+			throw new NullPointerException("Command cannot be null");
+
 		return convertConstraintsToFormulas(module, command);
 	}
 
@@ -128,7 +129,7 @@ public class Elaboration {
 	 * 
 	 * @param src
 	 * @param tmpFolder
-	 * @return 
+	 * @return
 	 */
 	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder) {
 
@@ -136,6 +137,7 @@ public class Elaboration {
 		String commandLabel = module.getAllCommands().get(0).label;
 		return createBodyOfInstance_Structural_Constraint_Predicates(src, tmpFolder, commandLabel);
 	}
+
 	/**
 	 * Given a the src file, the function returns a list, where result.get(0) is
 	 * the body of 'instance' predicate, and result.get(1) is the body of
@@ -145,9 +147,10 @@ public class Elaboration {
 	 * 
 	 * @param src
 	 * @param tmpFolder
-	 * @return 
+	 * @return
 	 */
-	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder, String commandName) {
+	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder,
+			String commandName) {
 
 		final String elabCommandName = "_s__igsp_";
 
@@ -195,9 +198,14 @@ public class Elaboration {
 
 		final Set<Formula> withoutStructuralsOne = new HashSet<>(
 				convertSigsdeclarationToFormula(sigsWithoutStructuralConstraintsWithOneSigsFile));
-		Set<String> StructuralsOneFormulas = withoutStructuralsOne.stream().map(f -> f.toString())
+		Set<String> allStructuralsOneFormulas = withoutStructuralsOne.stream().map(f -> f.toString())
 				.filter(s -> !allunivs.contains(s) && !allExtends.contains(s) && !allTupleInclusion.contains(s))
 				.collect(Collectors.toSet());
+		final Set<String> allStructuralsOneFormulasWithAnd = new HashSet<>();
+		allStructuralsOneFormulas.forEach(s -> {
+			allStructuralsOneFormulasWithAnd.add("&& " + s.trim());
+			allStructuralsOneFormulasWithAnd.add(s.trim() + " &&");
+		});
 
 		final Set<Formula> withStructurals = new HashSet<>(
 				convertSigsdeclarationToFormula(sigsWithStructuralConstraintsFile));
@@ -229,7 +237,7 @@ public class Elaboration {
 				}
 			}
 			// if the sig has one quantifier, ie "one sig NAME{}", then the quan
-			for (String inclusion : StructuralsOneFormulas) {
+			for (String inclusion : allStructuralsOneFormulasWithAnd) {
 				if (seen.contains(inclusion)) {
 					seen = seen.replace(inclusion, "").trim();
 					break;
@@ -241,7 +249,8 @@ public class Elaboration {
 			tmpStructuralBody.add(seen);
 		}
 
-		final String structuralConstraintBody = sanitizer(tmpStructuralBody.stream().collect(Collectors.joining("\n")));
+		final String structuralConstraintBody = sanitizer((generateStructuralConstraintsForOneAndLoneSig(src) + "\n"
+				+ tmpStructuralBody.stream().collect(Collectors.joining("\n"))).trim());
 
 		sigsWithStructuralConstraintsFile.delete();
 		sigsWithoutStructuralConstraintsFile.delete();
@@ -253,7 +262,7 @@ public class Elaboration {
 
 		// Fetch the command name
 		CompModule module = parseToCompModule(src);
-//		String commandLabel = module.getAllCommands().get(0).label;
+		// String commandLabel = module.getAllCommands().get(0).label;
 		// commandname does not have a name
 		final String tmpCommandName = commandName.contains("$") ? "this" : commandName + "_this";
 		Set<String> constraintFormulasAsSet = constraintFormulas.stream().map(f -> f.toString())
@@ -266,6 +275,34 @@ public class Elaboration {
 				.collect(Collectors.joining("\n"));
 
 		return Arrays.asList(instanceBody, structuralConstraintBody, constraintsBody);
+	}
+
+	public String generateStructuralConstraintsForOneAndLoneSig(File src) {
+		return parseToCompModule(src).getAllReachableUserDefinedSigs().stream()
+				.map(s -> generateStructuralConstraintsForOneAndLoneSig(s)).filter(s -> !s.isEmpty())
+				.collect(Collectors.joining("\n"));
+	}
+
+	/**
+	 * Provided a sig is lone, ie 'lone sig A{}', an structural constraint is
+	 * generated for it, ie 'lone A' Provided a sig is one, ie 'one sig A{}', an
+	 * structural constraint is generated for it, ie 'one A' For the
+	 * multiplicity constraint of some, the Alloy translator already takes care
+	 * of it.
+	 * 
+	 * @param sig
+	 * @return
+	 */
+	public String generateStructuralConstraintsForOneAndLoneSig(Sig sig) {
+		String result = "";
+
+		if (sig.isLone != null) {
+			result = "lone " + sig.label;
+		} else if (sig.isOne != null) {
+			result = "one " + sig.label;
+		}
+
+		return result;
 	}
 
 	public String getMult(Sig sig) {
@@ -375,7 +412,7 @@ public class Elaboration {
 	public String createAllSigsdeclaration(File src) {
 		return createAllSigsdeclaration(src, false, false);
 	}
-	
+
 	/**
 	 * Given an Alloy source code, an Alloy code per each signature is created.
 	 * 
@@ -626,12 +663,27 @@ public class Elaboration {
 
 	@Test
 	public void testStructuralBodyOneSingleSig() {
-		testStructuralBody("one sig A{}\nrun{}", "DO NOT KNOW THE SEMANTIC!");
+		testStructuralBody("one sig A{}\nrun{}", "one A");
 	}
 
 	@Test
 	public void testStructuralBodyOneSingleOneRelation() {
-		testStructuralBody("one sig A{r: A}\nrun{}", "(one (A . (A -> r)) && )");
+		testStructuralBody("one sig A{r: A}\nrun{}", "one A\n(one (A . (A -> r)) )");
+	}
+	
+	@Test
+	public void testStructuralBodyLoneSingleSig() {
+		testStructuralBody("lone sig A{}\nrun{}", "lone A");
+	}
+	
+	@Test
+	public void testStructuralBodySomeSingleSig() {
+		testStructuralBody("some sig A{}\nrun{}", "some A");
+	}
+	
+	@Test
+	public void testStructuralBodySomeSingleOneRelation() {
+		testStructuralBody("some sig A{r: A}\nrun{}", "(all _s__igsp__this: one A | (one (_s__igsp__this . r) ))\nsome A");
 	}
 
 	@Test
