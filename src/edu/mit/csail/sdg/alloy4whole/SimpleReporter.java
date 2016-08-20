@@ -68,6 +68,7 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4SolutionWriter;
 import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod;
 import edu.mit.csail.sdg.alloy4viz.StaticInstanceReader;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
+import edu.mit.csail.sdg.alloy4whole.SimpleGUI.BordeauxNextType;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.HolaReporter;
 import edu.uw.ece.bordeaux.engine.BordeauxEngine;
@@ -538,7 +539,7 @@ public final class SimpleReporter extends A4Reporter {
         private static final long serialVersionUID = 0;
         public String filename = "";
         public boolean useBordeaxEngine;
-        public boolean findNearMiss;
+        public BordeauxNextType nextType;
         public transient WorkerCallback out = null;
         private void cb(Object... objs) throws Exception { out.callback(objs); }
         public void run(WorkerCallback out) throws Exception {
@@ -567,8 +568,27 @@ public final class SimpleReporter extends A4Reporter {
             int tries=0;
             while(true) {
             	boolean none = false;
-            	if(useBordeaxEngine) {cb("bold", "eyo.\n");
-            		sol = findNearMiss ? engine.nextNearMiss(latestRep) : engine.nextNearHit(latestRep);
+            	if(useBordeaxEngine) {
+            		switch(nextType) {
+            		case NearHit: {
+            			cb("bold", "Searching for next 'near-hit' instance...\n");
+            			sol = engine.nextNearHit(latestRep);
+            			break;
+            		}
+            		
+            		case NearMiss: {
+            			cb("bold", "Searching for next 'near-miss' instance...\n");
+            			sol = engine.nextNearMiss(latestRep);
+            			break;
+            		}
+            		
+            		case NextSolution: {
+            			cb("bold", "Enumerating initial instance...\n");
+            			sol = engine.nextSolution();
+            			break;
+            		}
+            		}
+            		
             		none = sol == null;
             		tries = 100;
             	} else {

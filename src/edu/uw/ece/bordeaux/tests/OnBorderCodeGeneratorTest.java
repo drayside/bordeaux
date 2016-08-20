@@ -19,7 +19,7 @@ public class OnBorderCodeGeneratorTest {
         Command command = ExtractorUtils.getCommandFromNamePainfully(file, "showSuccesfullPrograms");
         
         OnBorderCodeGenerator generator = new OnBorderCodeGenerator(file, command);
-        generator.runWithStaticIntance("", Utils.not(generator.getForumlaContstraints()));
+        generator.run("", Utils.not(generator.getForumlaContstraints()));
     }
     
     @Test
@@ -29,7 +29,7 @@ public class OnBorderCodeGeneratorTest {
         Command command = ExtractorUtils.getCommandFromNamePainfully(file, "SinglyLinkedLists");
         
         OnBorderCodeGenerator generator = new OnBorderCodeGenerator(file, command);
-        generator.runWithStaticIntance("", Utils.not(generator.getForumlaContstraints()));
+        generator.run("", Utils.not(generator.getForumlaContstraints()));
         
     }
 }

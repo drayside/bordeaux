@@ -157,6 +157,21 @@ public class Utils {
 		if(s == null || s.isEmpty()) return "";
 		return String.format("not\n\t{\n\t\t%s\n\t}", s);
 	}
+
+	public static String and(String... args) {
+		if(args == null) return "";
+		
+		final String andStr = "\n\tand \n\t\t";
+		String val = "";
+		for(String s : args) {
+			if(s != null && !s.isEmpty()) {
+				val += andStr + s;
+			}
+		}
+		
+		val = val.replaceFirst(andStr, "");
+		return val;
+	}
 	
 	/**
 	 * Read non-blank lines from file into a list of strings.

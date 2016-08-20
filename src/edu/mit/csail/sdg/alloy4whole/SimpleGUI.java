@@ -1564,25 +1564,27 @@ public final class SimpleGUI implements ComponentListener, Listener {
     /** This object performs solution enumeration. */
     private final Computer nextEnumerator = new Computer() {
         public String compute(Object input) {
-        	return computeNext(input, false, false);
+        	return computeNext(input, UseBordeauxSolver.get(), BordeauxNextType.NextSolution);
         }
     };    
 
     /** This object performs near-miss solution enumeration. */
     private final Computer nearMissEnumerator = new Computer() {
         public String compute(Object input) {
-        	return computeNext(input, true, true);
+        	return computeNext(input, true, BordeauxNextType.NearMiss);
         }
     };
     
     /** This object performs near-hit solution enumeration. */
     private final Computer nearHitEnumerator = new Computer() {
         public String compute(Object input) {
-        	return computeNext(input, true, false);
+        	return computeNext(input, true, BordeauxNextType.NearHit);
         }
     };
 
-    public String computeNext(Object input, final boolean useBordeaxEngine, final boolean findNearMiss) {
+    public enum BordeauxNextType { NextSolution, NearMiss, NearHit }
+    
+    public String computeNext(Object input, final boolean useBordeaxEngine, final BordeauxNextType nextType) {
         final String arg = (String)input;
         OurUtil.show(frame);
         if (WorkerEngine.isBusy())
@@ -1591,7 +1593,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         SimpleTask2 task = new SimpleTask2();
         task.filename = arg;
         task.useBordeaxEngine = useBordeaxEngine;
-        task.findNearMiss = findNearMiss;
+        task.nextType = nextType;
         try {
             WorkerEngine.runLocally(task, cb);
 //            if (Util.isDebug() && VerbosityPref.get().geq(Verbosity.FULLDEBUG))

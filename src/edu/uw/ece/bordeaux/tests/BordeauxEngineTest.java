@@ -51,8 +51,10 @@ public class BordeauxEngineTest {
 		String filename = "bare_linked_list.als";
 		String commandName = "p";
 		File filepath = new File(MIN_DIST_DIRECTORY, filename);			
-		
-		testMiss(commandName, filepath);
+
+		HolaReporter reporter = new HolaReporter();
+		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
+		testMiss(commandName, filepath, engine);
 	}
 	
 	@Test
@@ -60,19 +62,25 @@ public class BordeauxEngineTest {
 		
 		String filename = "courses.als";
 		String commandName = "showSuccesfullPrograms";
-		File filepath = new File(BORDEUX_MODELS_DIRECTORY, filename);			
-		
-		testMiss(commandName, filepath);
+		File filepath = new File(BORDEUX_MODELS_DIRECTORY, filename);
+
+		HolaReporter reporter = new HolaReporter();
+		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
+		testMiss(commandName, filepath, engine);
 	}
 
 	@Test
 	public void testSinglyLinkedList() {
-		
+
 		String filename = "sll.als";
 		String commandName = "SinglyLinkedLists";
 		File filepath = new File(BORDEUX_MODELS_DIRECTORY, filename);	
+
+		HolaReporter reporter = new HolaReporter();
+		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-		testMiss(commandName, filepath);
+		testMiss(commandName, filepath, engine);
+		testHit(commandName, filepath, engine);
 	}
 
 	@Test
@@ -82,12 +90,13 @@ public class BordeauxEngineTest {
 		String commandName = "check$1";
 		File filepath = new File(BORDEUX_MODELS_DIRECTORY, filename);		
 
-		testMiss(commandName, filepath);
-	}
-
-	private void testMiss(String commandName, File filepath) {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
+		
+		testMiss(commandName, filepath, engine);
+	}
+
+	private void testMiss(String commandName, File filepath, BordeauxEngine engine) {	
 		
 		assertNotNull(engine);
 		
@@ -95,8 +104,30 @@ public class BordeauxEngineTest {
 		assertNotNull(nearMiss);
 		
 		assertNotEquals(nearMiss, engine.getInitialSolution());
+		
+		A4Solution nextnearMiss = engine.nextNearMiss(reporter);
+		assertNotNull(nextnearMiss);
+		
+		assertNotEquals(nextnearMiss, nearMiss);
+		assertNotEquals(nextnearMiss, engine.getInitialSolution());
 	}
 
+	private void testHit(String commandName, File filepath, BordeauxEngine engine) {
+		
+		assertNotNull(engine);
+		
+		A4Solution nearHit = engine.nextNearHit(reporter);
+		assertNotNull(nearHit);
+		
+		assertNotEquals(nearHit, engine.getInitialSolution());
+		
+		A4Solution nextnearHit = engine.nextNearHit(reporter);
+		assertNotNull(nextnearHit);
+		
+		assertNotEquals(nextnearHit, nearHit);
+		assertNotEquals(nextnearHit, engine.getInitialSolution());
+	}
+	
 	public BordeauxEngine createBordeauxEngine(A4Reporter reporter, File filepath, String commandName) {
 
 		assertNotNull(commandName);

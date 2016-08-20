@@ -11,6 +11,7 @@ import javax.management.RuntimeErrorException;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.mit.csail.sdg.alloy4whole.SimpleReporter;
@@ -30,6 +31,7 @@ public final class BordeauxEngine {
 	private final File inputPath;
 	
 	private boolean firstNearMiss = true;
+	private boolean firstNearHit = true;
 	private String currentMiss = "";
 	private String currentHit = "";
 	private A4Solution previousHit;
@@ -43,14 +45,8 @@ public final class BordeauxEngine {
 	public BordeauxEngine(File inputPath, Command command, A4Solution initialSolution) {
 
 		this.inputPath = inputPath;
-		this.initialSolution = initialSolution;
 		this.command = command;
-		this.createCodeGenerator(inputPath, command);
-		
-		if(initialSolution != null) {
-			this.currentHit =  ExtractorUtils.convertA4SolutionToAlloySyntax(initialSolution, true);
-			this.currentMiss = Utils.not(ExtractorUtils.convertFormulaExprToAlloySyntax(command.formula, true));
-		}
+		this.initSolution(initialSolution);
 	}
 
 	public BordeauxEngine(File inputPath, File tmpPath, Command command, A4Solution initialSolution) {
@@ -66,6 +62,8 @@ public final class BordeauxEngine {
 		String fileName = Utils.getFileName(inputPath.getAbsolutePath());
 		String onBorderFileName = fileName + ".hola-" + UUID.randomUUID().hashCode() + ".als";
 		this.onBorderFile = new File(tmpPath, onBorderFileName);
+		this.onBorderFile.deleteOnExit();
+		
 		PrintWriter writer = null;
 		try {
 			writer = new PrintWriter(onBorderFile);
@@ -84,8 +82,7 @@ public final class BordeauxEngine {
 			logger.info("\n\nOnBorderFile for: " + onBorderFileName + "\n" + Utils.readFile(onBorderFile.getAbsolutePath()) + "\n\n");
 		}
 	}
-		
-
+	
 	public A4Solution getInitialSolution() {
 		return this.initialSolution;
 	}
@@ -315,7 +312,14 @@ public final class BordeauxEngine {
 	
 	private A4Solution func(A4Reporter reporter, File inputPath, String constraint1, String constraint2) {
 		
+		try {
+			Util.writeAll(this.onBorderFile.getAbsolutePath(), "");
+		} catch (Err e1) {
+			e1.printStackTrace();
+		}
+		
 		this.generator.run(constraint1, constraint2);
+		System.out.println(Utils.readFile(this.onBorderFile.getAbsolutePath()));
 		logger.info("OnBorder Code generated...running Alloy*");
 
 		// Run on-border instances through the higher order solver (alloy*)
@@ -337,24 +341,70 @@ public final class BordeauxEngine {
 			logger.info("Alloy* Complete on : " + onBorderFile + ". Status: " + (success ? "Successful":"Failed"));
 		}
 
-		onBorderFile.deleteOnExit();
 		return reporter.getA4Solution();
 	}
 	
+	public A4Solution nextSolution() throws Err {
+		
+		A4Solution next = this.initialSolution.next();
+		
+		if(next != null) {
+			initSolution(next);
+		}
+		
+		return next;
+	}
+
+	private void initSolution(A4Solution sol) {
+		this.initialSolution = sol;
+		this.previousHit = sol;
+		
+		this.createCodeGenerator(inputPath, command);
+		this.currentMiss = this.generator.getForumlaContstraints();
+		this.currentHit = "";
+	}
+	
 	public A4Solution nextNearMiss(A4Reporter rep) {
+
+		if(!firstNearMiss && this.previousMiss == null) return null;
+		this.firstNearMiss = false; 
 		
-		String constraint1;
-		String constraint2;
+		String constraint1 = ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousHit, true);
 		
-		constraint1 = ExtractorUtils.convertA4SolutionToAlloySyntax(initialSolution, true);
-		constraint2 = Utils.not(this.generator.getForumlaContstraints());
-		this.previousMiss = this.func(rep, this.inputPath, constraint1, constraint2);
-		firstNearMiss = false;
+		String prevMissStr = "";
+		if(this.previousMiss != null) {
+			prevMissStr = ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousMiss, true);
+		}
+		
+		currentMiss = Utils.and(currentMiss, prevMissStr);
+		String constraint2 = Utils.not(currentMiss);
+		
+		this.previousMiss = this.func(rep, this.inputPath, constraint1, constraint2);		
 		return this.previousMiss;
 	}
 	
 	public A4Solution nextNearHit(A4Reporter rep) {
 
-		return null;
+		String constraint1 = ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousMiss, true);
+		
+		if(firstNearHit) {
+
+			String constraint2 = this.generator.getForumlaContstraints();
+			this.previousHit = this.func(rep, this.inputPath, constraint1, constraint2);
+			currentHit = ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousHit, true);
+			firstNearHit = false;
+			return this.previousHit;
+		}
+		
+		String prevHitStr = "";
+		if(this.previousHit != null) {
+			prevHitStr = ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousHit, true);
+		}
+		
+		currentHit = Utils.and(currentHit, prevHitStr);
+		String constraint2 = currentHit;
+		
+		this.previousHit = this.func(rep, this.inputPath, constraint1, constraint2);
+		return this.previousHit;
 	}
 }
