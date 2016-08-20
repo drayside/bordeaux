@@ -29,7 +29,6 @@ public class OnBorderCodeGenerator {
     public static final String FIND_MARGINAL_INSTANCES_COMMAND = "findMarginalInstances";
     
     private PrintWriter out;
-    private boolean useStaticInstance;
     private String indent;
     private Module module;
     private String sigDeclaration;
@@ -146,18 +145,7 @@ public class OnBorderCodeGenerator {
         
         this.out.flush();
     }
-    
-    /**
-     * Runs the generator using the specified {@link A4Solution} as a static instance the the given predName as the intended instance.
-     * @param staticSoln
-     * @param pred
-     */
-    public void runWithStaticIntance(String...constraints) {
-
-    	this.useStaticInstance = true;
-    	this.run(constraints);
-    }
-    
+        
     private void generateSigs(PrintWriter out) throws Err {
         
         this.out = out;
@@ -297,20 +285,8 @@ public class OnBorderCodeGenerator {
         sigmaCall.delete(0, 2);     
         sigmaCall_1.delete(0, 2);
         
-        String constr1;
-        String constr2;
-        if(this.useStaticInstance) {        	
-        	constr1 = "STATIC";
-        	constr2 = "isINTENDED";
-        } else {
-        	constr1 = contraints != null && contraints.length > 0 && !contraints[0].isEmpty()? contraints[0].replaceAll("\\s+", "_").toUpperCase() : "";
-        	constr2 = contraints != null && contraints.length > 1 && !contraints[1].isEmpty() ? "is" + contraints[1].replaceAll("\\s+", "_").toUpperCase() : "not is";
-       
-	        // say "not isPREDAInstance" if predA exists
-	        if(constr2.equals("not is") && !constr1.equals("")) {
-	        	constr2 += constr1;
-	        }
-        }
+        String constr1 = "C1";
+        String constr2 = "C2";
         
         // Finish outer quantifier
         print("some %s | {", quantifier);
@@ -319,7 +295,7 @@ public class OnBorderCodeGenerator {
         indent();
         println("(");
         println("is%sInstance[%s]", constr1, constr1InstanceCall);
-        println("and %sInstance[%s]", constr2, constr2InstanceCall);
+        println("and is%sInstance[%s]", constr2, constr2InstanceCall);
         println("%s)", deltaCalls.toString().replaceAll("\n", "\n" + indent));
         
         outdent();
@@ -332,7 +308,7 @@ public class OnBorderCodeGenerator {
         indent();
         println("(");
         println("is%sInstance[%s]", constr1, constr1InstanceCall_1);
-        println("and %sInstance[%s]", constr2, constr2InstanceCall_1);
+        println("and is%sInstance[%s]", constr2, constr2InstanceCall_1);
         println("%s)", deltaCalls_1.toString().replaceAll("\n", "\n" + indent));
         
         outdent();
@@ -540,38 +516,21 @@ public class OnBorderCodeGenerator {
     	if(contraints == null) return;
 
         this.out = out;
-    	if(this.useStaticInstance) {
+        ln();
+        println("pred isC1Instance [%s] {", params);
+        indent();
+        println("%s", contraints[0]);
+        outdent();
+        println("}");
 
-        	ln();
-	        println("pred isSTATICInstance [%s] {", params);
-	        indent();
-	        println("%s", contraints[0]);
-	        outdent();
-	        println("}");
-
-        	ln();
-	        println("pred isINTENDEDInstance [%s] {", params);
-	        indent();
-	        println("isInstance[%s]", args);
-	        println("not structuralConstraints[%s]", args);
-	        println("%s", contraints[1]);
-	        outdent();
-	        println("}");
-    		return;
-    	}
-    	
-    	for(String constraint : contraints) {
-    		
-    		if(constraint == null || constraint.isEmpty()) continue;
-    		
-        	ln();
-	        println("pred is%sInstance [%s] {", constraint.replaceAll("\\s+", "_").toUpperCase(), params);
-	        indent();
-	        println("isInstance[%s]", args);
-	        println("%s", constraint);
-	        outdent();
-	        println("}");
-    	}
+    	ln();
+        println("pred isC2Instance [%s] {", params);
+        indent();
+        println("isInstance[%s]", args);
+        println("not structuralConstraints[%s]", args);
+        println("%s", contraints[1]);
+        outdent();
+        println("}");
     }
     
     private void generateSigmaFunction(final int paramLength, PrintWriter out) {

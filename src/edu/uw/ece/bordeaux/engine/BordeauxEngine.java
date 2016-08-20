@@ -313,9 +313,9 @@ public final class BordeauxEngine {
 		}
 	}*/
 	
-	private A4Solution func(A4Reporter reporter, File inputPath, String staticConstraint, String intendedConstraint) {
+	private A4Solution func(A4Reporter reporter, File inputPath, String constraint1, String constraint2) {
 		
-		this.generator.runWithStaticIntance(staticConstraint, intendedConstraint);
+		this.generator.run(constraint1, constraint2);
 		logger.info("OnBorder Code generated...running Alloy*");
 
 		// Run on-border instances through the higher order solver (alloy*)
@@ -343,12 +343,12 @@ public final class BordeauxEngine {
 	
 	public A4Solution nextNearMiss(A4Reporter rep) {
 		
-		String staticConstraint;
-		String intendedConstraint;
+		String constraint1;
+		String constraint2;
 		
-		staticConstraint = ExtractorUtils.convertA4SolutionToAlloySyntax(initialSolution, true);
-		intendedConstraint = Utils.not(this.generator.getForumlaContstraints());
-		this.previousMiss = this.func(rep, this.inputPath, staticConstraint, intendedConstraint);
+		constraint1 = ExtractorUtils.convertA4SolutionToAlloySyntax(initialSolution, true);
+		constraint2 = Utils.not(this.generator.getForumlaContstraints());
+		this.previousMiss = this.func(rep, this.inputPath, constraint1, constraint2);
 		firstNearMiss = false;
 		return this.previousMiss;
 	}
