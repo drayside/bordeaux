@@ -572,13 +572,13 @@ public final class SimpleReporter extends A4Reporter {
             		switch(nextType) {
             		case NearHit: {
             			cb("bold", "Searching for next 'near-hit' instance...\n");
-            			sol = engine.nextNearHit(latestRep);
+            			sol = engine.nextNearHit(A4Reporter.NOP);
             			break;
             		}
             		
             		case NearMiss: {
             			cb("bold", "Searching for next 'near-miss' instance...\n");
-            			sol = engine.nextNearMiss(latestRep);
+            			sol = engine.nextNearMiss(A4Reporter.NOP);
             			break;
             		}
             		

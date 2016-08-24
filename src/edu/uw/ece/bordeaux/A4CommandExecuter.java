@@ -20,6 +20,10 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.collections4.MultiValuedMap;
+import org.apache.commons.collections4.map.MultiValueMap;
+import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
+
 import edu.mit.csail.sdg.alloy4.A4Preferences;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
@@ -238,9 +242,9 @@ public class A4CommandExecuter {
 		return Collections.unmodifiableMap(result);
 	}
 
-	public Map<Command, A4Solution> executeHola(A4Reporter rep, String tmpDirectory, String commandName, String... filenames) throws Err {
+	public MultiValuedMap<String, A4Solution> executeHola(A4Reporter rep, String tmpDirectory, String commandName, String... filenames) throws Err {
 		
-        Map<Command, A4Solution> result = new HashMap<>();
+		MultiValuedMap<String, A4Solution> result = new HashSetValuedHashMap<>();
 
         // Choose some default options for how you want to execute the commands
         A4Options opt = new A4Options();
@@ -283,11 +287,11 @@ public class A4CommandExecuter {
                 TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(rep, world.getAllReachableSigs(), command, opt);
                 A4Solution sol = tr.executeCommand();
 //                System.exit(0);
-                result.put(command, sol);
+                result.put(commandName, sol);
             }
         }
 
-        return Collections.unmodifiableMap(result);
+        return result;
 	}
 	
 	public void runAlloy(String fileName, A4Reporter rep, String commandName) throws Err {

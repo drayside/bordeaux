@@ -3,6 +3,8 @@ package edu.uw.ece.bordeaux.engine;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -324,9 +326,18 @@ public final class BordeauxEngine {
 
 		// Run on-border instances through the higher order solver (alloy*)
 		boolean success = true;
+		A4Solution result = null;
 		try {
-			A4CommandExecuter.get().executeHola(reporter, this.tmpPath.getAbsolutePath(),
-					OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND, onBorderFile.getAbsolutePath());
+			String commandName = OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND;
+			Collection<A4Solution> sols = A4CommandExecuter.get().executeHola(reporter, this.tmpPath.getAbsolutePath(),
+					commandName, onBorderFile.getAbsolutePath()).get(commandName);
+			
+			if(reporter.equals(A4Reporter.NOP)) {
+				Iterator<A4Solution> itr = sols.iterator();
+				result = itr.hasNext() ? itr.next() : null;
+			} else {
+				result = reporter.getA4Solution();
+			}
 		} catch (Exception e) {
 			success = false;
 			e.printStackTrace();
@@ -341,7 +352,7 @@ public final class BordeauxEngine {
 			logger.info("Alloy* Complete on : " + onBorderFile + ". Status: " + (success ? "Successful":"Failed"));
 		}
 
-		return reporter.getA4Solution();
+		return result;
 	}
 	
 	public A4Solution nextSolution() throws Err {
