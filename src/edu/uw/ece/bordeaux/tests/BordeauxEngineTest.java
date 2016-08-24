@@ -33,21 +33,7 @@ public class BordeauxEngineTest {
 	public final String TOY_EXAMPLES_DIRECTORY = "./models/examples/toys/";
 	public final String MIN_DIST_DIRECTORY = "./models/debugger/min_dist/";
 	public final String BORDEUX_MODELS_DIRECTORY = "./models/bordeaux/";
-	
-	private A4Reporter reporter;
-	private WorkerCallback cb;
-	
-	@Before
-	public void setUp() {
-		this.cb = new WorkerCallback() {
-            public void callback(Object x) { }
-            public void done() { }
-            public void fail() { }
-         };
-         
- 		this.reporter = new HolaReporter();
-	}
-	
+		
 	@Test
 	public void testBareLinkedList() {
 		
@@ -57,7 +43,7 @@ public class BordeauxEngineTest {
 
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
-		testNextMiss(commandName, filepath, engine, 1);
+		testNextMiss(reporter, commandName, filepath, engine, 1);
 	}
 	
 	@Test
@@ -69,7 +55,7 @@ public class BordeauxEngineTest {
 
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
-		testNextMiss(commandName, filepath, engine, 1);
+		testNextMiss(reporter, commandName, filepath, engine, 1);
 	}
 
 	@Test
@@ -82,8 +68,8 @@ public class BordeauxEngineTest {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-		testNextMiss(commandName, filepath, engine, 1);
-		testNextHit(commandName, filepath, engine, 1);
+		testNextMiss(reporter, commandName, filepath, engine, 1);
+		testNextHit(reporter, commandName, filepath, engine, 1);
 //		testNextSol(commandName, filepath, engine, 1);
 	}
 	
@@ -97,9 +83,11 @@ public class BordeauxEngineTest {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-		testNextMiss(commandName, filepath, engine, 1);
-		testNextHit(commandName, filepath, engine, 1);
+//		testNextMiss(commandName, filepath, engine, 1);
+//		testNextHit(commandName, filepath, engine, 1);
 //		testNextSol(commandName, filepath, engine, 1);
+		
+		BordeauxStatsManager.timeNearMiss(reporter, commandName, filepath, engine, 60000);
 	}
 	
 	@Test
@@ -112,9 +100,9 @@ public class BordeauxEngineTest {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-		testNextMiss(commandName, filepath, engine, 1);
-		testNextHit(commandName, filepath, engine, 1);
-		testNextSol(commandName, filepath, engine, 1);
+		testNextMiss(reporter, commandName, filepath, engine, 1);
+		testNextHit(reporter, commandName, filepath, engine, 1);
+		testNextSol(reporter, commandName, filepath, engine, 1);
 	}
 
 	@Test
@@ -127,25 +115,25 @@ public class BordeauxEngineTest {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-		testNextMiss(commandName, filepath, engine, 1);
+		testNextMiss(reporter, commandName, filepath, engine, 1);
 	}
 
-	private void testNextMiss(String commandName, File filepath, BordeauxEngine engine, int numberOfRuns) {	
+	private void testNextMiss(A4Reporter reporter, String commandName, File filepath, BordeauxEngine engine, int numberOfRuns) {	
 		
-		testSol(commandName, filepath, engine, numberOfRuns, BordeauxNextType.NearMiss);
+		testSol(reporter, commandName, filepath, engine, numberOfRuns, BordeauxNextType.NearMiss);
 	}
 
-	private void testNextHit(String commandName, File filepath, BordeauxEngine engine, int numberOfRuns) {
+	private void testNextHit(A4Reporter reporter, String commandName, File filepath, BordeauxEngine engine, int numberOfRuns) {
 		
-		testSol(commandName, filepath, engine, numberOfRuns, BordeauxNextType.NearHit);
+		testSol(reporter, commandName, filepath, engine, numberOfRuns, BordeauxNextType.NearHit);
 	}
 
-	private void testNextSol(String commandName, File filepath, BordeauxEngine engine, int numberOfRuns) {
+	private void testNextSol(A4Reporter reporter, String commandName, File filepath, BordeauxEngine engine, int numberOfRuns) {
 		
-		testSol(commandName, filepath, engine, numberOfRuns, BordeauxNextType.NextSolution);
+		testSol(reporter, commandName, filepath, engine, numberOfRuns, BordeauxNextType.NextSolution);
 	}
 	
-	private void testSol(String commandName, File filepath, BordeauxEngine engine, int numberOfRuns, BordeauxNextType nextType) {	
+	private void testSol(A4Reporter reporter, String commandName, File filepath, BordeauxEngine engine, int numberOfRuns, BordeauxNextType nextType) {	
 		
 		assertNotNull(engine);
 		
@@ -186,6 +174,7 @@ public class BordeauxEngineTest {
 			prevSols.add(sol);
 		}
 	}
+	
 	
 	public BordeauxEngine createBordeauxEngine(A4Reporter reporter, File filepath, String commandName) {
 
