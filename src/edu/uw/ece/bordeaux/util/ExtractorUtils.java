@@ -136,6 +136,29 @@ public class ExtractorUtils {
 
 		return getCamelCase(sigName) + "_" + fieldLabel;
 	}
+	
+	public static int getNumberOfTuplesFromA4Solution(A4Solution solution){
+		int num = 0;
+		
+		for (Sig sig : solution.getAllReachableSigs()) {
+			if (sig.builtin)
+				continue;
+
+			// The ordering sig should be skipped
+			if (isOrdering(sig))
+				continue;
+			
+			if(!sig.label.startsWith("this/")) {
+				continue;
+			}
+			
+			num += solution.eval(sig).size();
+			for (Field field : sig.getFields()) {
+				num += solution.eval(field).size();
+			}
+		}
+		return num;
+	}
 		
 	/**
 	 * Given an A4solution object from AlloyExecuter, it converts it to a Alloy
@@ -157,7 +180,7 @@ public class ExtractorUtils {
 			if (isOrdering(sig))
 				continue;
 			
-			// TODO: Trying to exlcude atons that are defined as signatures. Find a better condition.
+			// TODO: Trying to exclude atoms that are defined as signatures. Find a better condition.
 			if(!sig.label.startsWith("this/")) {
 				System.out.println("" + (sig.isAtom == null ? "not" : "") + "atom");
 				continue;
