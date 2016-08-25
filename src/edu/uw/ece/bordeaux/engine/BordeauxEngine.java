@@ -97,7 +97,7 @@ public final class BordeauxEngine {
 		String fileName = Utils.getFileName(inputPath.getAbsolutePath());
 		String onBorderFileName = fileName + ".hola-" + UUID.randomUUID().hashCode() + ".als";
 		this.onBorderFile = new File(tmpPath, onBorderFileName);
-		this.onBorderFile.deleteOnExit();
+		//this.onBorderFile.deleteOnExit();
 		
 		PrintWriter writer = null;
 		try {
@@ -108,7 +108,8 @@ public final class BordeauxEngine {
 
 		try {
 			String fileToReadFrom = inputPath.getAbsolutePath();
-			this.generator = new OnBorderCodeGenerator(fileToReadFrom, command, this.relationsToExclude, writer);
+			int numberOfIntAtoms = (ExtractorUtils.getNumberOfTuplesFromA4Solution(this.initialSolution) * 3) / 2;
+			this.generator = new OnBorderCodeGenerator(fileToReadFrom, command, this.relationsToExclude, numberOfIntAtoms, writer);
 		} catch (Exception e) {
 			logger.log(Level.SEVERE, Utils.threadName() + " Failed to generate on border code", e);
 		}

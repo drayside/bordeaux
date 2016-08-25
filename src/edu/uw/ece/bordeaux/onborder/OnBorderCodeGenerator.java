@@ -41,6 +41,7 @@ public class OnBorderCodeGenerator {
 	private String structuralConstraints;
 	private String formulaConstraints;
 	private Set<String> atomsToExclude;
+	private int numberOfIntAtoms = 0;
     
     private OnBorderCodeGenerator() {
         this.indent = "";
@@ -94,6 +95,19 @@ public class OnBorderCodeGenerator {
     public OnBorderCodeGenerator(String filepath, Command command, Set<String> relationsToExclude, PrintWriter writer) throws Err {
         this(filepath, command, writer);
         if(relationsToExclude != null) this.atomsToExclude = relationsToExclude;
+    }
+    
+    /**
+     * Creates a new instance of {@link OnBorderCodeGenerator}.
+     * @param filepath - The path to the alloy file to be used.
+     * @param command - The command to execute
+     * @param relationsToExclude - The names of the sigs and relations to be excluded
+     * @param writer - Specifies the {@link PrintWriter} to be used.
+     * @throws Err
+     */
+    public OnBorderCodeGenerator(String filepath, Command command, Set<String> relationsToExclude, int numberOfIntAtoms, PrintWriter writer) throws Err {
+        this(filepath, command, relationsToExclude, writer);
+        if(numberOfIntAtoms >= 0) this.numberOfIntAtoms  = numberOfIntAtoms;
     }
     
     private void initModule(Module module) {
@@ -153,11 +167,18 @@ public class OnBorderCodeGenerator {
             this.generateSigs(this.out);
         	this.generatePredicates(this.out);
             this.generateDeltas(this.out);
+            this.generateNoDeltas(this.out);
             this.generateIsInstance(this.out, constraints);
             this.generateFindMarginalInstances(out, constraints);
             
             ln();
-            println("run " + OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND + " " + this.commandScope);
+            String bounds = this.commandScope.trim();
+            if(this.numberOfIntAtoms > 0) {
+            	bounds += bounds.trim().isEmpty() ? "for " : " but ";
+            	bounds += "0.." + this.numberOfIntAtoms + " Int";
+            }
+            
+            println("run " + OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND + " " + bounds);
         }
         catch (Err e) {
             e.printStackTrace();
@@ -198,7 +219,7 @@ public class OnBorderCodeGenerator {
         
         for (SigFieldWrapper sigWrap : this.sigs) {
 
-            String sigName = this.getCamelCase(sigWrap.getSig());
+            String sigName = ExtractorUtils.getLocalSigName(sigWrap.getSig());
         	if(!this.atomsToExclude.contains(sigName) && !sigWrap.isAbstract()) {
         	
 	            ln();
@@ -207,7 +228,7 @@ public class OnBorderCodeGenerator {
 	            String s2 = String.format("%s': set %s", sigName, sigWrap.getSig());
 	            String s3 = String.format("%s'': set %s", sigName, sigWrap.getSig());
 	            
-	            println("pred delta%s[%s, %s, %s] {", this.getPascalCase(sigWrap.getSig()), s1, s2, s3);
+	            println("pred %s[%s, %s, %s] {", this.getDelta(sigWrap.getSig()), s1, s2, s3);
 	            indent();
 	            println("%1$s != %1$s' implies (%1$s'' = %1$s' - %1$s and %1$s'' + %1$s = %1$s') else no %1$s''", sigName);
 	            outdent();
@@ -223,7 +244,7 @@ public class OnBorderCodeGenerator {
                 String s2 = String.format("%s': %s", field.getLabel(), field.getType());
                 String s3 = String.format("%s'': %s", field.getLabel(), field.getType());
                 
-                println("pred delta%s[%s, %s, %s] {", this.getPascalCase(field.getLabel()), s1, s2, s3);
+                println("pred %s[%s, %s, %s] {", this.getDelta(field.getLabel()), s1, s2, s3);
                 indent();
                 println("%1$s != %1$s' implies (%1$s'' = %1$s' - %1$s and %1$s'' + %1$s = %1$s') else no %1$s''", field.getLabel());
                 outdent();
@@ -234,6 +255,48 @@ public class OnBorderCodeGenerator {
         
     }
     
+    private void generateNoDeltas(PrintWriter out) {
+        
+        this.out = out;
+        
+        for (SigFieldWrapper sigWrap : this.sigs) {
+
+            String sigName = ExtractorUtils.getLocalSigName(sigWrap.getSig());
+        	if(this.atomsToExclude.contains(sigName)) {
+        	
+	            ln();
+	            
+	            String s1 = String.format("%s: set %s", sigName, sigWrap.getSig());
+	            String s2 = String.format("%s': set %s", sigName, sigWrap.getSig());
+	            String s3 = String.format("%s'': set %s", sigName, sigWrap.getSig());
+	            
+	            println("pred %s[%s, %s, %s] {", this.getNoDelta(sigWrap.getSig()), s1, s2, s3);
+	            indent();
+	            println("%1$s = %1$s' and no %1$s''", sigName);
+	            outdent();
+	            println("}");
+        	}
+        	
+            for (FieldInfo field : sigWrap.getFields()) {
+            	
+            	if(!this.atomsToExclude.contains(field.getLabel())) continue;
+            	
+                ln();
+                String s1 = String.format("%s: %s", field.getLabel(), field.getType());
+                String s2 = String.format("%s': %s", field.getLabel(), field.getType());
+                String s3 = String.format("%s'': %s", field.getLabel(), field.getType());
+                
+                println("pred %s[%s, %s, %s] {", this.getNoDelta(field.getLabel()), s1, s2, s3);
+                indent();
+                println("%1$s = %1$s' and no %1$s''", field.getLabel());
+                outdent();
+                println("}");
+            }
+            
+        }
+        
+    }
+     
     private void generateFindMarginalInstances(PrintWriter out, String...contraints) {
         
         this.out = out;
@@ -261,8 +324,8 @@ public class OnBorderCodeGenerator {
             
             SigFieldWrapper sigWrap = sigItr.next();
 
-            String sigName = this.getCamelCase(sigWrap.getSig());
-            if(!this.atomsToExclude.contains(sigName) && !sigWrap.isAbstract()){
+            String sigName = ExtractorUtils.getLocalSigName(sigWrap.getSig());
+            if(!sigWrap.isAbstract()){
             
 	            quantifier.append(String.format(", %1$s, %1$s', %1$s'': set %2$s", sigName, sigWrap.getSig()));
 	            quantifier_1.append(String.format(", %1$s1, %1$s1', %1$s1'': set %2$s", sigName, sigWrap.getSig()));
@@ -270,12 +333,15 @@ public class OnBorderCodeGenerator {
 	            constr1InstanceCall.append(", " + sigName);
 	            constr2InstanceCall.append(", " + sigName + "'");
 	            sigmaCall.append(", #" + sigName + "''");
-	            deltaCalls.append(String.format("and delta%1$s[%2$s, %2$s', %2$s'']\n", this.getPascalCase(sigWrap.getSig()), sigName));
+	            
+	            boolean nodelta = this.atomsToExclude.contains(sigName);
+	            String deltaCall = nodelta ? this.getNoDelta(sigWrap.getSig()) : this.getDelta(sigWrap.getSig());
+	            deltaCalls.append(String.format("and %1$s[%2$s, %2$s', %2$s'']\n", deltaCall, sigName));
 	            
 	            constr1InstanceCall_1.append(", " + sigName + "1");
 	            constr2InstanceCall_1.append(", " + sigName + "1'");
 	            sigmaCall_1.append(", #" + sigName + "1''");
-	            deltaCalls_1.append(String.format("and delta%1$s[%2$s1, %2$s1', %2$s1'']\n", this.getPascalCase(sigWrap.getSig()), sigName));
+	            deltaCalls_1.append(String.format("and %1$s[%2$s1, %2$s1', %2$s1'']\n", deltaCall, sigName));
 	            
 	            sigmaParamLength++;
             }
@@ -284,21 +350,22 @@ public class OnBorderCodeGenerator {
             while (itr.hasNext()) {
                 
                 FieldInfo field = itr.next();
-                
-            	if(this.atomsToExclude.contains(field.getLabel())) continue;
-            	
+                            	
                 quantifier.append(String.format(", %1$s, %1$s', %1$s'': set %2$s", field.getLabel(), field.getType()));
                 quantifier_1.append(String.format(", %1$s1, %1$s1', %1$s1'': set %2$s", field.getLabel(), field.getType()));
                 
                 constr1InstanceCall.append(", " + field.getLabel());
                 constr2InstanceCall.append(", " + field.getLabel() + "'");
                 sigmaCall.append(", #" + field.getLabel() + "''");
-                deltaCalls.append(String.format("and delta%1$s[%2$s, %2$s', %2$s'']\n", this.getPascalCase(field.getLabel()), field.getLabel()));
+
+	            boolean nodelta = this.atomsToExclude.contains(field.getLabel());
+	            String deltaCall = nodelta ? this.getNoDelta(field.getLabel()) : this.getDelta(field.getLabel());
+                deltaCalls.append(String.format("and %1$s[%2$s, %2$s', %2$s'']\n", deltaCall, field.getLabel()));
                 
                 constr1InstanceCall_1.append(", " + field.getLabel() + "1");
                 constr2InstanceCall_1.append(", " + field.getLabel() + "1'");
                 sigmaCall_1.append(", #" + field.getLabel() + "1''");
-                deltaCalls_1.append(String.format("and delta%1$s[%2$s1, %2$s1', %2$s1'']\n", this.getPascalCase(field.getLabel()), field.getLabel()));
+                deltaCalls_1.append(String.format("and %1$s[%2$s1, %2$s1', %2$s1'']\n", deltaCall, field.getLabel()));
                 
                 sigmaParamLength++;
             }
@@ -375,7 +442,7 @@ public class OnBorderCodeGenerator {
         for (SigFieldWrapper sigWrap : this.sigs) {
             
         	if(!sigWrap.isAbstract()) {        	
-	        	String sigName = this.getCamelCase(sigWrap.getSig());
+	        	String sigName = ExtractorUtils.getLocalSigName(sigWrap.getSig());
 	            args.append(String.format(", %s", sigName));
 	            params.append(String.format(", %s: set %s", sigName, sigWrap.getSig()));
         	}
@@ -493,7 +560,8 @@ public class OnBorderCodeGenerator {
 
             // Replace each occurrence
             while (m.find()) {
-                m.appendReplacement(sb, String.format("%s%s", m.group(1).toLowerCase(), m.group(2)));
+            	String sigName = ExtractorUtils.getLocalSigName(m.group(1) + m.group(2));
+                m.appendReplacement(sb, String.format("%s", sigName));
             }
             
             m.appendTail(sb);
@@ -507,7 +575,7 @@ public class OnBorderCodeGenerator {
         	String mult = sig.getMultString();
         	if(sig.isAbstract() || mult.isEmpty()) continue;
         	
-        	println("%s %s", mult, this.getCamelCase(sig.getSig()));
+        	println("%s %s", mult, ExtractorUtils.getLocalSigName(sig.getSig()));
         }
         
         outdent();
@@ -605,14 +673,13 @@ public class OnBorderCodeGenerator {
         boolean lenG1 = in.length() > 1;
         return Character.toUpperCase(in.charAt(0)) + (lenG1 ? in.substring(1) : "");
     }
-    
-    private String getCamelCase(String in) {
         
-        if (in == null || in.isEmpty())
-            return in;
-            
-        boolean lenG1 = in.length() > 1;
-        return Character.toLowerCase(in.charAt(0)) + (lenG1 ? in.substring(1) : "");
+    private String getDelta(String s) {
+    	return "delta" + this.getPascalCase(s);
+    }
+
+    private String getNoDelta(String s) {
+    	return "No" + this.getDelta(s);
     }
     
     private void println(final String s, Object... args) {

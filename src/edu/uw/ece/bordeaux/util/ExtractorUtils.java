@@ -130,7 +130,7 @@ public class ExtractorUtils {
 	}
 	
 	public static String getLocalSigName(String sigName) {
-		return ExtractorUtils.getCamelCase(sigName);
+		return "_" + ExtractorUtils.getCamelCase(sigName);
 	}
 	
 	public static String getLocalFieldName(String fieldLabel, String sigName) {
@@ -194,7 +194,7 @@ public class ExtractorUtils {
 			}
 			
 			String sigName = sig.label.replace("this/", "");
-			sigName = useLocalNames ? getCamelCase(sigName) : sigName;
+			sigName = useLocalNames && sig.isAbstract == null ? getLocalSigName(sigName) : sigName;
 
 			if (solution.eval(sig).size() == 0) {
 				emptySigs.add(sigName);
@@ -313,6 +313,6 @@ public class ExtractorUtils {
 		}
 		
 		String name = formula.toString().replace("this/", "");
-		return useLocalNames ? getCamelCase(name) : name;
+		return useLocalNames ? getLocalSigName(name) : name;
 	}
 }
