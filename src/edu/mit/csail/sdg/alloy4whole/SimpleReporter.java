@@ -73,10 +73,11 @@ import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.HolaReporter;
 import edu.uw.ece.bordeaux.engine.BordeauxEngine;
 import edu.uw.ece.bordeaux.util.ExtractorUtils;
+import edu.uw.ece.bordeaux.util.Utils;
 
 /** This helper method is used by SimpleGUI. */
 
-public final class SimpleReporter extends A4Reporter {
+public class SimpleReporter extends A4Reporter {
 
     public static final class SimpleCallback1 implements WorkerCallback {
         private final SimpleGUI gui;
@@ -524,7 +525,7 @@ public final class SimpleReporter extends A4Reporter {
 
     /** Constructor is private.
      * @param simpleTask1 */
-    private SimpleReporter(WorkerCallback cb, String tempdir, boolean recordKodkod) { this.tempdir = tempdir; this.cb=cb; this.recordKodkod=recordKodkod; }
+    protected SimpleReporter(WorkerCallback cb, String tempdir, boolean recordKodkod) { this.tempdir = tempdir; this.cb=cb; this.recordKodkod=recordKodkod; }
 
     /** Helper method to write out a full XML file. */
     private static void writeXML(IA4Reporter rep, Module mod, String filename, A4Solution sol, Map<String,String> sources) throws Exception {
@@ -725,7 +726,7 @@ public final class SimpleReporter extends A4Reporter {
 //                    //TranslateAlloyToKodkod.execute_commandFromBook(rep, world.getAllReachableSigs(), cmd, options);
 //                }
                 
-                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options);
+                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(Utils.HolaReporter, world.getAllReachableSigs(), cmd, options);
                 sol = tr.getFrame();
                 latestKodkod = sol;
                 sol = tr.executeCommandFromBook();
@@ -733,6 +734,10 @@ public final class SimpleReporter extends A4Reporter {
                 
                 if(options.enableBordeaux) {
                 	bordeauxEngine = new BordeauxEngine(new File(options.originalFilename), cmd, sol);
+                	cb(out, "bold", "Getting next near miss\n");
+//                	latestRep.setWorkerCallback(Utils.EmptyCallBack);
+                	sol = bordeauxEngine.nextNearMiss(new SimpleReporter(out, tempCNF, true));
+                	cb(out, "bold", "\nDone with near miss\n");
                 }
                 
                 if (sol==null) result.add(null);

@@ -18,11 +18,12 @@ import edu.uw.ece.bordeaux.HolaReporter;
 import edu.uw.ece.bordeaux.engine.BordeauxEngine;
 import edu.uw.ece.bordeaux.stats.BordeauxStatsManager;
 import edu.uw.ece.bordeaux.util.ExtractorUtils;
+import edu.uw.ece.bordeaux.util.Utils;
 
 
 public class BordeauxEngineTest {
 
-	public final static String TMP_DIRECTORY = "./tmp/";
+	public final static String TMP_DIRECTORY = Utils.TMP_DIRECTORY;
 	public final static String TOY_EXAMPLES_DIRECTORY = "./models/examples/toys/";
 	public final static String MIN_DIST_DIRECTORY = "./models/debugger/min_dist/";
 	public final static String BORDEUX_MODELS_DIRECTORY = "./models/bordeaux/";
@@ -109,6 +110,7 @@ public class BordeauxEngineTest {
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
 		testNextMiss(reporter, commandName, filepath, engine, 1);
+		testNextHit(reporter, commandName, filepath, engine, 1);
 	}
 
 	private void testNextMiss(A4Reporter reporter, String commandName, File filepath, BordeauxEngine engine, int numberOfRuns) {	
