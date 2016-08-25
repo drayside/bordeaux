@@ -419,16 +419,22 @@ public final class BordeauxEngine {
 	
 	public A4Solution nextNearMiss(A4Reporter rep) {
 
+		System.out.println("===============================");
 		if(!firstNearMiss && this.previousMissString == null) return null;
 		this.firstNearMiss = false; 
 		
 		String constraint1 = this.previousHitString;
 		
-		currentMiss = Utils.and(this.currentMiss, this.previousMissString);
-		String constraint2 = Utils.not(currentMiss);
+//		currentMiss = Utils.or(this.currentMiss, this.previousMissString);
+//		String constraint2 = Utils.not(currentMiss);
+		
+		currentMiss = Utils.and(this.currentMiss, Utils.not(this.previousMissString));
+		String constraint2 = currentMiss;
 		
 		A4Solution result = this.perform(rep, this.inputPath, constraint1, constraint2);
-		this.previousMissString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result).b;
+		System.out.println("result: " + result);
+		this.previousMissString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).b;
+		System.out.println("===================Prev String: " + this.previousMissString);
 		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result).b;
 	}
 	
@@ -440,7 +446,7 @@ public final class BordeauxEngine {
 		String constraint1 = currentHit;
 		
 		A4Solution result = this.perform(rep, this.inputPath, constraint1, constraint2);
-		this.previousHitString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result).a;
+		this.previousHitString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).a;
 		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result).a;
 	}
 }

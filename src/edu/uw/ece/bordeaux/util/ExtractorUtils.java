@@ -10,11 +10,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.map.MultiKeyMap;
-
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.alloy4.ErrorFatal;
 import edu.mit.csail.sdg.alloy4.Pair;
+import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.ast.CommandScope;
 import edu.mit.csail.sdg.alloy4compiler.ast.Expr;
@@ -33,6 +33,7 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4TupleSet;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.Configuration;
 import edu.uw.ece.bordeaux.onborder.OnBorderCodeGenerator;
+import edu.uw.ece.bordeaux.tests.Elaboration;
 
 /**
  * The class contains static methods that are helpful for extracting Alloy
@@ -92,22 +93,29 @@ public class ExtractorUtils {
 	public static String extractScopeFromCommand(Command command) {
 		boolean first = true;
 		StringBuilder sb = new StringBuilder();
-		
-		System.out.println(command.intScope);
-		System.out.println(command.intScope.bitwidth);
-		
-		if (command.overall >= 0 && 
-				((command.intScope != null && command.intScope.bitwidth >= 0) || 
-						command.maxseq >= 0
-				|| (command.scope != null && command.scope.size() > 0)))
+
+		if (command.overall >= 0
+				&& ((command.intScope != null && ((command.intScope.bitwidth != null && command.intScope.bitwidth >= 0)
+						|| command.intScope.atoms != null)) || command.maxseq >= 0
+						|| (command.scope != null && command.scope.size() > 0)))
 			sb.append(" for ").append(command.overall).append(" but");
 		else if (command.overall >= 0)
 			sb.append(" for ").append(command.overall);
-		else if ((command.intScope != null && command.intScope.bitwidth >= 0) || command.maxseq >= 0
+		else if ((command.intScope != null && ((command.intScope.bitwidth != null && command.intScope.bitwidth >= 0)
+				|| command.intScope.atoms != null)) || command.maxseq >= 0
 				|| (command.scope != null && command.scope.size() > 0))
 			sb.append(" for");
-		if (command.intScope != null && command.intScope.bitwidth >= 0) {
-			sb.append(" ").append(command.intScope.bitwidth).append(" int");
+		if (command.intScope != null && ( ( command.intScope.bitwidth != null && command.intScope.bitwidth >= 0)
+				|| ( command.intScope.atoms != null))) {
+			if ((command.intScope.bitwidth != null && command.intScope.bitwidth >= 0))
+				sb.append(" ").append(command.intScope.bitwidth).append(" int");
+			if (command.intScope.atoms != null)
+				try {
+					sb.append(" ").append(command.intScope.atoms.min() + ".." + command.intScope.atoms.max())
+							.append(" Int");
+				} catch (ErrorFatal e) {
+					e.printStackTrace();
+				}
 			first = false;
 		}
 		if (command.maxseq >= 0) {
@@ -155,7 +163,7 @@ public class ExtractorUtils {
 
 		return getCamelCase(sigName) + "_" + ExtractorUtils.localNameSeparator(sigName) + "_" + fieldLabel;
 	}
-	
+
 	public static String localNameSeparator(String sigName) {
 		return "" + Math.abs(sigName.hashCode());
 	}
@@ -191,7 +199,6 @@ public class ExtractorUtils {
 		}
 
 		return Collections.unmodifiableList(result);
-
 	}
 
 	protected static boolean isSig(A4Solution solution, String name) {
@@ -220,13 +227,16 @@ public class ExtractorUtils {
 				} else {
 
 					if (isSig(solution, decodeSkolemizedNames.get(var.label))) {
-						declPart.add("some disj " + solution.eval(var).toString().replaceAll("\\{|\\}", "").replaceAll("\\$", "_") + ": univ ");
-						bodyPart.add("(" + solution.eval(var).toString().replaceAll("\\{|\\}", "").replaceAll("\\$", "_").replaceAll(",", "+") + " = "
-								+ decodeSkolemizedNames.get(var.label) + ")");
+						declPart.add("some disj "
+								+ solution.eval(var).toString().replaceAll("\\{|\\}", "").replaceAll("\\$", "_")
+								+ ": univ ");
+						bodyPart.add(
+								"(" + solution.eval(var).toString().replaceAll("\\{|\\}", "").replaceAll("\\$", "_")
+										.replaceAll(",", "+") + " = " + decodeSkolemizedNames.get(var.label) + ")");
 					} else {
 						bodyPart.add(
-								"(" + solution.eval(var).toString().replaceAll("\\{|\\}", "").replaceAll("\\$", "_").replaceAll(",", "+")
-										+ " = " + decodeSkolemizedNames.get(var.label) + ")");
+								"(" + solution.eval(var).toString().replaceAll("\\{|\\}", "").replaceAll("\\$", "_")
+										.replaceAll(",", "+") + " = " + decodeSkolemizedNames.get(var.label) + ")");
 					}
 				}
 			} catch (Err e) {
@@ -251,24 +261,55 @@ public class ExtractorUtils {
 
 	}
 	
-	public static Pair<A4Solution, A4Solution> convertBordeauxSolutionToAlloySolution(A4Solution solution){
-		return new Pair<>(solution, solution);
+	public static Pair<A4Solution, A4Solution> convertBordeauxSolutionToAlloySolution(A4Solution solution) {
+
+		final File fileName = solution.getAllReachableSigs().makeCopy().stream().filter(s -> !s.builtin)
+				.filter(s -> s.pos.filename != "").map(s -> new File(s.pos.filename)).findFirst().get();
+
+		String scope = ExtractorUtils.extractScopeFromCommand(fileName.getAbsolutePath(),
+				OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND);
+
+		Pair<String, String> solSyntax = (ExtractorUtils.convertBordeauxSolutionToAlloySyntax(solution, false));
+
+		String newContent = (new Elaboration()).createAllSigsdeclaration(fileName) + "\npred _a_[]{\n" + solSyntax.a
+				+ "\n}" + "\npred _b_[]{\n" + solSyntax.b + "\n}" + "\nrun _a_ " + scope + "\nrun _b_ " + scope;
+		File toSolution = new File(fileName.getParent(), fileName.getName() + ".sol.als");
+		try {
+			Util.writeAll(toSolution.getAbsolutePath(), newContent);
+		} catch (Err e) {
+			e.printStackTrace();
+		}
+
+		Pair<A4Solution, A4Solution> result = new Pair<>(null, null);
+		try {
+			result = new Pair<>(
+					A4CommandExecuter.get().runAlloyThenGetAnswers(toSolution.getAbsolutePath(), A4Reporter.NOP, "_a_"),
+					A4CommandExecuter.get().runAlloyThenGetAnswers(toSolution.getAbsolutePath(), A4Reporter.NOP,
+							"_b_"));
+		} catch (Err e) {
+			e.printStackTrace();
+		}
+		return result;
 	}
-	
-	public static Pair<String, String> convertBordeauxSolutionToAlloySyntax(A4Solution solution) {
-		return null;
+
+	public static Pair<String, String> convertBordeauxSolutionToAlloySyntax(A4Solution solution, boolean useLocalNames) {
+		return convertBordeauxSolutionToAlloySyntax(solution, generateSkolemMap(solution, useLocalNames));
 	}
 
 	public static Pair<String, String> convertBordeauxSolutionToAlloySyntax(A4Solution solution,
 			Map<String, String> decodeSkolemizedNames) {
-
+System.out.println("\n\nMap " + decodeSkolemizedNames);
 		final List<ExprVar> vars = new ArrayList<>();
 		solution.getAllSkolems().forEach(s -> vars.add(s));
 
 		List<List<ExprVar>> skolemizedVars = seperateSkolemizedVars(vars);
 
-		return new Pair<>(convertBordeauxSolutionToAlloySyntax(solution, skolemizedVars.get(0), decodeSkolemizedNames),
+		Pair<String, String> a = new Pair<>(convertBordeauxSolutionToAlloySyntax(solution, skolemizedVars.get(0), decodeSkolemizedNames),
 				convertBordeauxSolutionToAlloySyntax(solution, skolemizedVars.get(1), decodeSkolemizedNames));
+		
+		System.out.println("Pair.a: " + a.a);
+		System.out.println("Pair.b: " + a.b);
+		return a;
 	}
 
 	public static int getNumberOfTuplesFromA4Solution(A4Solution solution) {
@@ -293,11 +334,11 @@ public class ExtractorUtils {
 		}
 		return num;
 	}
-		
-	public static Map<String, String> generateSkolemMap(A4Solution solution) {
-		
+
+	public static Map<String, String> generateSkolemMap(A4Solution solution, boolean useLocalNames) {
+
 		Map<String, String> map = new HashMap<>();
-		
+
 		final String base = "$" + OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND + "_";
 		for (Sig sig : solution.getAllReachableSigs()) {
 			if (sig.builtin)
@@ -306,30 +347,33 @@ public class ExtractorUtils {
 			// The ordering sig should be skipped
 			if (isOrdering(sig))
 				continue;
-			
-			if(!sig.label.startsWith("this/")) {
+
+			if (!sig.label.startsWith("this/")) {
 				continue;
 			}
 
 			String sigName = sig.shortLabel();
-			String localSig = base + ExtractorUtils.getLocalSigName(sigName);
-			map.put(localSig, sigName);
-			map.put(localSig + "'", sigName);
-			map.put(localSig + "''", sigName);
-			
+			String localSig = ExtractorUtils.getLocalSigName(sigName);
+			String SkolemlSig = base + localSig;
+			String sigValue = useLocalNames ? localSig : sig.shortLabel();
+			map.put(SkolemlSig, sigValue);
+			map.put(SkolemlSig + "'", sigValue);
+			map.put(SkolemlSig + "''", sigValue);
+
 			for (Field field : sig.getFields()) {
-				
-				String localField  = base + ExtractorUtils.getLocalFieldName(field.label, sigName);
-				String fieldValue = sigName + "<:" + field.label;
-				map.put(localField, fieldValue);
-				map.put(localField + "'", fieldValue);
-				map.put(localField + "''", fieldValue);
+
+				String localField = ExtractorUtils.getLocalFieldName(field.label, sigName);
+				String SkolemField = base + localField;
+				String localValue = useLocalNames ? localField : field.label;
+				map.put(SkolemField, localValue);
+				map.put(SkolemField + "'", localValue);
+				map.put(SkolemField + "''", localValue);
 			}
 		}
-		
+
 		return map;
 	}
-	
+
 	/**
 	 * Given an A4solution object from AlloyExecuter, it converts it to a Alloy
 	 * syntax
@@ -340,7 +384,7 @@ public class ExtractorUtils {
 	public static String convertA4SolutionToAlloySyntax(A4Solution solution, boolean useLocalNames) {
 		if (solution == null)
 			return "";
-		
+
 		List<String> emptySigs = new ArrayList<>();
 		List<String> constraints = new ArrayList<>();
 		List<String> quantifiers = new ArrayList<>();
@@ -352,10 +396,10 @@ public class ExtractorUtils {
 			if (isOrdering(sig))
 				continue;
 
-			
-			// TODO: Trying to exclude atoms that are defined as signatures. Find a better condition.
-			if(!sig.label.startsWith("this/")) {
-				if(Configuration.IsInDeubbungMode)
+			// TODO: Trying to exclude atoms that are defined as signatures.
+			// Find a better condition.
+			if (!sig.label.startsWith("this/")) {
+				if (Configuration.IsInDeubbungMode)
 					System.out.println("" + (sig.isAtom == null ? "not" : "") + "atom");
 				continue;
 			}
@@ -363,11 +407,11 @@ public class ExtractorUtils {
 			String sigName = sig.label.replace("this/", "");
 			sigName = useLocalNames && sig.isAbstract == null ? getLocalSigName(sigName) : sigName;
 
-			if (!solution.satisfiable()){
-				constraints.add("(no " + sigName+")");
+			if (!solution.satisfiable()) {
+				constraints.add("(no " + sigName + ")");
 				continue;
 			}
-			
+
 			if (solution.eval(sig).size() == 0) {
 				emptySigs.add(sigName);
 			} else {
@@ -382,7 +426,7 @@ public class ExtractorUtils {
 		}
 
 		for (String noSigName : emptySigs) {
-			constraints.add("(no " + noSigName+")");
+			constraints.add("(no " + noSigName + ")");
 		}
 
 		for (Sig sig : solution.getAllReachableSigs()) {
@@ -390,15 +434,15 @@ public class ExtractorUtils {
 				continue;
 			else
 				for (Field field : sig.getFields()) {
-					
+
 					String fieldName = field.label;
 					fieldName = useLocalNames ? getLocalFieldName(fieldName, sig.label.replace("this/", ""))
 							: fieldName;
-					if (!solution.satisfiable()){
-						constraints.add("(no " + fieldName+")");
+					if (!solution.satisfiable()) {
+						constraints.add("(no " + fieldName + ")");
 						continue;
 					}
-					
+
 					A4TupleSet fieldsTuples = solution.eval(field);
 					if (isOrdering(sig)) {
 						fieldName = (sig.label.contains("/") ? sig.label.split("/")[0] + "/" : "")

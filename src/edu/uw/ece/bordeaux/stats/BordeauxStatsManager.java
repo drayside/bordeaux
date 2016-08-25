@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import java.io.File;
 import java.sql.Time;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -17,10 +18,17 @@ import com.sun.tools.javac.util.Pair;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Util;
+import edu.mit.csail.sdg.alloy4compiler.ast.Command;
+import edu.mit.csail.sdg.alloy4compiler.ast.ExprUnary;
+import edu.mit.csail.sdg.alloy4compiler.parser.CompModule;
+import edu.mit.csail.sdg.alloy4compiler.translator.A4Options;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
+import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod;
+import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.HolaReporter;
 import edu.uw.ece.bordeaux.engine.BordeauxEngine;
 import edu.uw.ece.bordeaux.tests.BordeauxEngineTest;
+import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import edu.uw.ece.bordeaux.util.Utils;
 
 public final class BordeauxStatsManager {
@@ -29,7 +37,6 @@ public final class BordeauxStatsManager {
 	
 	public static final int NUM_MILLISECONDS_IN_A_MINUTE = 60000;
 	public static final int NUM_TIME_ITERATIONS = 10;
-	public static final int NUM_ALLOY_ITERATIONS = 10;
 	public static final int MAX_ALLOY_RETRY = 100;
 	
 	public static void evaluateAll(List<Pair<File, String>> filesAndCommands, File outputFile) {
@@ -87,7 +94,7 @@ public final class BordeauxStatsManager {
 			
 			double avgNumPerMin = BordeauxStatsManager.getNumNearMissInTime(reporter, engine, NUM_TIME_ITERATIONS, NUM_MILLISECONDS_IN_A_MINUTE);
 			int numNearMissPerMin = (int)Math.round(avgNumPerMin);
-			int numNearMissByAlloy = BordeauxStatsManager.getNumMissByAlloy(reporter, filepath, commandName, firstNearMiss, NUM_ALLOY_ITERATIONS, MAX_ALLOY_RETRY);
+			int numNearMissByAlloy = BordeauxStatsManager.getNumMissByAlloy(filepath, commandName, firstNearMiss, MAX_ALLOY_RETRY);
 			
 			return new BordeauxStatistics(filepath.getName(), commandName, solveTime, evalTime, translationTime, totalVaraibles, clauses, numNearMissPerMin, numNearMissByAlloy);
 			
@@ -98,11 +105,96 @@ public final class BordeauxStatsManager {
 		}		
 	}
 	
-	private static int getNumMissByAlloy(A4Reporter reporter, File filepath, String commandName, A4Solution firstNearMiss, int numTimeIterations, int maxRetry) {
+	public static int getNumMissByAlloy(File filepath, String commandName, A4Solution firstNearMiss, int maxRetry) {
 	
-		return 0;
+		int tries = 1;
+
+		CompModule module = null;
+		try {
+			module = (CompModule) A4CommandExecuter.get().parse(filepath.getAbsolutePath(), A4Reporter.NOP);
+		} catch (Err e) {
+			e.printStackTrace();
+		}
+
+		final Command command = module.getAllCommands().stream().filter(f -> f.label.equals(commandName)).findAny()
+				.get();
+		final Command commandNot = command.change(ExprUnary.Op.NOT.make(command.formula.pos, command.formula));
+
+		A4Options options = new A4Options();
+
+		options.solver = A4Options.SatSolver.SAT4J;
+		try {
+			A4Solution ans = TranslateAlloyToKodkod.execute_command(A4Reporter.NOP, module.getAllReachableSigs(),
+					commandNot, options);
+			while (ans.satisfiable() && tries < maxRetry) {
+
+				if (equiSAT(filepath, ExtractorUtils.convertBordeauxSolutionToAlloySyntax(firstNearMiss, false).b,
+						ExtractorUtils.convertA4SolutionToAlloySyntax(ans, false), commandName)) {
+
+					System.out.println("NEAR MISS=" + firstNearMiss);
+					System.out.println(ans);
+					break;
+				}
+
+				System.out.println("NEAR MISS=" + firstNearMiss);
+				System.out.println(
+						"--->" + ExtractorUtils.convertBordeauxSolutionToAlloySyntax(firstNearMiss, new HashMap<>()));
+				System.out
+				.println("number of tuples=" + ExtractorUtils.getNumberOfTuplesFromA4Solution(firstNearMiss));
+
+				System.out.println("ans->" + ans);
+				System.out.println("number of tuples=" + ExtractorUtils.getNumberOfTuplesFromA4Solution(ans));
+
+				ans = ans.next();
+				++tries;
+			}
+
+		} catch (Err e) {
+			e.printStackTrace();
+		}
+		return tries;
+
 	}
 
+	protected static boolean equiSAT(File filePath, String sol1, String sol2, String commandName) {
+
+		String filecontent = Utils.readFile(filePath.getAbsolutePath());
+		String newCommandName = "__Check_EQU__";
+		File newFileTmp = new File(filePath.getParentFile(), filePath.getName() + ".tmp.als");
+		String newContent = filecontent + "\nassert " + newCommandName + " { (" + sol1 + ") iff (" + sol2 + ")}\ncheck "
+				+ newCommandName + findScope(filePath, commandName);
+
+		boolean result = false;
+		try {
+			Util.writeAll(newFileTmp.getAbsolutePath(), newContent);
+			;
+			result = !A4CommandExecuter.get()
+					.runAlloyThenGetAnswers(newFileTmp.getAbsolutePath(), A4Reporter.NOP, newCommandName).satisfiable();
+		} catch (Err e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+
+		newFileTmp.deleteOnExit();
+
+		return result;
+
+	}
+
+	protected static String findScope(File filePath, String commandName) {
+		CompModule module = null;
+		try {
+			module = (CompModule) A4CommandExecuter.get().parse(filePath.getAbsolutePath(), A4Reporter.NOP);
+		} catch (Err e) {
+			e.printStackTrace();
+		}
+
+		final Command command = module.getAllCommands().stream().filter(f -> f.label.equals(commandName)).findFirst()
+				.get();
+		return ExtractorUtils.extractScopeFromCommand(command);
+
+	}
+	
 	public static double getNumNearMissInTime(A4Reporter reporter, BordeauxEngine engine, int numIterations, long numMilliseconds) {	
 
 //		System.out.println("Starting timer for: " + filepath.getName());

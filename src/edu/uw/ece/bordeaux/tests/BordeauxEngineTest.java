@@ -62,8 +62,8 @@ public class BordeauxEngineTest {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-		testNextMiss(reporter, commandName, filepath, engine, 1);
-		testNextHit(reporter, commandName, filepath, engine, 1);
+		testNextMiss(reporter, commandName, filepath, engine, 2);
+//		testNextHit(reporter, commandName, filepath, engine, 1);
 //		testNextSol(commandName, filepath, engine, 1);
 	}
 	

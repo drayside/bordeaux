@@ -159,6 +159,21 @@ public class Utils {
 		return String.format("not\n\t{\n\t\t%s\n\t}", s);
 	}
 
+	public static String or(String... args) {
+		if(args == null) return "";
+		
+		final String orStr = "\n\tor \n\t\t";
+		String val = "";
+		for(String s : args) {
+			if(s != null && !s.isEmpty()) {
+				val += orStr + s;
+			}
+		}
+		
+		val = val.replaceFirst(orStr, "");
+		return val;
+	}
+	
 	public static String and(String... args) {
 		if(args == null) return "";
 		
