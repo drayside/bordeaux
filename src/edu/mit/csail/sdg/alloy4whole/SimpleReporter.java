@@ -358,10 +358,10 @@ public class SimpleReporter extends A4Reporter {
 
 
     public void holLoopStart(HOLTranslation tr, Formula formula, Bounds bounds) { cb("hol-start", tr, link("formula", formula), link("bounds", bounds)); }
-    public void holCandidateFound(HOLTranslation tr, Instance candidate)        { cb("hol-candidate", tr, cand(candidate)); }
+    public void holCandidateFound(HOLTranslation tr, Instance candidate)        { if(this.abandaonSteps) { return; } cb("hol-candidate", tr, cand(candidate)); }
     public void holVerifyingCandidate(HOLTranslation tr, Instance c, Formula cf, Bounds b) { cb("hol-verify", tr, link("condition", cf), link("pi", b)); }
     public void holCandidateVerified(HOLTranslation tr, Instance candidate)                { cb("hol-verify-outcome", tr, (Serializable)null); }
-    public void holCandidateNotVerified(HOLTranslation tr, Instance cnd, Instance cex)     { cb("hol-verify-outcome", tr, cex(cex)); }
+    public void holCandidateNotVerified(HOLTranslation tr, Instance cnd, Instance cex)     { if(this.abandaonSteps) {return;} cb("hol-verify-outcome", tr, cex(cex)); }
     public void holFindingNextCandidate(HOLTranslation tr, Formula inc) { cb("hol-next", tr, link("increment", inc)); }
 
     public void holSplitStart(HOLTranslation tr, Formula formula)      { cb("hol-split", tr, link("formula", formula)); }
@@ -419,6 +419,7 @@ public class SimpleReporter extends A4Reporter {
             formulafilename = tempfile+".java";
             try { Util.writeAll(formulafilename, formula); formulafilename="CNF: "+formulafilename; } catch(Throwable ex) { formulafilename=""; }
         }
+        
         cb("sat", cmd.check, cmd.expects, filename, formulafilename, System.currentTimeMillis()-lastTime);
     }
 
@@ -472,6 +473,7 @@ public class SimpleReporter extends A4Reporter {
 
     private WorkerCallback cb;
 
+    private boolean abandaonSteps;
 
     //========== These fields should be set each time we execute a set of commands
 
@@ -525,7 +527,12 @@ public class SimpleReporter extends A4Reporter {
 
     /** Constructor is private.
      * @param simpleTask1 */
-    protected SimpleReporter(WorkerCallback cb, String tempdir, boolean recordKodkod) { this.tempdir = tempdir; this.cb=cb; this.recordKodkod=recordKodkod; }
+    protected SimpleReporter(WorkerCallback cb, String tempdir, boolean recordKodkod) { 
+    	this.tempdir = tempdir; 
+    	this.cb=cb; 
+    	this.recordKodkod=recordKodkod; 
+    	this.abandaonSteps = false;
+    }
 
     /** Helper method to write out a full XML file. */
     private static void writeXML(IA4Reporter rep, Module mod, String filename, A4Solution sol, Map<String,String> sources) throws Exception {
@@ -560,6 +567,7 @@ public class SimpleReporter extends A4Reporter {
                 engine = bordeauxEngine;
                 mod=latestModule;
                 latestRep.setWorkerCallback(out);
+                latestRep.abandaonSteps = useBordeaxEngine;
             }
             if (!sol.satisfiable())
                 {cb("pop", "Error: This command is unsatisfiable,\nso there are no solutions to enumerate."); return;}
@@ -573,13 +581,13 @@ public class SimpleReporter extends A4Reporter {
             		switch(nextType) {
             		case NearHit: {
             			cb("bold", "Searching for next 'near-hit' instance...\n");
-            			sol = engine.nextNearHit(A4Reporter.NOP);
+            			sol = engine.nextNearHit(latestRep);
             			break;
             		}
             		
             		case NearMiss: {
             			cb("bold", "Searching for next 'near-miss' instance...\n");
-            			sol = engine.nextNearMiss(A4Reporter.NOP);
+            			sol = engine.nextNearMiss(latestRep);
             			break;
             		}
             		
@@ -667,6 +675,7 @@ public class SimpleReporter extends A4Reporter {
                 final String tempCNF=tempdir+File.separatorChar+i+".cnf";
                 final Command cmd=cmds.get(i);
                 latestRep.tempfile=tempCNF;
+//                latestRep.abandaonSteps = options.enableBordeaux;
                 
                 cb(out, "bold", "Executing \""+cmd+"\"\n");
                 A4Solution sol;
@@ -726,7 +735,7 @@ public class SimpleReporter extends A4Reporter {
 //                    //TranslateAlloyToKodkod.execute_commandFromBook(rep, world.getAllReachableSigs(), cmd, options);
 //                }
                 
-                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(Utils.HolaReporter, world.getAllReachableSigs(), cmd, options);
+                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options);
                 sol = tr.getFrame();
                 latestKodkod = sol;
                 sol = tr.executeCommandFromBook();
@@ -734,10 +743,6 @@ public class SimpleReporter extends A4Reporter {
                 
                 if(options.enableBordeaux) {
                 	bordeauxEngine = new BordeauxEngine(new File(options.originalFilename), cmd, sol);
-                	cb(out, "bold", "Getting next near miss\n");
-//                	latestRep.setWorkerCallback(Utils.EmptyCallBack);
-                	sol = bordeauxEngine.nextNearMiss(new SimpleReporter(out, tempCNF, true));
-                	cb(out, "bold", "\nDone with near miss\n");
                 }
                 
                 if (sol==null) result.add(null);

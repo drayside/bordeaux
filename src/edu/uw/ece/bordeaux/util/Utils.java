@@ -40,23 +40,12 @@ import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4.WorkerEngine.WorkerCallback;
-import edu.mit.csail.sdg.alloy4compiler.ast.Command;
-import edu.mit.csail.sdg.alloy4compiler.parser.CompModule;
-import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.HolaReporter;
 
 public class Utils {
 
 	public static final A4Reporter HolaReporter = new HolaReporter();
-	public static final A4Reporter HolaSimpleReporter = new edu.uw.ece.bordeaux.engine.HolaSimpleReporter();
 	public final static String TMP_DIRECTORY = "./tmp/";
-
-	public static WorkerCallback EmptyCallBack = new WorkerCallback() {
-        public void callback(Object x) { }
-        public void done() { }
-        public void fail() { }
-     };
      
 	private Utils() {
 		throw new UnsupportedOperationException();
