@@ -40,12 +40,13 @@ import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.alloy4.Pos;
-import edu.mit.csail.sdg.alloy4compiler.ast.Command;
-import edu.mit.csail.sdg.alloy4compiler.parser.CompModule;
-import edu.uw.ece.bordeaux.A4CommandExecuter;
+import edu.uw.ece.bordeaux.HolaReporter;
 
 public class Utils {
 
+	public static final A4Reporter HolaReporter = new HolaReporter();
+	public final static String TMP_DIRECTORY = "./tmp/";
+     
 	private Utils() {
 		throw new UnsupportedOperationException();
 	}

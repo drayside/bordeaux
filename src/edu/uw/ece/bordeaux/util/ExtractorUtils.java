@@ -300,13 +300,13 @@ public class ExtractorUtils {
 			
 			String localSig = ExtractorUtils.getLocalSigName(sig.label);
 			String sigValue = sig.label;
-			map.put(localSig, localSig + "'" + localSig + "''", sigValue);
+			map.put(localSig, localSig + "'", localSig + "''", sigValue);
 			
 			for (Field field : sig.getFields()) {
 				
 				String localField  = ExtractorUtils.getLocalFieldName(field.label, sig.label);
 				String fieldValue = sig.label + "<:" + field.label;
-				map.put(localField, localField + "'" + localField + "''", fieldValue);
+				map.put(localField, localField + "'", localField + "''", fieldValue);
 			}
 		}
 		
