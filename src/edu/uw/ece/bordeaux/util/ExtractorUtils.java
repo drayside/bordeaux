@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.map.MultiKeyMap;
+
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
@@ -165,6 +167,38 @@ public class ExtractorUtils {
 		return num;
 	}
 		
+	public static MultiKeyMap<String, String> getMap(A4Solution solution) {
+		
+		MultiKeyMap<String, String> map = new MultiKeyMap<>();
+		
+		for (Sig sig : solution.getAllReachableSigs()) {
+			if (sig.builtin)
+				continue;
+
+			// The ordering sig should be skipped
+			if (isOrdering(sig))
+				continue;
+			
+			if(!sig.label.startsWith("this/")) {
+				continue;
+			}
+			
+			String localSig = ExtractorUtils.getLocalSigName(sig.label);
+			String sigValue = sig.label;
+			map.put(localSig, localSig + "'" + localSig + "''", sigValue);
+			
+			for (Field field : sig.getFields()) {
+				
+				String localField  = ExtractorUtils.getLocalFieldName(field.label, sig.label);
+				String fieldValue = sig.label + "<:" + field.label;
+				map.put(localField, localField + "'" + localField + "''", fieldValue);
+			}
+		}
+		
+		return map;
+	}
+	
+	
 	/**
 	 * Given an A4solution object from AlloyExecuter, it converts it to a Alloy
 	 * syntax
