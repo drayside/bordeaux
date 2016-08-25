@@ -3,6 +3,7 @@ package edu.uw.ece.bordeaux.util;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4Tuple;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4TupleSet;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.Configuration;
+import edu.uw.ece.bordeaux.onborder.OnBorderCodeGenerator;
 
 /**
  * The class contains static methods that are helpful for extracting Alloy
@@ -282,10 +284,11 @@ public class ExtractorUtils {
 		return num;
 	}
 		
-	public static MultiKeyMap<String, String> getMap(A4Solution solution) {
+	public static Map<String, String> generateSkolemMap(A4Solution solution) {
 		
-		MultiKeyMap<String, String> map = new MultiKeyMap<>();
+		Map<String, String> map = new HashMap<>();
 		
+		final String base = "$" + OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND + "_";
 		for (Sig sig : solution.getAllReachableSigs()) {
 			if (sig.builtin)
 				continue;
@@ -297,16 +300,20 @@ public class ExtractorUtils {
 			if(!sig.label.startsWith("this/")) {
 				continue;
 			}
-			
-			String localSig = ExtractorUtils.getLocalSigName(sig.label);
-			String sigValue = sig.label;
-			map.put(localSig, localSig + "'", localSig + "''", sigValue);
+
+			String sigName = sig.shortLabel();
+			String localSig = base + ExtractorUtils.getLocalSigName(sigName);
+			map.put(localSig, sigName);
+			map.put(localSig + "'", sigName);
+			map.put(localSig + "''", sigName);
 			
 			for (Field field : sig.getFields()) {
 				
-				String localField  = ExtractorUtils.getLocalFieldName(field.label, sig.label);
-				String fieldValue = sig.label + "<:" + field.label;
-				map.put(localField, localField + "'", localField + "''", fieldValue);
+				String localField  = base + ExtractorUtils.getLocalFieldName(field.label, sigName);
+				String fieldValue = sigName + "<:" + field.label;
+				map.put(localField, fieldValue);
+				map.put(localField + "'", fieldValue);
+				map.put(localField + "''", fieldValue);
 			}
 		}
 		

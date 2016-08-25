@@ -39,8 +39,10 @@ public final class BordeauxEngine {
 	private boolean firstNearHit = true;
 	private String currentMiss = "";
 	private String currentHit = "";
-	private A4Solution previousHit;
-	private A4Solution previousMiss;
+//	private A4Solution previousHit;
+//	private A4Solution previousMiss;
+	private String previousHitString;
+	private String previousMissString;
 	private A4Solution initialSolution;
 	private Command command;
 	private OnBorderCodeGenerator generator;
@@ -346,7 +348,7 @@ public final class BordeauxEngine {
 		}
 	}*/
 	
-	private A4Solution func(A4Reporter reporter, File inputPath, String constraint1, String constraint2) {
+	private A4Solution perform(A4Reporter reporter, File inputPath, String constraint1, String constraint2) {
 		
 		try {
 			Util.writeAll(this.onBorderFile.getAbsolutePath(), "");
@@ -429,7 +431,9 @@ public final class BordeauxEngine {
 		currentMiss = Utils.and(currentMiss, prevMissStr);
 		String constraint2 = Utils.not(currentMiss);
 		
-		this.previousMiss = this.func(rep, this.inputPath, constraint1, constraint2);		
+		A4Solution result = this.perform(rep, this.inputPath, constraint1, constraint2);
+		this.previousMissString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result).b;
+		this.previousMiss = result;
 		return this.previousMiss;
 	}
 	
@@ -440,7 +444,7 @@ public final class BordeauxEngine {
 		if(firstNearHit) {
 
 			String constraint2 = this.generator.getForumlaContstraints();
-			this.previousHit = this.func(rep, this.inputPath, constraint1, constraint2);
+			this.previousHit = this.perform(rep, this.inputPath, constraint1, constraint2);
 			currentHit = ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousHit, true);
 			firstNearHit = false;
 			return this.previousHit;
@@ -454,7 +458,8 @@ public final class BordeauxEngine {
 		currentHit = Utils.and(currentHit, prevHitStr);
 		String constraint2 = currentHit;
 		
-		this.previousHit = this.func(rep, this.inputPath, constraint1, constraint2);
+		previousHit = this.perform(rep, this.inputPath, constraint1, constraint2);
+//		this.previousHit = ExtractorUtils.convertBordeauxSolutionToA4Solution(result).a;
 		return this.previousHit;
 	}
 }

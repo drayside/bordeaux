@@ -29,7 +29,6 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import kodkod.ast.Formula;
@@ -69,11 +68,7 @@ import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod;
 import edu.mit.csail.sdg.alloy4viz.StaticInstanceReader;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
 import edu.mit.csail.sdg.alloy4whole.SimpleGUI.BordeauxNextType;
-import edu.uw.ece.bordeaux.A4CommandExecuter;
-import edu.uw.ece.bordeaux.HolaReporter;
 import edu.uw.ece.bordeaux.engine.BordeauxEngine;
-import edu.uw.ece.bordeaux.util.ExtractorUtils;
-import edu.uw.ece.bordeaux.util.Utils;
 
 /** This helper method is used by SimpleGUI. */
 

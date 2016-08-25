@@ -64,7 +64,7 @@ public class BoreauxVsAlloyTest {
 		final A4Solution nearMissExample = findBoreauxNearMiss(filePath, commandName);
 		
 		System.out.println("result ->" +nearMissExample);
-		System.exit(-1);
+//		System.exit(-1);
 		Map<String, String> decodeSkolemizedNames = new HashMap<>();
 		decodeSkolemizedNames.put("$findMarginalInstances__a", "A");
 		decodeSkolemizedNames.put("$findMarginalInstances_a_65_w", "w");
@@ -201,32 +201,36 @@ public class BoreauxVsAlloyTest {
 		
 		System.out.println(nearMissExample);
 		
-		Map<String, String> map = new HashMap<>();
-		map.put("$findMarginalInstances_a", "A");
-		map.put("$findMarginalInstances_a_w", "w");
-		map.put("$findMarginalInstances_a'", "A");
-		map.put("$findMarginalInstances_a_w'", "w");
-		map.put("$findMarginalInstances_a''", "A");
-		map.put("$findMarginalInstances_a_w''", "w");
-		System.out.println(ExtractorUtils.convertBordeauxSolutionToAlloySyntax(nearMissExample,map ));
-		assertEquals(new Pair<String,String>("(no A and no w)","(some A2, A3: univ | (A2, A3 in A) and (A3->A2+ A3->A3 = w)"),ExtractorUtils.convertBordeauxSolutionToAlloySyntax(nearMissExample,map ));
+//		Map<String, String> map = new HashMap<>();
+//		map.put("$findMarginalInstances_a", "A");
+//		map.put("$findMarginalInstances_a_w", "w");
+//		map.put("$findMarginalInstances_a'", "A");
+//		map.put("$findMarginalInstances_a_w'", "w");
+//		map.put("$findMarginalInstances_a''", "A");
+//		map.put("$findMarginalInstances_a_w''", "w");
+
+		Map<String, String> map = ExtractorUtils.generateSkolemMap(nearMissExample);
+		System.out.println(ExtractorUtils.convertBordeauxSolutionToAlloySyntax(nearMissExample, map));
+		assertEquals(new Pair<String,String>("(no A and no A<:w)","(some disj A_2, A_3: univ | (A_2+ A_3 = A) and (A_3->A_2+ A_3->A_3 = A<:w))"),ExtractorUtils.convertBordeauxSolutionToAlloySyntax(nearMissExample,map ));
 	}
-	
+		
 	@Test
-	public void tesWithPrimtMapA4SolutionToBordeaux(){
-		final A4Solution nearMissExample = findBordeauxExample("sig A{w': lone A}\npred p{no ^w' & iden\n}\nrun p for 4 but 4 Int", "p");
+	public void testSkolemMapOutput(){
+		
+		final A4Solution nearMissExample = findBordeauxExample("sig A{w: lone A}\npred p{no ^w & iden\n}\nrun p for 4 but 4 Int", "p");
 		
 		System.out.println(nearMissExample);
 		
-		Map<String, String> map = new HashMap<>();
-		map.put("$findMarginalInstances_a", "A");
-		map.put("$findMarginalInstances_a_w'", "w'");
-		map.put("$findMarginalInstances_a'", "A");
-		map.put("$findMarginalInstances_a_w''", "w'");
-		map.put("$findMarginalInstances_a''", "A");
-		map.put("$findMarginalInstances_a_w'''", "w'");
-		System.out.println(ExtractorUtils.convertBordeauxSolutionToAlloySyntax(nearMissExample,map ));
-		assertEquals(new Pair<String,String>("(no A and no w')","(some A2, A3: univ | (A2, A3 in A) and (A3->A2+ A3->A3 = w')"),ExtractorUtils.convertBordeauxSolutionToAlloySyntax(nearMissExample,map ));
+		Map<String, String> map = ExtractorUtils.generateSkolemMap(nearMissExample);
+		Map<String, String> expected = new HashMap<>();
+		expected.put("$findMarginalInstances__a", "A");
+		expected.put("$findMarginalInstances__a'", "A");
+		expected.put("$findMarginalInstances__a''", "A");
+		expected.put("$findMarginalInstances_a_65_w", "A<:w");
+		expected.put("$findMarginalInstances_a_65_w'", "A<:w");
+		expected.put("$findMarginalInstances_a_65_w''", "A<:w");
+				
+		assertEquals(map, expected);
 	}
 	
 }
