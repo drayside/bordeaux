@@ -115,3 +115,10 @@ pred lowerBoundProcess{
 check{ 
 (lowerBoundProcess && GrabOrRelease && GrabbedInOrder) => Not_Deadlock
 }for 5 State, 5 Process, 4 Mutex
+
+
+pred showDijkstra{ 
+(lowerBoundProcess && GrabOrRelease && GrabbedInOrder)
+}
+
+run showDijkstra for 5 State, 5 Process, 4 Mutex

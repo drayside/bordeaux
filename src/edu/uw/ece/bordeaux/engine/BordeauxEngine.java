@@ -4,12 +4,16 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.management.RuntimeErrorException;
+
+import org.apache.commons.collections4.MultiValuedMap;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
@@ -28,8 +32,7 @@ public final class BordeauxEngine {
 
 	private final static Logger logger = Logger
 			.getLogger(BordeauxEngine.class.getName() + "--" + Thread.currentThread().getName());
-	private File tmpPath = new File("./tmp/");
-
+	private final File tmpPath;
 	private final File inputPath;
 	
 	private boolean firstNearMiss = true;
@@ -42,23 +45,53 @@ public final class BordeauxEngine {
 	private Command command;
 	private OnBorderCodeGenerator generator;
 	private File onBorderFile;
-
+	private Set<String> relationsToExclude;
 	
+	/**
+	 * Creates a new Bordeaux Engine instance
+	 * @param inputPath - The path to the alloy source file
+	 * @param command - The command executed when generating the initial solution
+	 * @param initialSolution - The initial solution generated from Alloy (can't be null)
+	 */
 	public BordeauxEngine(File inputPath, Command command, A4Solution initialSolution) {
-
-		this.inputPath = inputPath;
-		this.command = command;
-		this.initSolution(initialSolution);
+		this(inputPath, new File("./tmp/"), command, new HashSet<>(), initialSolution);
 	}
 
+	/**
+	 * Creates a new Bordeaux Engine instance
+	 * @param inputPath - The path to the alloy source file
+	 * @param tmpPath - The path to the temporary directory
+	 * @param command - The command executed when generating the initial solution
+	 * @param initialSolution - The initial solution generated from Alloy (can't be null)
+	 */
 	public BordeauxEngine(File inputPath, File tmpPath, Command command, A4Solution initialSolution) {
-		this(inputPath, command, initialSolution);
+		this(inputPath, tmpPath, command, new HashSet<>(), initialSolution);
+	}
+	
+	/**
+	 * Creates a new Bordeaux Engine instance
+	 * @param inputPath - The path to the alloy source file
+	 * @param tmpPath - The path to the temporary directory
+	 * @param command - The command executed when generating the initial solution
+	 * @param relationsToExclude - The names of the sigs and relations to be excluded
+	 * @param initialSolution - The initial solution generated from Alloy (can't be null)
+	 */
+	public BordeauxEngine(File inputPath, File tmpPath, Command command, Set<String> relationsToExclude, A4Solution initialSolution) {
+		
+		if(initialSolution == null) throw new NullPointerException("Initial alloy solution cannot be null");
+		
+		this.inputPath = inputPath;
 		this.tmpPath = tmpPath;
+		this.command = command;
+		this.relationsToExclude = relationsToExclude;
+		this.initSolution(initialSolution);
 	}
 	
 	private void createCodeGenerator(File inputPath, Command command) {
 
-		logger.info("Generating OnBorder code");
+		if(Configuration.IsInDeubbungMode) {
+			logger.info("Generating OnBorder code");
+		}
 		
 		// Generate on Border instances
 		String fileName = Utils.getFileName(inputPath.getAbsolutePath());
@@ -70,12 +103,12 @@ public final class BordeauxEngine {
 		try {
 			writer = new PrintWriter(onBorderFile);
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			logger.log(Level.SEVERE, Utils.threadName() + " Failed to generate printwriter for Code Generator", e);
 		}
 
 		try {
 			String fileToReadFrom = inputPath.getAbsolutePath();
-			this.generator = new OnBorderCodeGenerator(fileToReadFrom, command, writer);
+			this.generator = new OnBorderCodeGenerator(fileToReadFrom, command, this.relationsToExclude, writer);
 		} catch (Exception e) {
 			logger.log(Level.SEVERE, Utils.threadName() + " Failed to generate on border code", e);
 		}
@@ -321,16 +354,20 @@ public final class BordeauxEngine {
 		}
 		
 		this.generator.run(constraint1, constraint2);
-		System.out.println(Utils.readFile(this.onBorderFile.getAbsolutePath()));
-		logger.info("OnBorder Code generated...running Alloy*");
+		
+		if(Configuration.IsInDeubbungMode) {
+			System.out.println(Utils.readFile(this.onBorderFile.getAbsolutePath()));
+			logger.info("OnBorder Code generated...running Alloy*");
+		}
 
 		// Run on-border instances through the higher order solver (alloy*)
 		boolean success = true;
 		A4Solution result = null;
 		try {
 			String commandName = OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND;
-			Collection<A4Solution> sols = A4CommandExecuter.get().executeHola(reporter, this.tmpPath.getAbsolutePath(),
-					commandName, onBorderFile.getAbsolutePath()).get(commandName);
+			MultiValuedMap<String, A4Solution> map = A4CommandExecuter.get().executeHola(reporter, this.tmpPath.getAbsolutePath(),
+					commandName, onBorderFile.getAbsolutePath());
+					Collection<A4Solution> sols =map.get(commandName);
 			
 			if(reporter.equals(A4Reporter.NOP)) {
 				Iterator<A4Solution> itr = sols.iterator();
@@ -341,11 +378,7 @@ public final class BordeauxEngine {
 		} catch (Exception e) {
 			success = false;
 			e.printStackTrace();
-			logger.severe(
-					"[" + Thread.currentThread().getName() + "] " + " Failed to execute alloy* on file: " + inputPath);
-			if (Configuration.IsInDeubbungMode) {
-				logger.log(Level.SEVERE, "[" + Thread.currentThread().getName() + "] " + e.getMessage(), e);
-			}
+			logger.log(Level.SEVERE, "[" + Thread.currentThread().getName() + "] " + " Failed to execute alloy* on file: " + inputPath, e);
 		}
 
 		if (Configuration.IsInDeubbungMode) {
@@ -355,6 +388,11 @@ public final class BordeauxEngine {
 		return result;
 	}
 	
+	/**
+	 * Increments 
+	 * @return
+	 * @throws Err
+	 */
 	public A4Solution nextSolution() throws Err {
 		
 		A4Solution next = this.initialSolution.next();

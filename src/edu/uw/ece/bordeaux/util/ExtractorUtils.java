@@ -23,6 +23,7 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Tuple;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4TupleSet;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
+import edu.uw.ece.bordeaux.Configuration;
 
 /**
  * The class contains static methods that are helpful for extracting Alloy
@@ -134,9 +135,13 @@ public class ExtractorUtils {
 	
 	public static String getLocalFieldName(String fieldLabel, String sigName) {
 
-		return getCamelCase(sigName) + "_" + fieldLabel;
+		return getCamelCase(sigName) + "_" + ExtractorUtils.localNameSeparator(sigName) + "_" + fieldLabel;
 	}
-		
+	
+	public static String localNameSeparator(String sigName) {
+		return "" + Math.abs(sigName.hashCode());
+	}
+	
 	/**
 	 * Given an A4solution object from AlloyExecuter, it converts it to a Alloy
 	 * syntax
@@ -159,7 +164,9 @@ public class ExtractorUtils {
 			
 			// TODO: Trying to exlcude atons that are defined as signatures. Find a better condition.
 			if(!sig.label.startsWith("this/")) {
-				System.out.println("" + (sig.isAtom == null ? "not" : "") + "atom");
+				if(Configuration.IsInDeubbungMode)
+					System.out.println("" + (sig.isAtom == null ? "not" : "") + "atom");
+				
 				continue;
 			}
 			

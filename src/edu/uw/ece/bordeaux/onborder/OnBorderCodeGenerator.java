@@ -3,8 +3,10 @@ package edu.uw.ece.bordeaux.onborder;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,11 +40,13 @@ public class OnBorderCodeGenerator {
 	private String includeConstraints;
 	private String structuralConstraints;
 	private String formulaConstraints;
+	private Set<String> atomsToExclude;
     
     private OnBorderCodeGenerator() {
         this.indent = "";
         this.commandScope = "";
         this.out = new PrintWriter(System.out);
+        this.atomsToExclude = new HashSet<>();
     }
     
     /**
@@ -54,6 +58,7 @@ public class OnBorderCodeGenerator {
      * 
      * @param filepath
      *            - The path to the alloy file to be used.
+     * @param command - The command to execute
      * @throws Err 
      */
     public OnBorderCodeGenerator(String filepath, Command command) throws Err {
@@ -68,6 +73,7 @@ public class OnBorderCodeGenerator {
      * 
      * @param filepath
      *            - The path to the alloy file to be used.
+     * @param command - The command to execute
      * @param writer
      *            - Specifies the {@link PrintWriter} to be used.
      * @throws Err 
@@ -75,6 +81,19 @@ public class OnBorderCodeGenerator {
     public OnBorderCodeGenerator(String filepath, Command command, PrintWriter writer) throws Err {
         this(filepath, command);
         this.out = writer;
+    }
+    
+    /**
+     * Creates a new instance of {@link OnBorderCodeGenerator}.
+     * @param filepath - The path to the alloy file to be used.
+     * @param command - The command to execute
+     * @param relationsToExclude - The names of the sigs and relations to be excluded
+     * @param writer - Specifies the {@link PrintWriter} to be used.
+     * @throws Err
+     */
+    public OnBorderCodeGenerator(String filepath, Command command, Set<String> relationsToExclude, PrintWriter writer) throws Err {
+        this(filepath, command, writer);
+        if(relationsToExclude != null) this.atomsToExclude = relationsToExclude;
     }
     
     private void initModule(Module module) {
@@ -101,15 +120,19 @@ public class OnBorderCodeGenerator {
         
         for(SigFieldWrapper sigWrap : this.sigs) {
         	
-        	includeConstraints = includeConstraints.replace(sigWrap.getSig(), ExtractorUtils.getLocalSigName(sigWrap.getSig()));
-        	structuralConstraints = structuralConstraints.replace(sigWrap.getSig(), ExtractorUtils.getLocalSigName(sigWrap.getSig()));
-        	formulaConstraints = formulaConstraints.replace(sigWrap.getSig(), ExtractorUtils.getLocalSigName(sigWrap.getSig()));
+        	String sigRegex = "\\b(($)*" + sigWrap.getSig() + ")\\b";
+        	String localSig = ExtractorUtils.getLocalSigName(sigWrap.getSig());
+        	includeConstraints = includeConstraints.replaceAll(sigRegex, localSig);
+        	structuralConstraints = structuralConstraints.replaceAll(sigRegex, localSig);
+        	formulaConstraints = formulaConstraints.replaceAll(sigRegex, localSig);
         	
         	for(FieldInfo field : sigWrap.getFields()) {
         		
-        		includeConstraints = includeConstraints.replace(field.getName(), field.getLabel());
-        		structuralConstraints = structuralConstraints.replace(field.getName(), field.getLabel());
-        		formulaConstraints = formulaConstraints.replace(field.getName(), field.getLabel());
+        		String fieldRegex = "\\b(($)*" + field.getName() + ")\\b";
+        		String localField = field.getLabel();
+        		includeConstraints = includeConstraints.replaceAll(fieldRegex, localField);
+        		structuralConstraints = structuralConstraints.replaceAll(fieldRegex, localField);
+        		formulaConstraints = formulaConstraints.replaceAll(fieldRegex, localField);
         	}
         }
         
@@ -174,12 +197,12 @@ public class OnBorderCodeGenerator {
         this.out = out;
         
         for (SigFieldWrapper sigWrap : this.sigs) {
-            
-        	if(!sigWrap.isAbstract()) {
+
+            String sigName = this.getCamelCase(sigWrap.getSig());
+        	if(!this.atomsToExclude.contains(sigName) && !sigWrap.isAbstract()) {
         	
 	            ln();
 	            
-	            String sigName = this.getCamelCase(sigWrap.getSig());
 	            String s1 = String.format("%s: set %s", sigName, sigWrap.getSig());
 	            String s2 = String.format("%s': set %s", sigName, sigWrap.getSig());
 	            String s3 = String.format("%s'': set %s", sigName, sigWrap.getSig());
@@ -192,6 +215,9 @@ public class OnBorderCodeGenerator {
         	}
         	
             for (FieldInfo field : sigWrap.getFields()) {
+            	
+            	if(this.atomsToExclude.contains(field.getLabel())) continue;
+            	
                 ln();
                 String s1 = String.format("%s: %s", field.getLabel(), field.getType());
                 String s2 = String.format("%s': %s", field.getLabel(), field.getType());
@@ -234,10 +260,10 @@ public class OnBorderCodeGenerator {
         while (sigItr.hasNext()) {
             
             SigFieldWrapper sigWrap = sigItr.next();
+
+            String sigName = this.getCamelCase(sigWrap.getSig());
+            if(!this.atomsToExclude.contains(sigName) && !sigWrap.isAbstract()){
             
-            if(!sigWrap.isAbstract()){
-            
-	            String sigName = this.getCamelCase(sigWrap.getSig());
 	            quantifier.append(String.format(", %1$s, %1$s', %1$s'': set %2$s", sigName, sigWrap.getSig()));
 	            quantifier_1.append(String.format(", %1$s1, %1$s1', %1$s1'': set %2$s", sigName, sigWrap.getSig()));
 	            
@@ -258,6 +284,9 @@ public class OnBorderCodeGenerator {
             while (itr.hasNext()) {
                 
                 FieldInfo field = itr.next();
+                
+            	if(this.atomsToExclude.contains(field.getLabel())) continue;
+            	
                 quantifier.append(String.format(", %1$s, %1$s', %1$s'': set %2$s", field.getLabel(), field.getType()));
                 quantifier_1.append(String.format(", %1$s1, %1$s1', %1$s1'': set %2$s", field.getLabel(), field.getType()));
                 
@@ -441,13 +470,24 @@ public class OnBorderCodeGenerator {
                         
             // Replace each occurrence
             while (m.find()) {
-                m.appendReplacement(sb, String.format("%s%s_%s", m.group(1).toLowerCase(), m.group(2), m.group(4)));
+//                m.appendReplacement(sb, String.format("%s%s_%s", m.group(1).toLowerCase(), m.group(2), m.group(4)));
+            	String sigName = m.group(1) + m.group(2);
+            	String sep = "";
+            	 for (SigFieldWrapper sigWrap : this.sigs) {
+            		 if(sigWrap.getSig().equals(sigName)) {
+            			 sep = ExtractorUtils.localNameSeparator(sigWrap.getSig());
+            			 break;
+            		 }
+            	 }
+            	 
+            	 sigName = ExtractorUtils.getLocalSigName(sigName);
+            	 m.appendReplacement(sb, String.format("%s_%s_%s", sigName, sep, m.group(4)));
             }
             
             m.appendTail(sb);
             constraint = sb.toString();
             
-            // Replace remaining this/SigName with sigNane            
+            // Replace remaining this/SigName with sigName            
             m = Pattern.compile("this\\/([A-Za-z])((\\w)*)").matcher(constraint);
             sb = new StringBuffer();
 
