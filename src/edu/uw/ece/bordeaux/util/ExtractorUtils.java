@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.map.MultiKeyMap;
+
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Pair;
@@ -138,7 +140,7 @@ public class ExtractorUtils {
 	}
 
 	public static String getLocalSigName(String sigName) {
-		return ExtractorUtils.getCamelCase(sigName);
+		return "_" + ExtractorUtils.getCamelCase(sigName);
 	}
 
 	public static String getLocalFieldName(String fieldLabel, String sigName) {
@@ -210,13 +212,13 @@ public class ExtractorUtils {
 				} else {
 
 					if (isSig(solution, decodeSkolemizedNames.get(var.label))) {
-						declPart.add("some " + solution.eval(var).toString().replaceAll("\\$|\\{|\\}", "") + ": univ ");
-						bodyPart.add("(" + solution.eval(var).toString().replaceAll("\\$|\\{|\\}", "") + " in "
+						declPart.add("some disj " + solution.eval(var).toString().replaceAll("\\{|\\}", "").replaceAll("\\$", "_") + ": univ ");
+						bodyPart.add("(" + solution.eval(var).toString().replaceAll("\\{|\\}", "").replaceAll("\\$", "_").replaceAll(",", "+") + " = "
 								+ decodeSkolemizedNames.get(var.label) + ")");
 					} else {
 						bodyPart.add(
-								"(" + solution.eval(var).toString().replaceAll("\\$|\\{|\\}", "").replaceAll(",", "+")
-										+ " = " + decodeSkolemizedNames.get(var.label));
+								"(" + solution.eval(var).toString().replaceAll("\\{|\\}", "").replaceAll("\\$", "_").replaceAll(",", "+")
+										+ " = " + decodeSkolemizedNames.get(var.label) + ")");
 					}
 				}
 			} catch (Err e) {
@@ -239,6 +241,10 @@ public class ExtractorUtils {
 			return "";
 		}
 
+	}
+	
+	public static Pair<String, String> convertBordeauxSolutionToAlloySyntax(A4Solution solution) {
+		return null;
 	}
 
 	public static Pair<String, String> convertBordeauxSolutionToAlloySyntax(A4Solution solution,
@@ -275,7 +281,38 @@ public class ExtractorUtils {
 		}
 		return num;
 	}
+		
+	public static MultiKeyMap<String, String> getMap(A4Solution solution) {
+		
+		MultiKeyMap<String, String> map = new MultiKeyMap<>();
+		
+		for (Sig sig : solution.getAllReachableSigs()) {
+			if (sig.builtin)
+				continue;
 
+			// The ordering sig should be skipped
+			if (isOrdering(sig))
+				continue;
+			
+			if(!sig.label.startsWith("this/")) {
+				continue;
+			}
+			
+			String localSig = ExtractorUtils.getLocalSigName(sig.label);
+			String sigValue = sig.label;
+			map.put(localSig, localSig + "'" + localSig + "''", sigValue);
+			
+			for (Field field : sig.getFields()) {
+				
+				String localField  = ExtractorUtils.getLocalFieldName(field.label, sig.label);
+				String fieldValue = sig.label + "<:" + field.label;
+				map.put(localField, localField + "'" + localField + "''", fieldValue);
+			}
+		}
+		
+		return map;
+	}
+	
 	/**
 	 * Given an A4solution object from AlloyExecuter, it converts it to a Alloy
 	 * syntax
@@ -286,6 +323,7 @@ public class ExtractorUtils {
 	public static String convertA4SolutionToAlloySyntax(A4Solution solution, boolean useLocalNames) {
 		if (solution == null)
 			return "";
+		
 		List<String> emptySigs = new ArrayList<>();
 		List<String> constraints = new ArrayList<>();
 		List<String> quantifiers = new ArrayList<>();
@@ -306,8 +344,13 @@ public class ExtractorUtils {
 			}
 
 			String sigName = sig.label.replace("this/", "");
-			sigName = useLocalNames ? getCamelCase(sigName) : sigName;
+			sigName = useLocalNames && sig.isAbstract == null ? getLocalSigName(sigName) : sigName;
 
+			if (!solution.satisfiable()){
+				constraints.add("(no " + sigName+")");
+				continue;
+			}
+			
 			if (solution.eval(sig).size() == 0) {
 				emptySigs.add(sigName);
 			} else {
@@ -322,7 +365,7 @@ public class ExtractorUtils {
 		}
 
 		for (String noSigName : emptySigs) {
-			constraints.add("\tno " + noSigName);
+			constraints.add("(no " + noSigName+")");
 		}
 
 		for (Sig sig : solution.getAllReachableSigs()) {
@@ -330,10 +373,16 @@ public class ExtractorUtils {
 				continue;
 			else
 				for (Field field : sig.getFields()) {
-					A4TupleSet fieldsTuples = solution.eval(field);
+					
 					String fieldName = field.label;
 					fieldName = useLocalNames ? getLocalFieldName(fieldName, sig.label.replace("this/", ""))
 							: fieldName;
+					if (!solution.satisfiable()){
+						constraints.add("(no " + fieldName+")");
+						continue;
+					}
+					
+					A4TupleSet fieldsTuples = solution.eval(field);
 					if (isOrdering(sig)) {
 						fieldName = (sig.label.contains("/") ? sig.label.split("/")[0] + "/" : "")
 								+ field.label.toLowerCase();
@@ -356,12 +405,12 @@ public class ExtractorUtils {
 				}
 		}
 
-		String result = "{";
+		String result = "(";
 		if (quantifiers.size() > 0) {
-			result = quantifiers.stream().collect(Collectors.joining("| ")) + "| {";
+			result = quantifiers.stream().collect(Collectors.joining("| ")) + "| (";
 		}
 
-		result = result + constraints.stream().collect(Collectors.joining("\n")) + "}";
+		result = result + constraints.stream().collect(Collectors.joining(" and ")) + ")";
 		return result;
 	}
 
@@ -427,6 +476,6 @@ public class ExtractorUtils {
 		}
 
 		String name = formula.toString().replace("this/", "");
-		return useLocalNames ? getCamelCase(name) : name;
+		return useLocalNames ? getLocalSigName(name) : name;
 	}
 }

@@ -62,6 +62,16 @@ public class BoreauxVsAlloyTest {
 		int tries = 1;
 
 		final A4Solution nearMissExample = findBoreauxNearMiss(filePath, commandName);
+		
+		System.out.println("result ->" +nearMissExample);
+		System.exit(-1);
+		Map<String, String> decodeSkolemizedNames = new HashMap<>();
+		decodeSkolemizedNames.put("$findMarginalInstances__a", "A");
+		decodeSkolemizedNames.put("$findMarginalInstances_a_65_w", "w");
+		decodeSkolemizedNames.put("$findMarginalInstances__a'", "A");
+		decodeSkolemizedNames.put("$findMarginalInstances_a_65_w'", "w");
+		decodeSkolemizedNames.put("$findMarginalInstances__a''", "A");
+		decodeSkolemizedNames.put("$findMarginalInstances_a_65_w''", "w");
 
 		CompModule module = null;
 		try {
@@ -82,7 +92,7 @@ public class BoreauxVsAlloyTest {
 					commandNot, options);
 			while (ans.satisfiable() && tries < maxRetry) {
 
-				if (equiSAT(filePath, ExtractorUtils.convertA4SolutionToAlloySyntax(nearMissExample, false),
+				if (equiSAT(filePath, ExtractorUtils.convertBordeauxSolutionToAlloySyntax(nearMissExample, decodeSkolemizedNames).b,
 						ExtractorUtils.convertA4SolutionToAlloySyntax(ans, false), commandName)) {
 					
 					System.out.println("NEAR MISS="+nearMissExample);
@@ -138,6 +148,7 @@ public class BoreauxVsAlloyTest {
 					.runAlloyThenGetAnswers(newFileTmp.getAbsolutePath(), A4Reporter.NOP, newCommandName).satisfiable();
 		} catch (Err e) {
 			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		//newFileTmp.deleteOnExit();
@@ -177,7 +188,7 @@ public class BoreauxVsAlloyTest {
 	@Test
 	public void testEmptyMapA4SolutionToBordeaux(){
 		
-		final A4Solution nearMissExample = findBordeauxExample("sig A{w: lone A}\npred p{no ^w & iden\n}\nrun p for 4", "p");
+		final A4Solution nearMissExample = findBordeauxExample("sig A{w: lone A}\npred p{no ^w & iden\n}\nrun p for 3", "p");
 		
 		Map<String, String> map = new HashMap<>();
 		

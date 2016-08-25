@@ -95,7 +95,7 @@ public class BordeauxEngineTest {
 		
 		testNextMiss(reporter, commandName, filepath, engine, 1);
 		testNextHit(reporter, commandName, filepath, engine, 1);
-		testNextSol(reporter, commandName, filepath, engine, 1);
+//		testNextSol(reporter, commandName, filepath, engine, 1);
 	}
 
 	@Test

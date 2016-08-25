@@ -10,6 +10,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
@@ -41,12 +42,35 @@ public class ExtractorUtilsTest {
 	}
 
 	@Test
+	public void testConvertA4SolutionToNonAlloySyntaxOrderedPackage() {
+		// @formatter:off
+		final String alloyContent = "sig A{r: A}\npred p[]{some r and no A}\nrun p";
+		// @formatter:on
+		final File testFile = new File("tmp", "ordered.als");
+		try {
+			Util.writeAll(testFile.getAbsolutePath(), alloyContent);
+		} catch (Err e) {
+			e.printStackTrace();
+			fail(e.getMessage());
+		}
+
+		A4Solution solution = null;
+		try {
+			solution = A4CommandExecuter.get().runAlloyThenGetAnswers(testFile.getAbsolutePath(), A4Reporter.NOP,
+					"p");
+		} catch (Err e) {
+			e.printStackTrace();
+			fail(e.getMessage());
+		}
+		
+		System.out.println(ExtractorUtils.convertA4SolutionToAlloySyntax(solution, false));
+	}
+
+	@Test
 	public void testConvertA4SolutionToAlloySyntaxOrderedPackage() {
 		// @formatter:off
-		final String alloyContent = "open util/ordering [State] as so\n" +
-							  		"sig State{r: State}\n" +
-							  		"pred gen{some so/first and some so/next}\n" +
-							  		"run gen";
+		final String alloyContent = "open util/ordering [State] as so\n" + "sig State{r: State}\n"
+				+ "pred gen{some so/first and some so/next}\n" + "run gen";
 		// @formatter:on
 		final File testFile = new File("tmp", "ordered.als");
 		try {
