@@ -92,7 +92,13 @@ public class ExtractorUtils {
 	public static String extractScopeFromCommand(Command command) {
 		boolean first = true;
 		StringBuilder sb = new StringBuilder();
-		if (command.overall >= 0 && ((command.intScope != null && command.intScope.bitwidth >= 0) || command.maxseq >= 0
+		
+		System.out.println(command.intScope);
+		System.out.println(command.intScope.bitwidth);
+		
+		if (command.overall >= 0 && 
+				((command.intScope != null && command.intScope.bitwidth >= 0) || 
+						command.maxseq >= 0
 				|| (command.scope != null && command.scope.size() > 0)))
 			sb.append(" for ").append(command.overall).append(" but");
 		else if (command.overall >= 0)
@@ -243,6 +249,10 @@ public class ExtractorUtils {
 			return "";
 		}
 
+	}
+	
+	public static Pair<A4Solution, A4Solution> convertBordeauxSolutionToAlloySolution(A4Solution solution){
+		return new Pair<>(solution, solution);
 	}
 	
 	public static Pair<String, String> convertBordeauxSolutionToAlloySyntax(A4Solution solution) {

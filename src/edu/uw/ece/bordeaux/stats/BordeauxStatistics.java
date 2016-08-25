@@ -26,7 +26,12 @@ public class BordeauxStatistics {
 		this.numNearMissPerMin = numNearMissPerMin;
 		this.numNearMissByAlloy = numNearMissByAlloy;
 	}
+	
+	public static BordeauxStatistics getEmpty(final String filename, final String commandName) {
 
+		return new BordeauxStatistics(filename, commandName, 0, 0, 0, 0, 0, 0, 0);
+	}
+	
 	/*
 	 * (non-Javadoc)
 	 * 

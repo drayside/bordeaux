@@ -409,57 +409,38 @@ public final class BordeauxEngine {
 
 	private void initSolution(A4Solution sol) {
 		this.initialSolution = sol;
-		this.previousHit = sol;
+		this.previousHitString = ExtractorUtils.convertA4SolutionToAlloySyntax(sol, true);
 		
 		this.createCodeGenerator(inputPath, command);
-		this.currentMiss = this.generator.getForumlaContstraints();
+		this.previousMissString = this.generator.getForumlaContstraints();
+		this.currentMiss = "";
 		this.currentHit = "";
 	}
 	
 	public A4Solution nextNearMiss(A4Reporter rep) {
 
-		if(!firstNearMiss && this.previousMiss == null) return null;
+		if(!firstNearMiss && this.previousMissString == null) return null;
 		this.firstNearMiss = false; 
 		
-		String constraint1 = ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousHit, true);
+		String constraint1 = this.previousHitString;
 		
-		String prevMissStr = "";
-		if(this.previousMiss != null) {
-			prevMissStr = ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousMiss, true);
-		}
-		
-		currentMiss = Utils.and(currentMiss, prevMissStr);
+		currentMiss = Utils.and(this.currentMiss, this.previousMissString);
 		String constraint2 = Utils.not(currentMiss);
 		
 		A4Solution result = this.perform(rep, this.inputPath, constraint1, constraint2);
 		this.previousMissString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result).b;
-		this.previousMiss = result;
-		return this.previousMiss;
+		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result).b;
 	}
 	
 	public A4Solution nextNearHit(A4Reporter rep) {
 
-		String constraint1 = ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousMiss, true);
+		String constraint2 = this.previousMissString;
 		
-		if(firstNearHit) {
-
-			String constraint2 = this.generator.getForumlaContstraints();
-			this.previousHit = this.perform(rep, this.inputPath, constraint1, constraint2);
-			currentHit = ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousHit, true);
-			firstNearHit = false;
-			return this.previousHit;
-		}
+		currentHit = Utils.and(currentHit, previousHitString);
+		String constraint1 = currentHit;
 		
-		String prevHitStr = "";
-		if(this.previousHit != null) {
-			prevHitStr = ExtractorUtils.convertA4SolutionToAlloySyntax(this.previousHit, true);
-		}
-		
-		currentHit = Utils.and(currentHit, prevHitStr);
-		String constraint2 = currentHit;
-		
-		previousHit = this.perform(rep, this.inputPath, constraint1, constraint2);
-//		this.previousHit = ExtractorUtils.convertBordeauxSolutionToA4Solution(result).a;
-		return this.previousHit;
+		A4Solution result = this.perform(rep, this.inputPath, constraint1, constraint2);
+		this.previousHitString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result).a;
+		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result).a;
 	}
 }

@@ -22,6 +22,7 @@ import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.HolaReporter;
 import edu.uw.ece.bordeaux.engine.BordeauxEngine;
+import edu.uw.ece.bordeaux.onborder.OnBorderCodeGenerator;
 import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import edu.uw.ece.bordeaux.util.Utils;
 
@@ -62,9 +63,8 @@ public class BoreauxVsAlloyTest {
 		int tries = 1;
 
 		final A4Solution nearMissExample = findBoreauxNearMiss(filePath, commandName);
-		
-		System.out.println("result ->" +nearMissExample);
-//		System.exit(-1);
+		System.out.println("result ->" + nearMissExample);
+		System.exit(-1);
 		Map<String, String> decodeSkolemizedNames = new HashMap<>();
 		decodeSkolemizedNames.put("$findMarginalInstances__a", "A");
 		decodeSkolemizedNames.put("$findMarginalInstances_a_65_w", "w");
@@ -92,21 +92,24 @@ public class BoreauxVsAlloyTest {
 					commandNot, options);
 			while (ans.satisfiable() && tries < maxRetry) {
 
-				if (equiSAT(filePath, ExtractorUtils.convertBordeauxSolutionToAlloySyntax(nearMissExample, decodeSkolemizedNames).b,
+				if (equiSAT(filePath,
+						ExtractorUtils.convertBordeauxSolutionToAlloySyntax(nearMissExample, decodeSkolemizedNames).b,
 						ExtractorUtils.convertA4SolutionToAlloySyntax(ans, false), commandName)) {
-					
-					System.out.println("NEAR MISS="+nearMissExample);
+
+					System.out.println("NEAR MISS=" + nearMissExample);
 					System.out.println(ans);
 					break;
 				}
-				
-				System.out.println("NEAR MISS="+nearMissExample);
-				System.out.println("--->"+ExtractorUtils.convertBordeauxSolutionToAlloySyntax(nearMissExample, new HashMap<>()));
-				System.out.println("number of tuples="+ExtractorUtils.getNumberOfTuplesFromA4Solution(nearMissExample));
 
-				System.out.println("ans->"+ans);
-				System.out.println("number of tuples="+ExtractorUtils.getNumberOfTuplesFromA4Solution(ans));
-				
+				System.out.println("NEAR MISS=" + nearMissExample);
+				System.out.println(
+						"--->" + ExtractorUtils.convertBordeauxSolutionToAlloySyntax(nearMissExample, new HashMap<>()));
+				System.out
+						.println("number of tuples=" + ExtractorUtils.getNumberOfTuplesFromA4Solution(nearMissExample));
+
+				System.out.println("ans->" + ans);
+				System.out.println("number of tuples=" + ExtractorUtils.getNumberOfTuplesFromA4Solution(ans));
+
 				ans = ans.next();
 				++tries;
 			}
@@ -151,14 +154,14 @@ public class BoreauxVsAlloyTest {
 			System.exit(-1);
 		}
 
-		//newFileTmp.deleteOnExit();
-		
+		// newFileTmp.deleteOnExit();
+
 		return result;
 
 	}
-	
+
 	@Test
-	public void testSimplyLinked(){
+	public void testSimplyLinked() {
 		String content = "sig A{w: lone A}\npred p{no ^w & iden\n}\nrun p for 4";
 		File tmpFile = new File(tmpFolder, "tmp.als");
 		try {
@@ -167,13 +170,12 @@ public class BoreauxVsAlloyTest {
 			e.printStackTrace();
 			fail(e.msg);
 		}
-		
-		
+
 		System.out.println(findAlloyMissExample(tmpFile, "p", 100));
-		
+
 	}
-	
-	protected A4Solution findBordeauxExample(String content, String command){
+
+	protected A4Solution findBordeauxExample(String content, String command) {
 		File tmpFile = new File(tmpFolder, "tmp.als");
 		try {
 			Util.writeAll(tmpFile.getAbsolutePath(), content);
@@ -181,24 +183,27 @@ public class BoreauxVsAlloyTest {
 			e.printStackTrace();
 			fail(e.msg);
 		}
-		
+
 		return findBoreauxNearMiss(tmpFile.getAbsoluteFile(), "p");
 	}
-	
+
 	@Test
-	public void testEmptyMapA4SolutionToBordeaux(){
-		
-		final A4Solution nearMissExample = findBordeauxExample("sig A{w: lone A}\npred p{no ^w & iden\n}\nrun p for 3", "p");
-		
+	public void testEmptyMapA4SolutionToBordeaux() {
+
+		final A4Solution nearMissExample = findBordeauxExample("sig A{w: lone A}\npred p{no ^w & iden\n}\nrun p for 3",
+				"p");
+
 		Map<String, String> map = new HashMap<>();
-		
-		assertEquals(new Pair<String,String>("",""),ExtractorUtils.convertBordeauxSolutionToAlloySyntax(nearMissExample,map ));
+
+		assertEquals(new Pair<String, String>("", ""),
+				ExtractorUtils.convertBordeauxSolutionToAlloySyntax(nearMissExample, map));
 	}
-	
+
 	@Test
-	public void testMapA4SolutionToBordeaux(){
-		final A4Solution nearMissExample = findBordeauxExample("sig A{w: lone A}\npred p{no ^w & iden\n}\nrun p for 4 but 4 Int", "p");
-		
+	public void testMapA4SolutionToBordeaux() {
+		final A4Solution nearMissExample = findBordeauxExample(
+				"sig A{w: lone A}\npred p{no ^w & iden\n}\nrun p for 4 but 4 Int", "p");
+
 		System.out.println(nearMissExample);
 		
 //		Map<String, String> map = new HashMap<>();
@@ -218,9 +223,7 @@ public class BoreauxVsAlloyTest {
 	public void testSkolemMapOutput(){
 		
 		final A4Solution nearMissExample = findBordeauxExample("sig A{w: lone A}\npred p{no ^w & iden\n}\nrun p for 4 but 4 Int", "p");
-		
-		System.out.println(nearMissExample);
-		
+
 		Map<String, String> map = ExtractorUtils.generateSkolemMap(nearMissExample);
 		Map<String, String> expected = new HashMap<>();
 		expected.put("$findMarginalInstances__a", "A");
@@ -231,6 +234,7 @@ public class BoreauxVsAlloyTest {
 		expected.put("$findMarginalInstances_a_65_w''", "A<:w");
 				
 		assertEquals(map, expected);
+
 	}
-	
+
 }
