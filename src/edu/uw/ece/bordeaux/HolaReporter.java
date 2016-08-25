@@ -36,7 +36,19 @@ public class HolaReporter extends A4Reporter implements Serializable {
         this.satSolution = null;
         this.instances = new ArrayDeque<>();
 	}
-    
+
+	public long getTotalVaraibles() {
+		return totalVaraibles;
+	}
+
+	public long getClauses() {
+		return clauses;
+	}
+
+	public long getEvalTime() {
+		return evalTime;
+	}
+	
     public A4Solution getA4Solution() {
         return this.satSolution;
     }
@@ -62,13 +74,17 @@ public class HolaReporter extends A4Reporter implements Serializable {
     
     public void holCandidateFound(HOLTranslation tr, Instance candidate) {
         
-        System.out.println("Adding Candidate Instance");
+    	if(Configuration.IsInDeubbungMode)
+    		System.out.println("Adding Candidate Instance");
+        
         this.instances.push(candidate);
     }
     
     public void holFixpointFirstSolution(HOLTranslation tr, Instance candidate) {
-        
-        System.out.println("Adding Candidate Instance");
+    	
+    	if(Configuration.IsInDeubbungMode)
+    		System.out.println("Adding Candidate Instance");
+    	
         this.instances.push(candidate);
     }
     
@@ -76,7 +92,8 @@ public class HolaReporter extends A4Reporter implements Serializable {
 	// System.out
 	@Override
 	public void warning(ErrorWarning msg) {
-		logger.warning("Relevance Warning:\n" + (msg.toString().trim()) + "\n\n");
+		if(Configuration.IsInDeubbungMode)
+			logger.warning("Relevance Warning:\n" + (msg.toString().trim()) + "\n\n");
 		// System.out.flush();
 	}
 
@@ -108,9 +125,11 @@ public class HolaReporter extends A4Reporter implements Serializable {
 		 if (!(solution instanceof A4Solution) || !(command instanceof Command)) {
             return;
         }
-
-        System.out.println("Adding SAT Solution");
-        this.satSolution = (A4Solution) solution;   
+		
+		 if(Configuration.IsInDeubbungMode)
+			 System.out.println("Adding SAT Solution");
+        
+		 this.satSolution = (A4Solution) solution;   
 	        
 		this.solveTime = System.currentTimeMillis() - lastTime;
 		if (Configuration.IsInDeubbungMode)

@@ -28,6 +28,7 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Tuple;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4TupleSet;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
+import edu.uw.ece.bordeaux.Configuration;
 
 /**
  * The class contains static methods that are helpful for extracting Alloy
@@ -142,7 +143,11 @@ public class ExtractorUtils {
 
 	public static String getLocalFieldName(String fieldLabel, String sigName) {
 
-		return getCamelCase(sigName) + "_" + fieldLabel;
+		return getCamelCase(sigName) + "_" + ExtractorUtils.localNameSeparator(sigName) + "_" + fieldLabel;
+	}
+	
+	public static String localNameSeparator(String sigName) {
+		return "" + Math.abs(sigName.hashCode());
 	}
 
 	protected static List<List<ExprVar>> seperateSkolemizedVars(List<ExprVar> vars) {
@@ -292,9 +297,11 @@ public class ExtractorUtils {
 			if (isOrdering(sig))
 				continue;
 
-			// TODO: Trying to exclude atoms that are defined as signatures.
-			// Find a better condition.
-			if (!sig.label.startsWith("this/")) {
+			
+			// TODO: Trying to exclude atoms that are defined as signatures. Find a better condition.
+			if(!sig.label.startsWith("this/")) {
+				if(Configuration.IsInDeubbungMode)
+					System.out.println("" + (sig.isAtom == null ? "not" : "") + "atom");
 				continue;
 			}
 

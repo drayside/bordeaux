@@ -265,7 +265,6 @@ public class A4CommandExecuter {
         opt.solverThreadsShareClauses = SolverThreadsShareClauses.get();
         
         opt.renameAtoms = false;
-        System.out.println(opt);
         
         for (String filename : filenames) {
 
