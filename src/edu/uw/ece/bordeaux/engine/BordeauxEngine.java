@@ -434,7 +434,7 @@ public final class BordeauxEngine {
 		A4Solution result = this.perform(rep, this.inputPath, constraint1, constraint2);
 		System.out.println("result: " + result);
 		this.previousMissString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).b;
-		System.out.println("===================Prev String: " + this.previousMissString);
+		System.out.println("===================\nPrev String: " + this.previousMissString);
 		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result).b;
 	}
 	
