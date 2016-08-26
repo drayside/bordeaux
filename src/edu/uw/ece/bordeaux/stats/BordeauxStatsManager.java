@@ -137,10 +137,8 @@ public final class BordeauxStatsManager {
 				}
 
 				System.out.println("NEAR MISS=" + firstNearMiss);
-				System.out.println(
-						"--->" + ExtractorUtils.convertBordeauxSolutionToAlloySyntax(firstNearMiss, new HashMap<>()));
-				System.out
-				.println("number of tuples=" + ExtractorUtils.getNumberOfTuplesFromA4Solution(firstNearMiss));
+				System.out.println("--->" + ExtractorUtils.convertBordeauxSolutionToAlloySyntax(firstNearMiss, false));
+				System.out.println("number of tuples=" + ExtractorUtils.getNumberOfTuplesFromA4Solution(firstNearMiss));
 
 				System.out.println("ans->" + ans);
 				System.out.println("number of tuples=" + ExtractorUtils.getNumberOfTuplesFromA4Solution(ans));

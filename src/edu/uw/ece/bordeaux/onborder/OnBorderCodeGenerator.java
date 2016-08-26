@@ -627,7 +627,8 @@ public class OnBorderCodeGenerator {
         ln();
         println("pred isC1Instance [%s] {", params);
         indent();
-//        println("isInstance[%s]", args);
+        println("isInstance[%s]", args);
+        println("structuralConstraints[%s]", args);
         println("%s", contraints[0]);
         outdent();
         println("}");

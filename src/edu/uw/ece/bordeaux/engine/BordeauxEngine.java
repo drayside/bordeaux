@@ -95,11 +95,15 @@ public final class BordeauxEngine {
 			logger.info("Generating OnBorder code");
 		}
 		
+		if(this.onBorderFile != null && this.onBorderFile.exists()) {
+			this.onBorderFile.delete();
+		}
+		
 		// Generate on Border instances
 		String fileName = Utils.getFileName(inputPath.getAbsolutePath());
 		String onBorderFileName = fileName + ".hola-" + UUID.randomUUID().hashCode() + ".als";
 		this.onBorderFile = new File(tmpPath, onBorderFileName);
-		//this.onBorderFile.deleteOnExit();
+		this.onBorderFile.deleteOnExit();
 		
 		PrintWriter writer = null;
 		try {
@@ -398,13 +402,17 @@ public final class BordeauxEngine {
 	 */
 	public A4Solution nextSolution() throws Err {
 		
-		A4Solution next = this.initialSolution.next();
-		
-		if(next != null) {
-			initSolution(next);
+		if(this.initialSolution != null) {
+			A4Solution next = this.initialSolution.next();
+			
+			if(next != null) {
+				initSolution(next);
+			}
+			
+			return next;
 		}
 		
-		return next;
+		return null;
 	}
 
 	private void initSolution(A4Solution sol) {
@@ -419,7 +427,6 @@ public final class BordeauxEngine {
 	
 	public A4Solution nextNearMiss(A4Reporter rep) {
 
-		System.out.println("===============================");
 		if(!firstNearMiss && this.previousMissString == null) return null;
 		this.firstNearMiss = false; 
 		
@@ -432,9 +439,7 @@ public final class BordeauxEngine {
 		String constraint2 = currentMiss;
 		
 		A4Solution result = this.perform(rep, this.inputPath, constraint1, constraint2);
-		System.out.println("result: " + result);
 		this.previousMissString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).b;
-		System.out.println("===================\nPrev String: " + this.previousMissString);
 		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result).b;
 	}
 	
@@ -442,7 +447,7 @@ public final class BordeauxEngine {
 
 		String constraint2 = this.previousMissString;
 		
-		currentHit = Utils.and(currentHit, previousHitString);
+		currentHit = Utils.and(currentHit, Utils.not(previousHitString));
 		String constraint1 = currentHit;
 		
 		A4Solution result = this.perform(rep, this.inputPath, constraint1, constraint2);

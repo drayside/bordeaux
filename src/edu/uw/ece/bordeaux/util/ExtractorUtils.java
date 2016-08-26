@@ -201,13 +201,16 @@ public class ExtractorUtils {
 		return Collections.unmodifiableList(result);
 	}
 
-	protected static boolean isSig(A4Solution solution, String name) {
+	protected static boolean isSig(A4Solution solution, String name, boolean useLocalNames) {
 
-		return solution.getAllReachableSigs().makeCopy().stream().anyMatch(s -> s.label.equals("this/" + name));
+//		return solution.getAllReachableSigs().makeCopy().stream().anyMatch(s -> s.label.equals("this/" + name));
+		return solution.getAllReachableSigs().makeCopy().stream().anyMatch((s) -> {
+			String sigName = useLocalNames ? ExtractorUtils.getLocalSigName(s.shortLabel()) : s.shortLabel();
+			return sigName.equals(name);
+		});
 	}
 
-	protected static String convertBordeauxSolutionToAlloySyntax(A4Solution solution, List<ExprVar> vars,
-			Map<String, String> decodeSkolemizedNames) {
+	protected static String convertBordeauxSolutionToAlloySyntax(A4Solution solution, List<ExprVar> vars, Map<String, String> decodeSkolemizedNames, boolean useLocalNames) {
 
 		final List<String> declPart = new ArrayList<>();
 		final List<String> noPart = new ArrayList<>();
@@ -226,7 +229,7 @@ public class ExtractorUtils {
 
 				} else {
 
-					if (isSig(solution, decodeSkolemizedNames.get(var.label))) {
+					if (isSig(solution, decodeSkolemizedNames.get(var.label), useLocalNames)) {
 						declPart.add("some disj "
 								+ solution.eval(var).toString().replaceAll("\\{|\\}", "").replaceAll("\\$", "_")
 								+ ": univ ");
@@ -293,23 +296,18 @@ public class ExtractorUtils {
 	}
 
 	public static Pair<String, String> convertBordeauxSolutionToAlloySyntax(A4Solution solution, boolean useLocalNames) {
-		return convertBordeauxSolutionToAlloySyntax(solution, generateSkolemMap(solution, useLocalNames));
-	}
-
-	public static Pair<String, String> convertBordeauxSolutionToAlloySyntax(A4Solution solution,
-			Map<String, String> decodeSkolemizedNames) {
-System.out.println("\n\nMap " + decodeSkolemizedNames);
+		
+		Map<String, String> decodeSkolemizedNames = generateSkolemMap(solution, useLocalNames);
+		
 		final List<ExprVar> vars = new ArrayList<>();
 		solution.getAllSkolems().forEach(s -> vars.add(s));
 
 		List<List<ExprVar>> skolemizedVars = seperateSkolemizedVars(vars);
 
-		Pair<String, String> a = new Pair<>(convertBordeauxSolutionToAlloySyntax(solution, skolemizedVars.get(0), decodeSkolemizedNames),
-				convertBordeauxSolutionToAlloySyntax(solution, skolemizedVars.get(1), decodeSkolemizedNames));
+		String nearHitString = convertBordeauxSolutionToAlloySyntax(solution, skolemizedVars.get(0), decodeSkolemizedNames, useLocalNames);
+		String nearMissString = convertBordeauxSolutionToAlloySyntax(solution, skolemizedVars.get(1), decodeSkolemizedNames, useLocalNames);
 		
-		System.out.println("Pair.a: " + a.a);
-		System.out.println("Pair.b: " + a.b);
-		return a;
+		return new Pair<>(nearHitString, nearMissString);
 	}
 
 	public static int getNumberOfTuplesFromA4Solution(A4Solution solution) {

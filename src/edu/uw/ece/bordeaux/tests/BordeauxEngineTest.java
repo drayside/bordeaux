@@ -62,9 +62,9 @@ public class BordeauxEngineTest {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-		testNextMiss(reporter, commandName, filepath, engine, 2);
-//		testNextHit(reporter, commandName, filepath, engine, 1);
-//		testNextSol(commandName, filepath, engine, 1);
+		testNextMiss(reporter, commandName, filepath, engine, 1);
+		testNextHit(reporter, commandName, filepath, engine, 3);
+//		testNextSol(reporter, commandName, filepath, engine, 1);
 	}
 	
 	@Test
@@ -132,6 +132,7 @@ public class BordeauxEngineTest {
 		
 		assertNotNull(engine);
 		
+		A4Solution initialSolution = engine.getInitialSolution();
 		List<A4Solution> prevSols = new ArrayList<>();
 		for(int i = 0; i < numberOfRuns; i++) {
 			
@@ -165,7 +166,7 @@ public class BordeauxEngineTest {
 				assertNotEquals(sol, prev);
 			}
 
-			assertNotEquals(sol, engine.getInitialSolution());
+			assertNotEquals(sol, initialSolution);
 			prevSols.add(sol);
 		}
 	}
