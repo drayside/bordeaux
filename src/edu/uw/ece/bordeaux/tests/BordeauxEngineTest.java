@@ -62,8 +62,8 @@ public class BordeauxEngineTest {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-		testNextMiss(reporter, commandName, filepath, engine, 1);
-		testNextHit(reporter, commandName, filepath, engine, 3);
+		testNextMiss(reporter, commandName, filepath, engine, 40);
+//		testNextHit(reporter, commandName, filepath, engine, 3);
 //		testNextSol(reporter, commandName, filepath, engine, 1);
 	}
 	
@@ -77,11 +77,28 @@ public class BordeauxEngineTest {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-//		testNextMiss(commandName, filepath, engine, 1);
+		testNextMiss(reporter, commandName, filepath, engine, 100);
 //		testNextHit(commandName, filepath, engine, 1);
 //		testNextSol(commandName, filepath, engine, 1);
 		
-		BordeauxStatsManager.getNumNearMissInTime(reporter, engine, BordeauxStatsManager.NUM_TIME_ITERATIONS, 60000);
+//		BordeauxStatsManager.getNumNearMissInTime(reporter, engine, BordeauxStatsManager.NUM_TIME_ITERATIONS, 60000);
+	}
+	
+	@Test
+	public void testBinaryTree() {
+
+		String filename = "binary_tree.als";
+		String commandName = "showValidTrees";
+		File filepath = new File(BORDEUX_MODELS_DIRECTORY, filename);	
+
+		HolaReporter reporter = new HolaReporter();
+		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
+		
+		testNextMiss(reporter, commandName, filepath, engine, 100);
+//		testNextHit(commandName, filepath, engine, 1);
+//		testNextSol(commandName, filepath, engine, 1);
+		
+//		BordeauxStatsManager.getNumNearMissInTime(reporter, engine, BordeauxStatsManager.NUM_TIME_ITERATIONS, 60000);
 	}
 	
 	@Test
@@ -94,8 +111,8 @@ public class BordeauxEngineTest {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-		testNextMiss(reporter, commandName, filepath, engine, 1);
-		testNextHit(reporter, commandName, filepath, engine, 1);
+		testNextMiss(reporter, commandName, filepath, engine, 100);
+		//testNextHit(reporter, commandName, filepath, engine, 1);
 //		testNextSol(reporter, commandName, filepath, engine, 1);
 	}
 
@@ -133,13 +150,24 @@ public class BordeauxEngineTest {
 		assertNotNull(engine);
 		
 		A4Solution initialSolution = engine.getInitialSolution();
+		System.out.println(initialSolution);
 		List<A4Solution> prevSols = new ArrayList<>();
+		long startTime = System.currentTimeMillis();
 		for(int i = 0; i < numberOfRuns; i++) {
+			
+			System.out.println("current done= " + i);
+			
+			if (System.currentTimeMillis() - startTime > 60*1000){
+				System.out.println("max number="+i);
+				System.exit(-1);
+			}
 			
 			A4Solution sol = null;
 			switch(nextType) {
 				case NearMiss: {
 					sol = engine.nextNearMiss(reporter);
+					System.out.println(sol);
+					System.out.println("Stat for nearmiss="+reporter);
 					break;					
 				}
 				case NearHit: {
@@ -182,6 +210,7 @@ public class BordeauxEngineTest {
 		try {
 			A4CommandExecuter.get().runAlloy(filepath.getAbsolutePath(), reporter, command.label);
 			A4Solution initialSoln = reporter.getA4Solution();
+			System.out.println("stat for Initial="+reporter);
 			return new BordeauxEngine(filepath, command, initialSoln);
 		} catch (Exception e) {
 			e.printStackTrace();

@@ -114,7 +114,7 @@ public final class BordeauxEngine {
 
 		try {
 			String fileToReadFrom = inputPath.getAbsolutePath();
-			int numberOfIntAtoms = (ExtractorUtils.getNumberOfTuplesFromA4Solution(this.initialSolution) * 3) / 2;
+			int numberOfIntAtoms = ((ExtractorUtils.getNumberOfTuplesFromA4Solution(this.initialSolution)+4) * 3) / 2;
 			this.generator = new OnBorderCodeGenerator(fileToReadFrom, command, this.relationsToExclude, numberOfIntAtoms, writer);
 		} catch (Exception e) {
 			logger.log(Level.SEVERE, Utils.threadName() + " Failed to generate on border code", e);

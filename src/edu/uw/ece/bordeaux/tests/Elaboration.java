@@ -4,7 +4,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,8 +11,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.junit.Before;
@@ -21,6 +18,7 @@ import org.junit.Test;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.Err;
+import edu.mit.csail.sdg.alloy4.Pair;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.ast.Expr;
@@ -34,7 +32,6 @@ import edu.mit.csail.sdg.alloy4compiler.parser.CompModule;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Options;
 import edu.mit.csail.sdg.alloy4compiler.translator.TranslateDeclarativeConstriant2DeclarativeFormula;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
-import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import kodkod.ast.Formula;
 
 public class Elaboration {
@@ -107,6 +104,19 @@ public class Elaboration {
 		return s;
 	}
 
+	protected String sigNameFieldSAnitizer(String statement, File src) {
+		// all sigs in the form of this/label -> this/label.
+		final Set<Pair<String, String>> sigsArrowSigDot = createAllSigsNames(src).stream()
+				.map(s -> new Pair<String, String>(s + " -> " + s + ".", s + ".")).collect(Collectors.toSet());
+
+		String result = statement;
+		for (Pair<String, String> name : sigsArrowSigDot) {
+			result = result.replace(name.a, name.b);
+		}
+
+		return result;
+	}
+
 	/**
 	 * Given a the src file, the function returns a list, where result.get(0) is
 	 * the body of 'instance' predicate, and result.get(1) is the body of
@@ -124,7 +134,7 @@ public class Elaboration {
 		String commandName = module.getAllCommands().get(0).label;
 		return createBodyOfInstance_Structural_Constraint_Predicates(src, tmpFolder, commandName);
 	}
-		
+
 	/**
 	 * Given a the src file, the function returns a list, where result.get(0) is
 	 * the body of 'instance' predicate, and result.get(1) is the body of
@@ -134,9 +144,10 @@ public class Elaboration {
 	 * 
 	 * @param src
 	 * @param tmpFolder
-	 * @return 
+	 * @return
 	 */
-	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder, String commandName) {
+	public List<String> createBodyOfInstance_Structural_Constraint_Predicates(final File src, final File tmpFolder,
+			String commandName) {
 
 		final String elabCommandName = "_s__igsp_";
 
@@ -254,7 +265,7 @@ public class Elaboration {
 		// remove the structural constraints from the rest of constraints in the
 		// formula.
 		List<Formula> constraintFormulas = convertAllConstraintsToFormula(src, commandName);
-		
+
 		// String commandLabel = module.getAllCommands().get(0).label;
 		// commandname does not have a name
 		final String tmpCommandName = commandName.contains("$") ? "this" : commandName + "_this";
@@ -264,8 +275,8 @@ public class Elaboration {
 				.map(s -> s.replace(elabCommandName + "_this", tmpCommandName)).collect(Collectors.toSet());
 		constraintFormulasAsSet.removeAll(strucuralsAsSet);
 
-		final String constraintsBody = constraintFormulasAsSet.stream().map(s -> sanitizer(s))
-				.collect(Collectors.joining("\n"));
+		final String constraintsBody = constraintFormulasAsSet.stream().map(s -> sigNameFieldSAnitizer(s, src))
+				.map(s -> sanitizer(s)).collect(Collectors.joining("\n"));
 
 		return Arrays.asList(instanceBody, structuralConstraintBody, constraintsBody);
 	}
@@ -387,13 +398,12 @@ public class Elaboration {
 		}
 		result = result + "{";
 		result = result + sig.getFields().makeCopy().stream()
-				.map(f ->  f.label + ":" + convertFieldToStringDeclaration(f, withMult))
+				.map(f -> f.label + ":" + convertFieldToStringDeclaration(f, withMult))
 				.collect(Collectors.joining(","));
 		result = result + "}";
 
 		return result.replace("  ", " ").trim();
 	}
-	
 
 	/**
 	 * Given an Alloy source code, an Alloy code per each signature is created.
@@ -405,6 +415,17 @@ public class Elaboration {
 	 */
 	public String createAllSigsdeclaration(File src) {
 		return createAllSigsdeclaration(src, false, false);
+	}
+
+	protected Set<String> createAllSigsNames(File src) {
+		CompModule module = null;
+		try {
+			module = (CompModule) A4CommandExecuter.get().parse(src.getAbsolutePath(), A4Reporter.NOP);
+		} catch (Err e) {
+			e.printStackTrace();
+		}
+
+		return module.getAllReachableUserDefinedSigs().stream().map(s -> s.label).collect(Collectors.toSet());
 	}
 
 	/**

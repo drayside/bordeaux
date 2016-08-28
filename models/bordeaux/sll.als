@@ -27,4 +27,4 @@ pred SinglyLinkedLists[]{
   singleHead
 }
 
-run SinglyLinkedLists
+run SinglyLinkedLists for 3

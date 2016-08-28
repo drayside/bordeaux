@@ -50,7 +50,7 @@ pred showValidTrees {
 	isTreeInstance[Node, right, left]
 }
 
-run showValidTrees for 10 Node
+run showValidTrees for 3-- Node
 
 
 
