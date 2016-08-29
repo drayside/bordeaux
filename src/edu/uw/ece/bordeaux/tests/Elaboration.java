@@ -33,6 +33,7 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4Options;
 import edu.mit.csail.sdg.alloy4compiler.translator.TranslateDeclarativeConstriant2DeclarativeFormula;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
 import kodkod.ast.Formula;
+import kodkod.util.nodes.PrettyPrinter;
 
 public class Elaboration {
 
@@ -254,7 +255,7 @@ public class Elaboration {
 				tmpStructuralBody.add(seen);
 			tmpStructuralBody.add(seen);
 		}
-
+		
 		final String structuralConstraintBody = sanitizer((generateStructuralConstraintsForOneAndLoneSig(src) + "\n"
 				+ tmpStructuralBody.stream().collect(Collectors.joining("\n"))).trim());
 
@@ -269,7 +270,7 @@ public class Elaboration {
 		// String commandLabel = module.getAllCommands().get(0).label;
 		// commandname does not have a name
 		final String tmpCommandName = commandName.contains("$") ? "this" : commandName + "_this";
-		Set<String> constraintFormulasAsSet = constraintFormulas.stream().map(f -> f.toString())
+		Set<String> constraintFormulasAsSet = constraintFormulas.stream().map(f -> "("+PrettyPrinter.print(f, 0).replaceAll("\n", " ") + ")")
 				.collect(Collectors.toSet());
 		Set<String> strucuralsAsSet = withStructurals.stream().map(f -> f.toString())
 				.map(s -> s.replace(elabCommandName + "_this", tmpCommandName)).collect(Collectors.toSet());
@@ -278,6 +279,7 @@ public class Elaboration {
 		final String constraintsBody = constraintFormulasAsSet.stream().map(s -> sigNameFieldSAnitizer(s, src))
 				.map(s -> sanitizer(s)).collect(Collectors.joining("\n"));
 
+		
 		return Arrays.asList(instanceBody, structuralConstraintBody, constraintsBody);
 	}
 
