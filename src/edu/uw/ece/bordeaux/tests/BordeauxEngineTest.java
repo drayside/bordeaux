@@ -111,7 +111,7 @@ public class BordeauxEngineTest {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-		testNextMiss(reporter, commandName, filepath, engine, 100);
+		testNextMiss(reporter, commandName, filepath, engine, 1);
 		//testNextHit(reporter, commandName, filepath, engine, 1);
 //		testNextSol(reporter, commandName, filepath, engine, 1);
 	}
@@ -206,6 +206,8 @@ public class BordeauxEngineTest {
 		
 		Command command = ExtractorUtils.getCommandFromNamePainfully(filepath.getAbsolutePath(), commandName);
 		assertNotNull("Cannot find command from command name", command);
+		
+		System.out.println(filepath.getAbsolutePath());
 		
 		try {
 			A4CommandExecuter.get().runAlloy(filepath.getAbsolutePath(), reporter, command.label);
