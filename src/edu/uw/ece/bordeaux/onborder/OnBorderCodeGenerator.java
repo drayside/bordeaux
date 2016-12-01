@@ -211,6 +211,7 @@ public class OnBorderCodeGenerator {
     		ln();
 			println(impl);
 		}
+    	System.out.println(preds);
     }
     
     private void generateDeltas(PrintWriter out) {

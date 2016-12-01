@@ -155,12 +155,14 @@ public final class BordeauxStatsManager {
 	}
 
 	protected static boolean equiSAT(File filePath, String sol1, String sol2, String commandName) {
-
 		String filecontent = Utils.readFile(filePath.getAbsolutePath());
 		String newCommandName = "__Check_EQU__";
 		File newFileTmp = new File(filePath.getParentFile(), filePath.getName() + ".tmp.als");
-		String newContent = filecontent + "\nassert " + newCommandName + " { (" + sol1 + ") iff (" + sol2 + ")}\ncheck "
-				+ newCommandName + findScope(filePath, commandName);
+		String newContent = filecontent + "\nassert " + newCommandName + " { ";
+		if (sol1!=null&&!sol1.equals(""))	newContent += "( "+ sol1 + " ) iff ";
+		newContent += "( " + sol2 + " )";
+		newContent += " }\ncheck ";
+		newContent += newCommandName + findScope(filePath, commandName);
 
 		boolean result = false;
 		try {

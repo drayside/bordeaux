@@ -352,7 +352,16 @@ final class BoundsComputer {
                     continue;
                  }
               }
-              Type t = isOne ? Sig.UNIV.type().join(f.type()) : f.type();
+              Type t = null; //isOne ? Sig.UNIV.type().join(f.type()) : f.type();
+              if (isOne)
+              {
+            	  t = Sig.UNIV.type().join(f.type());
+            	  t = s.type().product(t);
+              }
+              else
+              {
+            	  t = f.type();
+              }
               //compute upper
               TupleSet ub = factory.noneOf(t.arity());
               for(List<PrimSig> p:t.fold()) {
@@ -441,9 +450,9 @@ final class BoundsComputer {
 //                 }
 //              }
               //------------------
-
+              
               Relation r = sol.addRel(s.label+"."+f.label, piLb, ub, s.isAtom != null);
-              sol.addField(f, isOne ? sol.a2k(s).product(r) : r);
+              sol.addField(f, /*isOne ? sol.a2k(s).product(r) :*/ r);
            }
         }
         // Add any additional SIZE constraints

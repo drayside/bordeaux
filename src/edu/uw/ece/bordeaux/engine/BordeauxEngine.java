@@ -104,7 +104,8 @@ public final class BordeauxEngine {
 		String onBorderFileName = fileName + ".hola-" + UUID.randomUUID().hashCode() + ".als";
 		this.onBorderFile = new File(tmpPath, onBorderFileName);
 		this.onBorderFile.deleteOnExit();
-		
+		System.out.println("On Border File: " + onBorderFile.toString());
+		System.out.println("Temp Path: "+tmpPath);
 		PrintWriter writer = null;
 		try {
 			writer = new PrintWriter(onBorderFile);
