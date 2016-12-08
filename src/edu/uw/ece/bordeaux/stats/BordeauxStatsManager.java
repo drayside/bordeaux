@@ -159,7 +159,10 @@ public final class BordeauxStatsManager {
 		String newCommandName = "__Check_EQU__";
 		File newFileTmp = new File(filePath.getParentFile(), filePath.getName() + ".tmp.als");
 		String newContent = filecontent + "\nassert " + newCommandName + " { ";
-		if (sol1!=null&&!sol1.equals(""))	newContent += "( "+ sol1 + " ) iff ";
+		if ((sol1==null||sol1.equals("")) ^ ((sol2==null||sol2.equals("")))) return false;
+		else if ((sol1==null||sol1.equals("")) && ((sol2==null||sol2.equals("")))) return true;
+		
+		newContent += "( "+ sol1 + " ) iff ";
 		newContent += "( " + sol2 + " )";
 		newContent += " }\ncheck ";
 		newContent += newCommandName + findScope(filePath, commandName);

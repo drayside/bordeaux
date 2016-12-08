@@ -4,7 +4,10 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import static org.junit.Assert.*;
+
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import com.sun.tools.javac.util.Pair;
 
@@ -22,7 +25,7 @@ import edu.uw.ece.bordeaux.util.Utils;
 
 
 public class BordeauxEngineTest {
-
+	
 	public final static String TMP_DIRECTORY = Utils.TMP_DIRECTORY;
 	public final static String TOY_EXAMPLES_DIRECTORY = "./models/examples/toys/";
 	public final static String MIN_DIST_DIRECTORY = "./models/debugger/min_dist/";
@@ -62,7 +65,7 @@ public class BordeauxEngineTest {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-		testNextMiss(reporter, commandName, filepath, engine, 40);
+		testNextMiss(reporter, commandName, filepath, engine, 1);
 //		testNextHit(reporter, commandName, filepath, engine, 3);
 //		testNextSol(reporter, commandName, filepath, engine, 1);
 	}
@@ -77,7 +80,7 @@ public class BordeauxEngineTest {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-		testNextMiss(reporter, commandName, filepath, engine, 100);
+		testNextMiss(reporter, commandName, filepath, engine, 1);
 //		testNextHit(commandName, filepath, engine, 1);
 //		testNextSol(commandName, filepath, engine, 1);
 		
@@ -94,7 +97,7 @@ public class BordeauxEngineTest {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-		testNextMiss(reporter, commandName, filepath, engine, 100);
+		testNextMiss(reporter, commandName, filepath, engine, 1);
 //		testNextHit(commandName, filepath, engine, 1);
 //		testNextSol(commandName, filepath, engine, 1);
 		
@@ -117,17 +120,18 @@ public class BordeauxEngineTest {
 	}
 
 	@Test
-	public void testDijkstra() {
+	public void testDijkstra() throws NullPointerException {
 		
-		String filename = "dijkstra.buggy.als";
-		String commandName = "check$1";
+		String filename = "dijkstra.als";
+		String commandName = "ShowDijkstra";
 		File filepath = new File(BORDEUX_MODELS_DIRECTORY, filename);		
 
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		
-		testNextMiss(reporter, commandName, filepath, engine, 1);
-		testNextHit(reporter, commandName, filepath, engine, 1);
+		assert(engine==null);
+		//testNextMiss(reporter, commandName, filepath, engine, 1);
+		//testNextHit(reporter, commandName, filepath, engine, 1);
 	}
 
 	private void testNextMiss(A4Reporter reporter, String commandName, File filepath, BordeauxEngine engine, int numberOfRuns) {	
@@ -229,7 +233,7 @@ public class BordeauxEngineTest {
 		filesAndCommands.add(new Pair<File, String>(new File(BORDEUX_MODELS_DIRECTORY, "binary_tree.als"), "showValidTrees"));
 		filesAndCommands.add(new Pair<File, String>(new File(BORDEUX_MODELS_DIRECTORY, "courses.als"), "showSuccesfullPrograms"));
 		filesAndCommands.add(new Pair<File, String>(new File(BORDEUX_MODELS_DIRECTORY, "fs.als"), "OneParent_correctVersion"));
-		filesAndCommands.add(new Pair<File, String>(new File(BORDEUX_MODELS_DIRECTORY, "dijkstra.buggy.als"), "showDijkstra"));
+		filesAndCommands.add(new Pair<File, String>(new File(BORDEUX_MODELS_DIRECTORY, "dijkstra.als"), "showDijkstra"));
 		BordeauxStatsManager.evaluateAll(filesAndCommands, outputFile);
 	}
 	

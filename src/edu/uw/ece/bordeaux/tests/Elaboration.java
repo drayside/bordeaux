@@ -685,7 +685,7 @@ public class Elaboration {
 
 	@Test
 	public void testStructuralBodyOneSingleOneRelation() {
-		testStructuralBody("one sig A{r: A}\nrun{}", "one A\n(one (A . (A -> r)) )");
+		testStructuralBody("one sig A{r: A}\nrun{}", "one A\n(one (A . r) )");
 	}
 
 	@Test
@@ -727,28 +727,28 @@ public class Elaboration {
 
 	@Test
 	public void testSigSomeSimpleRun() {
-		testConstratinsBody("sig A{}\nrun{ some A}", "some A");
+		testConstratinsBody("sig A{}\nrun{ some A}", "(some A)");
 	}
 
 	@Test
 	public void testSigSomePredRun() {
-		testConstratinsBody("sig A{}\npred p[]{some A}\nrun p", "some A");
+		testConstratinsBody("sig A{}\npred p[]{some A}\nrun p", "(some A)");
 	}
 
 	@Test
 	public void testSigSomeFactPredRun() {
-		testConstratinsBody("sig A{r:A}\nfact{p and some r}pred p[]{some A}\nrun {}", "some r\nsome A");
+		testConstratinsBody("sig A{r:A}\nfact{p and some r}pred p[]{some A}\nrun {}", "(some r)\n(some A)\n(all this: A |   one (this . r) &&   (this . r) in A)");
 	}
 
 	@Test
 	public void testSigSomeFactPredWithParamRun() {
-		testConstratinsBody("sig A{r:A}\nfact{p[A] and some r}pred p[a: A]{some a}\nrun {}", "some r\nsome A");
+		testConstratinsBody("sig A{r:A}\nfact{p[A] and some r}pred p[a: A]{some a}\nrun {}", "(some r)\n(some A)\n(all this: A |   one (this . r) &&   (this . r) in A)");
 	}
 
 	@Test
 	public void testSigSomeFactPredWithParamAppendedFactRun() {
 		testConstratinsBody("sig A{r:A}{#r=2}\nfact{p[A] and some r}pred p[a: A]{some a}\nrun {}",
-				"(all this: one A | (#((this . r)) = 2))\nsome r\nsome A");
+				"(some r)\n(some A)\n(all this: A |   #(this . r) = 2)\n(all this: A |   one (this . r) &&   (this . r) in A)");
 	}
 
 }
