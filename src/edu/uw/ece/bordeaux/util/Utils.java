@@ -65,7 +65,7 @@ public class Utils {
 	public static String getFileName(String filepath) {
 		
 		try {
-			return filepath.substring(filepath.lastIndexOf("/") + 1, filepath.lastIndexOf("."));
+			return filepath.substring(filepath.lastIndexOf(File.separatorChar) + 1, filepath.lastIndexOf("."));
 		} catch (Exception e) {
 			return filepath;
 		}
@@ -74,7 +74,7 @@ public class Utils {
 	public static String getFileNameWithExtension(String filepath) {
 		
 		try {
-			return filepath.substring(filepath.lastIndexOf("/") + 1);
+			return filepath.substring(filepath.lastIndexOf(File.separatorChar) + 1);
 		} catch (Exception e) {
 			return filepath;
 		}

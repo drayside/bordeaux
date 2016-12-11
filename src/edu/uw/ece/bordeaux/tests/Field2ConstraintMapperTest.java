@@ -22,7 +22,7 @@ public class Field2ConstraintMapperTest {
 	@Test
 	public void test() throws Err {
 
-		String alloy4Home = "/home/fikayo/Documents/Engineering/Alloy/alloy";
+		String alloy4Home = "C:/Users/Bhargava/git/bordeaux";
 		String fileName = "linked_list_sigs.als";
 		System.out.println("Running file: " + fileName);
 
@@ -55,7 +55,7 @@ public class Field2ConstraintMapperTest {
 	@Test
 	public void testSigExtraction() throws Err {
 
-		String alloy4Home = "/home/fikayo/Documents/Engineering/Alloy/alloy";
+		String alloy4Home = "C:/Users/Bhargava/git/bordeaux";
 
 		String fileName = "linked_list.als";
 		String directory = alloy4Home + "/models/debugger/min_dist/";
