@@ -254,6 +254,7 @@ public final class Bounds implements Cloneable {
 	 * @throws IllegalArgumentException  tuples.arity != r.arity || tuples.universe != this.universe
 	 */
 	public void boundExactly(Relation r, TupleSet tuples) {
+		if (tuples==null) tuples = new TupleSet(factory.universe(), r.arity());
 		checkBound(r.arity(), tuples);
 		final TupleSet unmodifiableTuplesCopy = tuples.clone().unmodifiableView();
 		putBound(lowers, r, unmodifiableTuplesCopy);

@@ -24,6 +24,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import kodkod.ast.BinaryExpression;
 import kodkod.ast.Decls;
@@ -47,6 +48,7 @@ import kodkod.util.ints.IntVector;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.ConstMap;
+import edu.mit.csail.sdg.alloy4.ConstSet;
 import edu.mit.csail.sdg.alloy4.Env;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.ErrorFatal;
@@ -77,6 +79,7 @@ import edu.mit.csail.sdg.alloy4compiler.ast.Sig;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
 import edu.mit.csail.sdg.alloy4compiler.ast.Type;
 import edu.mit.csail.sdg.alloy4compiler.ast.VisitReturn;
+import edu.mit.csail.sdg.alloy4viz.AlloyRelation;
 
 /** Translate an Alloy AST into Kodkod AST then attempt to solve it using Kodkod. */
 
@@ -114,14 +117,22 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     private final int unrolls;
     private final A4Options opt;
     private final Iterable<Sig> sigs;
-
+    
+    /** The list of relations that can be added or subtracted in bordeaux calculations*/
+    private final ConstSet<AlloyRelation> canAddSubtract;
+    
+    /** The last solution to be used as a reference for the next solution. */
+    private final A4Solution lastSolution;
+    
     /** Construct a translator based on the given list of sigs and the given command.
      * @param rep - if nonnull, it's the reporter that will receive diagnostics and progress reports
      * @param opt - the solving options (must not be null)
      * @param sigs - the list of sigs (must not be null, and must be a complete list)
      * @param cmd - the command to solve (must not be null)
      */
-    private TranslateAlloyToKodkod (IA4Reporter rep, A4Options opt, Iterable<Sig> sigs, Command cmd) throws Err {
+    private TranslateAlloyToKodkod (IA4Reporter rep, A4Options opt, Iterable<Sig> sigs, Command cmd, A4Solution lastSolution, ConstSet<AlloyRelation> canAddSubtract) throws Err {
+    	this.canAddSubtract = canAddSubtract;
+    	this.lastSolution = lastSolution;
         this.opt = opt;
         this.sigs = sigs;
         this.unrolls = opt.unrolls;
@@ -145,7 +156,8 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     private TranslateAlloyToKodkod (IntScope intScope, int unrolls, Map<Expr,Expression> a2k, Map<String,Expression> s2k) throws Err {
         this.opt = null;
         this.sigs = null;
-
+        this.canAddSubtract = null;
+        this.lastSolution = null;
         this.unrolls = unrolls;
         this.rep = A4Reporter.NOP;
         this.cmd = null;
@@ -309,7 +321,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
           + "Visit http://alloy.mit.edu/ for advice on refactoring.");
     }
 
-    private static A4Solution execute_greedyCommand(IA4Reporter rep, Iterable<Sig> sigs, Command usercommand, A4Options opt) throws Exception {
+    private static A4Solution execute_greedyCommand(IA4Reporter rep, Iterable<Sig> sigs, ConstSet<AlloyRelation> addSubtract, A4Solution lastSolution, Command usercommand, A4Options opt) throws Exception {
         // FIXTHIS: if the next command has a "smaller scope" than the last command, we would get a Kodkod exception...
         // FIXTHIS: if the solver is "toCNF" or "toKodkod" then this method will throw an Exception...
         // FIXTHIS: does solution enumeration still work when we're doing a greedy solve?
@@ -336,9 +348,9 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
                 while(cmd != null) {
                     rep.debug(cmd.scope.toString());
                     usercommand = cmd;
-                    tr = translate(rep2, sigs, cmd, opt); 
+                    tr = translate(rep2, sigs, cmd, opt, lastSolution); 
                     sim.totalOrderPredicates = tr.totalOrderPredicates;
-                    sol = tr.frame.solve(rep2, cmd, sim.partial==null || cmd.check ? new Simplifier() : sim, false);
+                    sol = tr.frame.solve(rep2, cmd, addSubtract, lastSolution, sim.partial==null || cmd.check ? new Simplifier() : sim, false);
                     if (!sol.satisfiable() && !cmd.check) {
                         start = System.currentTimeMillis() - start;
                         if (sim.partial==null) { rep.resultUNSAT(cmd, start, sol); return sol; } else { rep.resultSAT(cmd, start, sim.partial); return sim.partial; }
@@ -378,10 +390,13 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
      * <p> If the return value X is satisfiable, you can call X.next() to get the next satisfying solution X2;
      * and you can call X2.next() to get the next satisfying solution X3... until you get an unsatisfying solution.
      */
-    public static A4Solution execute_command (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt) throws Err {
-        return translate(rep, sigs, cmd, opt).executeCommand();
+    public static A4Solution execute_command (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, A4Solution lastSol) throws Err {
+        return translate(rep, sigs, cmd, opt, lastSol).executeCommand();
     }
 
+    public static A4Solution execute_command (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt) throws Err {
+        return translate(rep, sigs, cmd, opt, null).executeCommand();
+    }
     /** Based on the specified "options", execute one command and return the resulting A4Solution object.
      *
      * <p> Note: it will first test whether the model fits one of the model from the "Software Abstractions" book;
@@ -397,15 +412,21 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
      * <p> If the return value X is satisfiable, you can call X.next() to get the next satisfying solution X2;
      * and you can call X2.next() to get the next satisfying solution X3... until you get an unsatisfying solution.
      */
-    public static A4Solution execute_commandFromBook (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt) throws Err {
-        return translate(rep, sigs, cmd, opt).executeCommandFromBook();
+    public static A4Solution execute_commandFromBook (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, A4Solution lastSol) throws Err {
+        return translate(rep, sigs, cmd, opt, lastSol).executeCommandFromBook();
     }
 
-    public static TranslateAlloyToKodkod translate(IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt) throws Err {
+    public static A4Solution execute_commandFromBook (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt) throws Err {
+        return translate(rep, sigs, cmd, opt, null).executeCommandFromBook();
+    }
+    
+    public static TranslateAlloyToKodkod translate(IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, A4Solution lastSolution, AlloyRelation... canAddSubtract) throws Err {
         if (rep==null) rep = A4Reporter.NOP;
         TranslateAlloyToKodkod tr = null;
         try {
-            tr = new TranslateAlloyToKodkod(rep, opt, sigs, cmd);
+        	Set<AlloyRelation> set =  new TreeSet<AlloyRelation>();
+        	for (AlloyRelation rel : canAddSubtract) set.add(rel);
+            tr = new TranslateAlloyToKodkod(rep, opt, sigs, cmd, lastSolution, ConstSet.make(set));
             return tr;
         } catch(UnsatisfiedLinkError ex) {
             throw new ErrorFatal("The required JNI library cannot be found: "+ex.toString().trim(), ex);
@@ -1067,8 +1088,9 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     public A4Solution executeCommand(boolean tryFromBook) throws Err {
         try {
             if (sigs != null && cmd.parent!=null || !cmd.getGrowableSigs().isEmpty())
-                return execute_greedyCommand(rep, sigs, cmd, opt);
-            return frame.solve(rep, cmd, new Simplifier(), tryFromBook);
+            	//TODO Should lastSolution be sent here or null?
+                return execute_greedyCommand(rep, sigs, canAddSubtract, lastSolution, cmd, opt);
+            return frame.solve(rep, cmd, canAddSubtract, lastSolution, new Simplifier(), tryFromBook);
         } catch(UnsatisfiedLinkError ex) {
             throw new ErrorFatal("The required JNI library cannot be found: "+ex.toString().trim(), ex);
         } catch(CapacityExceededException ex) {
@@ -1082,6 +1104,8 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
         }
     }
 
+    public ConstSet<AlloyRelation> getCanAddSubtract(){return canAddSubtract;}
+    
     public A4Solution getFrame() {
         return frame;
     }

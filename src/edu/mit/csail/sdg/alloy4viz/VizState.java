@@ -49,6 +49,7 @@ public final class VizState {
       this.currentModel = originalInstance.model;
       resetTheme();
       loadInstance(originalInstance);
+      for (AlloyRelation rel : originalInstance.model.getRelations()) canAddSubtract.add(rel);
    }
 
    /** Make a copy of an existing VizState object. */
@@ -56,6 +57,7 @@ public final class VizState {
       originalInstance = old.originalInstance;
       currentModel = old.currentModel;
       projectedTypes = new TreeSet<AlloyType>(old.projectedTypes);
+      canAddSubtract = new TreeSet<AlloyRelation>(old.canAddSubtract);
       useOriginalNames = old.useOriginalNames;
       hidePrivate = old.hidePrivate;
       hideMeta = old.hideMeta;
@@ -231,9 +233,14 @@ public final class VizState {
 
    /** The set of types we are currently projecting over. */
    private Set<AlloyType> projectedTypes = new TreeSet<AlloyType>();
+   
+   /** The set of relations that can be added and subtracted in bordeaux. */
+   private Set<AlloyRelation> canAddSubtract = new TreeSet<AlloyRelation>();
 
    /** Gets an unmodifiable copy of the set of types we are currently projecting over. */
    public ConstSet<AlloyType> getProjectedTypes() { return ConstSet.make(projectedTypes); }
+   
+   public ConstSet<AlloyRelation> getAddSubtract() { return ConstSet.make(canAddSubtract); }
 
    /** Returns true iff the type is not univ, and it is a toplevel type. */
    public boolean canProject(final AlloyType type) { return isTopLevel(type); }
@@ -243,6 +250,9 @@ public final class VizState {
       return AlloyType.UNIV.equals(originalInstance.model.getSuperType(type));
    }
 
+   public void addBordeauxRelation(AlloyRelation rel) {canAddSubtract.add(rel);}
+   public void removeBordeauxRelation(AlloyRelation rel) {canAddSubtract.remove(rel);}
+   
    /** Adds type to the list of projected types if it's a toplevel type. */
    public void project(AlloyType type) {
       if (canProject(type)) if (projectedTypes.add(type)) {

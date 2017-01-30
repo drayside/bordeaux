@@ -3,6 +3,7 @@ package edu.uw.ece.bordeaux.engine;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -16,14 +17,14 @@ import javax.management.RuntimeErrorException;
 import org.apache.commons.collections4.MultiValuedMap;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
+import edu.mit.csail.sdg.alloy4.ConstSet;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
-import edu.mit.csail.sdg.alloy4whole.SimpleReporter;
+import edu.mit.csail.sdg.alloy4viz.AlloyRelation;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.Configuration;
-import edu.uw.ece.bordeaux.HolaReporter;
 import edu.uw.ece.bordeaux.onborder.OnBorderCodeGenerator;
 import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import edu.uw.ece.bordeaux.util.Utils;
@@ -44,11 +45,12 @@ public final class BordeauxEngine {
 	private String previousHitString;
 	private String previousMissString;
 	private A4Solution initialSolution;
+	private A4Solution lastSolution;
 	private Command command;
 	private OnBorderCodeGenerator generator;
 	private File onBorderFile;
 	private Set<String> relationsToExclude;
-	
+		
 	/**
 	 * Creates a new Bordeaux Engine instance
 	 * @param inputPath - The path to the alloy source file
@@ -353,7 +355,7 @@ public final class BordeauxEngine {
 		}
 	}*/
 	
-	private A4Solution perform(A4Reporter reporter, File inputPath, String constraint1, String constraint2) {
+	private A4Solution perform(A4Reporter reporter, File inputPath, ConstSet<AlloyRelation> canAddSubtract, String constraint1, String constraint2) {
 		
 		try {
 			Util.writeAll(this.onBorderFile.getAbsolutePath(), "");
@@ -373,7 +375,7 @@ public final class BordeauxEngine {
 		A4Solution result = null;
 		try {
 			String commandName = OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND;
-			MultiValuedMap<String, A4Solution> map = A4CommandExecuter.get().executeHola(reporter, this.tmpPath.getAbsolutePath(),
+			MultiValuedMap<String, A4Solution> map = A4CommandExecuter.get().executeHola(reporter, canAddSubtract, lastSolution, this.tmpPath.getAbsolutePath(),
 					commandName, onBorderFile.getAbsolutePath());
 					Collection<A4Solution> sols =map.get(commandName);
 			
@@ -392,7 +394,7 @@ public final class BordeauxEngine {
 		if (Configuration.IsInDeubbungMode) {
 			logger.info("Alloy* Complete on : " + onBorderFile + ". Status: " + (success ? "Successful":"Failed"));
 		}
-
+		lastSolution = result;
 		return result;
 	}
 	
@@ -418,6 +420,7 @@ public final class BordeauxEngine {
 
 	private void initSolution(A4Solution sol) {
 		this.initialSolution = sol;
+		this.lastSolution = sol;
 		this.previousHitString = ExtractorUtils.convertA4SolutionToAlloySyntax(sol, true);
 		
 		this.createCodeGenerator(inputPath, command);
@@ -426,7 +429,7 @@ public final class BordeauxEngine {
 		this.currentHit = "";
 	}
 	
-	public A4Solution nextNearMiss(A4Reporter rep) {
+	public A4Solution nextNearMiss(A4Reporter rep, ConstSet<AlloyRelation> canAddSubtract) {
 
 		if(!firstNearMiss && this.previousMissString == null) return null;
 		this.firstNearMiss = false; 
@@ -439,19 +442,19 @@ public final class BordeauxEngine {
 		currentMiss = Utils.and(this.currentMiss, Utils.not(this.previousMissString));
 		String constraint2 = currentMiss;
 		
-		A4Solution result = this.perform(rep, this.inputPath, constraint1, constraint2);
+		A4Solution result = this.perform(rep, this.inputPath, canAddSubtract, constraint1, constraint2);
 		this.previousMissString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).b;
 		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result).b;
 	}
 	
-	public A4Solution nextNearHit(A4Reporter rep) {
+	public A4Solution nextNearHit(A4Reporter rep, ConstSet<AlloyRelation> canAddSubtract) {
 
 		String constraint2 = this.previousMissString;
 		
 		currentHit = Utils.and(currentHit, Utils.not(previousHitString));
 		String constraint1 = currentHit;
 		
-		A4Solution result = this.perform(rep, this.inputPath, constraint1, constraint2);
+		A4Solution result = this.perform(rep, this.inputPath, canAddSubtract, constraint1, constraint2);
 		this.previousHitString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).a;
 		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result).a;
 	}

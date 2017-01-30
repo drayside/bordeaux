@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Set;
 
 import kodkod.ast.Formula;
+import kodkod.ast.Relation;
 import kodkod.engine.hol.HOLTranslation;
 import kodkod.engine.hol.HOLTranslationNew;
 import kodkod.instance.Bounds;
@@ -42,6 +43,7 @@ import edu.mit.csail.sdg.alloy4.A4Preferences.InstFormat;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.ConstMap;
+import edu.mit.csail.sdg.alloy4.ConstSet;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.ErrorSyntax;
 import edu.mit.csail.sdg.alloy4.ErrorType;
@@ -65,6 +67,7 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4SolutionReader;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4SolutionWriter;
 import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod;
+import edu.mit.csail.sdg.alloy4viz.AlloyRelation;
 import edu.mit.csail.sdg.alloy4viz.StaticInstanceReader;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
 import edu.mit.csail.sdg.alloy4whole.SimpleGUI.BordeauxNextType;
@@ -541,6 +544,7 @@ public class SimpleReporter extends A4Reporter {
     static final class SimpleTask2 implements WorkerTask {
         private static final long serialVersionUID = 0;
         public String filename = "";
+        public ConstSet<AlloyRelation> relations;
         public boolean useBordeaxEngine;
         public BordeauxNextType nextType;
         public transient WorkerCallback out = null;
@@ -576,13 +580,13 @@ public class SimpleReporter extends A4Reporter {
             		switch(nextType) {
             		case NearHit: {
             			cb("bold", "Searching for next 'near-hit' instance...\n");
-            			sol = engine.nextNearHit(latestRep);
+            			sol = engine.nextNearHit(latestRep, relations);
             			break;
             		}
             		
             		case NearMiss: {
             			cb("bold", "Searching for next 'near-miss' instance...\n");
-            			sol = engine.nextNearMiss(latestRep);
+            			sol = engine.nextNearMiss(latestRep, relations);
             			break;
             		}
             		
@@ -730,7 +734,7 @@ public class SimpleReporter extends A4Reporter {
 //                    //TranslateAlloyToKodkod.execute_commandFromBook(rep, world.getAllReachableSigs(), cmd, options);
 //                }
                 
-                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options);
+                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options, latestKodkod);
                 sol = tr.getFrame();
                 latestKodkod = sol;
                 sol = tr.executeCommandFromBook();

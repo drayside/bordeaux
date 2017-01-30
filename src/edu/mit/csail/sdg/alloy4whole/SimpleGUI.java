@@ -186,6 +186,7 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4SolutionReader;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Tuple;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4TupleSet;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
+import edu.mit.csail.sdg.alloy4viz.VizGUI.BordeauxData;
 import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleCallback1;
 import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleTask1;
 import edu.mit.csail.sdg.alloy4whole.SimpleReporter.SimpleTask2;
@@ -1585,13 +1586,24 @@ public final class SimpleGUI implements ComponentListener, Listener {
     public enum BordeauxNextType { NextSolution, NearMiss, NearHit }
     
     public String computeNext(Object input, final boolean useBordeaxEngine, final BordeauxNextType nextType) {
-        final String arg = (String)input;
+    	String arg;
         OurUtil.show(frame);
         if (WorkerEngine.isBusy())
             throw new RuntimeException("Alloy4 is currently executing a SAT solver command. Please wait until that command has finished.");
         SimpleCallback1 cb = new SimpleCallback1(SimpleGUI.this, viz, log, VerbosityPref.get().ordinal(), latestAlloyVersionName, latestAlloyVersion);
         SimpleTask2 task = new SimpleTask2();
-        task.filename = arg;
+        if (input instanceof BordeauxData)
+        {
+        	BordeauxData bd = (BordeauxData) input;
+        	task.filename = bd.xmlFileName;
+        	arg = bd.xmlFileName;
+        	task.relations = bd.canAddSubtract;
+        }
+        else
+        {
+        	task.filename = (String) input;
+        	arg = (String) input;
+        }
         task.useBordeaxEngine = useBordeaxEngine;
         task.nextType = nextType;
         try {

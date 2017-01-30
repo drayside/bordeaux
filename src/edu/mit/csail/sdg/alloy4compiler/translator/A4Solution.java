@@ -78,6 +78,7 @@ import kodkod.util.ints.IndexedEntry;
 import kodkod.util.nodes.PrettyPrinter;
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.ConstMap;
+import edu.mit.csail.sdg.alloy4.ConstSet;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.ErrorAPI;
 import edu.mit.csail.sdg.alloy4.ErrorFatal;
@@ -101,6 +102,7 @@ import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.PrimSig;
 import edu.mit.csail.sdg.alloy4compiler.ast.Type;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Options.SatSolver;
+import edu.mit.csail.sdg.alloy4viz.AlloyRelation;
 
 /** This class stores a SATISFIABLE or UNSATISFIABLE solution.
  * It is also used as a staging area for the solver before generating the solution.
@@ -210,7 +212,10 @@ public class A4Solution {
 
     /** The map from each Kodkod Variable to an Alloy Type and Alloy Pos. */
     private Map<Variable,Pair<Type,Pos>> decl2type;
-
+    
+    /** The previous instance that was generated. */
+    private Instance prevInst = null;
+    
     /** optional partial instance */
     private final PartialInstance partialInstance;
     /** whether or not to rename atoms */
@@ -971,7 +976,7 @@ public class A4Solution {
     private A4Solution i2a(Instance inst) { try { return new A4Solution(this, inst); } catch (Err e) { return null; } }
 
     /** Solve for the solution if not solved already; if cmd==null, we will simply use the lowerbound of each relation as its value. */
-    A4Solution solve(final IA4Reporter rep, Command cmd, Simplifier simp, boolean tryBookExamples) throws Err, IOException {
+    A4Solution solve(final IA4Reporter rep, Command cmd, ConstSet<AlloyRelation> canAddSubtract, A4Solution old, Simplifier simp, boolean tryBookExamples) throws Err, IOException {
         // If already solved, then return this object as is
         if (solved) return this;
         // If cmd==null, then all four arguments are ignored, and we simply use the lower bound of each relation
@@ -1040,6 +1045,39 @@ public class A4Solution {
         for(Relation r: bounds.relations()) if (!r.isAtom()) formulas.add(r.eq(r)); // Without this, kodkod refuses to grow unmentioned relations
         fgoal = Formula.and(formulas);
 
+        if (old!=null && old.prevInst!=null && canAddSubtract!=null)
+        {
+        	ArrayList<Relation> relations = new ArrayList<Relation>();
+	        for (Relation r: bounds.relations())
+	        {
+	        	for (AlloyRelation rel : canAddSubtract)
+	        	{
+	        		if (r.toString().equals("this/Node." + rel.getName()))
+	        		{
+	        			relations.add(r);
+	        		}
+	        	}
+	        }
+	        for (Relation r: bounds.relations())
+	        {	
+	        	if (r.name().indexOf("this/Node.")!=0 || relations.contains(r)) continue;
+	        	Map<Relation, TupleSet> ts = old.prevInst.relationTuples();
+	        	for (Relation rel : ts.keySet())
+	        	{
+	        		if (rel.name().equals(r.name()))
+	        		{
+	        			TupleSet oldTuples = ts.get(rel);
+	        			Iterator<Tuple> it = oldTuples.iterator();
+	        			ArrayList<Tuple> tuples = new ArrayList<Tuple>();
+	        			//TODO This assumes that the universe is identical between the old and new factories.
+	        			while (it.hasNext()) tuples.add(factory.tuple(oldTuples.arity(), it.next().index()));
+	        			if (tuples.isEmpty()) continue;
+	        			TupleSet newTuples = factory.setOf(tuples);
+	        			bounds.boundExactly(r, newTuples);
+	        		}
+	        	}
+	        }
+        }   
         rep.generatingSolution(fgoal, bounds);
 
         // Now pick the solver and solve it!
@@ -1105,7 +1143,15 @@ public class A4Solution {
         // report the result
         solved();
         time = System.currentTimeMillis() - time;
-        if (inst!=null) rep.resultSAT(cmd, time, this); else rep.resultUNSAT(cmd, time, this);
+        if (inst!=null)
+        {
+        	rep.resultSAT(cmd, time, this);
+        	prevInst = inst;
+        }
+        else
+        {
+        	rep.resultUNSAT(cmd, time, this);
+        }
         return this;
     }
 

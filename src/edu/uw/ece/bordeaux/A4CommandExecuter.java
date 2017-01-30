@@ -12,6 +12,7 @@ import static edu.mit.csail.sdg.alloy4.A4Preferences.Unrolls;
 import static edu.mit.csail.sdg.alloy4.A4Preferences.UseHOLSolver;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +27,7 @@ import org.apache.commons.collections4.multimap.HashSetValuedHashMap;
 
 import edu.mit.csail.sdg.alloy4.A4Preferences;
 import edu.mit.csail.sdg.alloy4.A4Reporter;
+import edu.mit.csail.sdg.alloy4.ConstSet;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.IA4Reporter;
 import edu.mit.csail.sdg.alloy4.OurDialog;
@@ -39,8 +41,10 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4Options;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod;
 import edu.mit.csail.sdg.alloy4compiler.translator.TranslateDeclarativeConstriant2DeclarativeFormula;
+import edu.mit.csail.sdg.alloy4viz.AlloyRelation;
 import edu.uw.ece.bordeaux.Configuration;
 import kodkod.ast.Formula;
+import kodkod.ast.Relation;
 
 /**
  * This class is for executing the decomposer using Alloy 4
@@ -121,7 +125,7 @@ public class A4CommandExecuter {
 
 		for (Command command : world.getAllCommands()) {
 			A4Solution ans = TranslateAlloyToKodkod.execute_command(rep,
-					world.getAllReachableSigs(), command, options);
+					world.getAllReachableSigs(), command, options, null);
 			if (Configuration.IsInDeubbungMode)
 				logger.log(Level.INFO, "[" + Thread.currentThread().getName() + "]"
 						+ "An Alloy is executed and the result is: " + ans);
@@ -194,7 +198,7 @@ public class A4CommandExecuter {
 						+ "============ Command " + command + ": ============");
 
 			result = TranslateAlloyToKodkod.execute_command(rep,
-					world.getAllReachableSigs(), command, options);
+					world.getAllReachableSigs(), command, options, null);
 		}
 
 		if (null == result)
@@ -235,14 +239,14 @@ public class A4CommandExecuter {
 							+ "============ Command " + command + ": ============");
 
 				result.put(command, TranslateAlloyToKodkod.execute_command(rep,
-						world.getAllReachableSigs(), command, options));
+						world.getAllReachableSigs(), command, options, null));
 			}
 		}
 
 		return Collections.unmodifiableMap(result);
 	}
 
-	public MultiValuedMap<String, A4Solution> executeHola(A4Reporter rep, String tmpDirectory, String commandName, String... filenames) throws Err {
+	public MultiValuedMap<String, A4Solution> executeHola(A4Reporter rep, ConstSet<AlloyRelation> canAddSubtract, A4Solution lastSolution, String tmpDirectory, String commandName, String... filenames) throws Err {
 		
 		MultiValuedMap<String, A4Solution> result = new HashSetValuedHashMap<>();
 
@@ -283,7 +287,9 @@ public class A4CommandExecuter {
 
 //                result.put(command, TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, opt));
 
-                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(rep, world.getAllReachableSigs(), command, opt);
+                ArrayList<AlloyRelation> rels = new ArrayList<AlloyRelation>();
+                for (AlloyRelation rel : canAddSubtract) rels.add(rel);
+                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(rep, world.getAllReachableSigs(), command, opt, lastSolution, rels.toArray(new AlloyRelation[0]));
                 A4Solution sol = tr.executeCommand();
 //                System.exit(0);
                 result.put(commandName, sol);

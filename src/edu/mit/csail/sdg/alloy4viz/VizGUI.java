@@ -58,6 +58,7 @@ import edu.mit.csail.sdg.alloy4.A4Preferences.IntPref;
 import edu.mit.csail.sdg.alloy4.A4Preferences.StringPref;
 import edu.mit.csail.sdg.alloy4.Computer;
 import edu.mit.csail.sdg.alloy4.ConstList;
+import edu.mit.csail.sdg.alloy4.ConstSet;
 import edu.mit.csail.sdg.alloy4.OurBorder;
 import edu.mit.csail.sdg.alloy4.OurCheckbox;
 import edu.mit.csail.sdg.alloy4.OurConsole;
@@ -67,6 +68,7 @@ import edu.mit.csail.sdg.alloy4.Runner;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4.Version;
 import edu.mit.csail.sdg.alloy4graph.GraphViewer;
+import kodkod.ast.Relation;
 
 /** GUI main window for the visualizer.
  *
@@ -100,7 +102,7 @@ public final class VizGUI implements ComponentListener {
    private final JPopupMenu projectionPopup;
 
    /** The buttons on the toolbar. */
-   private final JButton projectionButton, openSettingsButton, closeSettingsButton,
+   private final JButton projectionButton, relationButton, openSettingsButton, closeSettingsButton,
    magicLayout, loadSettingsButton, saveSettingsButton, saveAsSettingsButton,
    resetSettingsButton, updateSettingsButton, openEvaluatorButton, closeEvaluatorButton, enumerateNextButton, enumerateNearMissButton, enumerateNearHitButton,
    vizButton, treeButton, txtButton/*, dotButton, xmlButton*/;
@@ -122,6 +124,9 @@ public final class VizGUI implements ComponentListener {
 
    /** The "show next near-hit" menu item. */
    private final JMenuItem enumerateNearHitMenu;
+   
+   /** The relation popup menu.*/
+   private final JPopupMenu relationPopup;
 
    private boolean enableBordeaux;
    
@@ -417,6 +422,18 @@ public final class VizGUI implements ComponentListener {
          }
       });
       repopulateProjectionPopup();
+      
+      // Create the toolbar
+      relationPopup = new JPopupMenu();
+      relationButton = new JButton("Add/Remove: all");
+      relationButton.addActionListener(new ActionListener() {
+         public void actionPerformed(ActionEvent e) {
+        	 enableAddSubtractAllRelations();
+             if (relationPopup.getComponentCount()>0) relationPopup.show(relationButton, 10, 10);
+         }
+      });
+      enableAddSubtractAllRelations();
+      
       toolbar = new JToolBar();
       toolbar.setVisible(false);
       toolbar.setFloatable(false);
@@ -440,6 +457,7 @@ public final class VizGUI implements ComponentListener {
          toolbar.add(enumerateNearMissButton=OurUtil.button("Next Near-Miss", "Show the next near-miss solution", "images/24_history.gif", doNextNearMiss()));
          toolbar.add(enumerateNearHitButton=OurUtil.button("Next Near-Hit", "Show the next near-hit solution", "images/24_history.gif", doNextNearHit()));
          toolbar.add(projectionButton);
+         toolbar.add(relationButton);
          toolbar.add(loadSettingsButton=OurUtil.button("Load", "Load the theme customization from a theme file", "images/24_open.gif", doLoadTheme()));
          toolbar.add(saveSettingsButton=OurUtil.button("Save", "Save the current theme customization", "images/24_save.gif", doSaveTheme()));
          toolbar.add(saveAsSettingsButton=OurUtil.button("Save As", "Save the current theme customization as a new theme file", "images/24_save.gif", doSaveThemeAs()));
@@ -524,6 +542,29 @@ public final class VizGUI implements ComponentListener {
       projectionButton.setText(num>1 ? ("Projected over "+num+" sigs") : label);
    }
 
+   /** Helper method that enables all relations to be added or subtracted in bordeaux. */
+   private void enableAddSubtractAllRelations() {
+      int num=0;
+      String label="Add/Remove: all";
+      if (myState==null) { relationButton.setEnabled(false); return; }
+      relationButton.setEnabled(true);
+      relationPopup.removeAll();
+      final Set<AlloyRelation> relations = myState.getAddSubtract();
+      for(final AlloyRelation r: myState.getOriginalModel().getRelations()){
+         final boolean on = relations.contains(r);
+         final JMenuItem m = new JMenuItem(r.getName(), on ? OurCheckbox.ON : OurCheckbox.OFF);
+         m.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+               if (on) myState.removeBordeauxRelation(r); else myState.addBordeauxRelation(r);
+               updateDisplay();
+            }
+         });
+         relationPopup.add(m);
+         if (on) { num++; if (num==1) label="Adding/Removing "+r.getName(); }
+      }
+      relationButton.setText(num>1 ? ("Relations adding/removing over "+num+" sigs") : label);
+   }
+   
    /** Helper method that refreshes the right-side visualization panel with the latest settings. */
    private void updateDisplay() {
       if (myState==null) return;
@@ -545,6 +586,7 @@ public final class VizGUI implements ComponentListener {
 //      xmlButton.setVisible(frame!=null);
       magicLayout.setVisible((settingsOpen==0 || settingsOpen==1) && currentMode==VisualizerMode.Viz);
       projectionButton.setVisible((settingsOpen==0 || settingsOpen==1) && currentMode==VisualizerMode.Viz);
+      relationButton.setVisible((settingsOpen==0 || settingsOpen==1) && currentMode==VisualizerMode.Viz);
       openSettingsButton.setVisible(               settingsOpen==0 && currentMode==VisualizerMode.Viz);
       loadSettingsButton.setVisible(frame==null && settingsOpen==1 && currentMode==VisualizerMode.Viz);
       saveSettingsButton.setVisible(frame==null && settingsOpen==1 && currentMode==VisualizerMode.Viz);
@@ -635,6 +677,7 @@ public final class VizGUI implements ComponentListener {
       if (frame!=null) frame.setContentPane(splitpane);
       if (settingsOpen!=2) content.requestFocusInWindow(); else myEvaluatorPanel.requestFocusInWindow();
       repopulateProjectionPopup();
+      enableAddSubtractAllRelations();
       if (frame!=null) frame.validate(); else splitpane.validate();
    }
 
@@ -710,6 +753,7 @@ public final class VizGUI implements ComponentListener {
          }
          if (myState==null) myState=new VizState(myInstance); else myState.loadInstance(myInstance);
          repopulateProjectionPopup();
+         enableAddSubtractAllRelations();
          xml2title.put(xmlFileName, makeVizTitle());
          this.xmlFileName = xmlFileName;
       }
@@ -738,6 +782,7 @@ public final class VizGUI implements ComponentListener {
          return false;
       }
       repopulateProjectionPopup();
+      enableAddSubtractAllRelations();
       if (myCustomPanel!=null) myCustomPanel.remakeAll();
       if (myGraphPanel!=null) myGraphPanel.remakeAll();
       addThemeHistory(filename);
@@ -921,6 +966,7 @@ public final class VizGUI implements ComponentListener {
       if (!OurDialog.yesno("Are you sure you wish to clear all your customizations?", "Yes, clear them", "No, keep them")) return null;
       myState.resetTheme();
       repopulateProjectionPopup();
+      enableAddSubtractAllRelations();
       if (myCustomPanel!=null) myCustomPanel.remakeAll();
       if (myGraphPanel!=null) myGraphPanel.remakeAll();
       thmFileName="";
@@ -936,6 +982,7 @@ public final class VizGUI implements ComponentListener {
       myState.resetTheme();
       try { MagicLayout.magic(myState);  MagicColor.magic(myState); } catch(Throwable ex) { }
       repopulateProjectionPopup();
+      enableAddSubtractAllRelations();
       if (myCustomPanel!=null) myCustomPanel.remakeAll();
       if (myGraphPanel!=null) myGraphPanel.remakeAll();
       updateDisplay();
@@ -990,6 +1037,12 @@ public final class VizGUI implements ComponentListener {
 	   return this.doNext(nextEnumerator, "");
    }
    
+   public class BordeauxData
+   {
+   	   public String xmlFileName;
+   	   public ConstSet<AlloyRelation> canAddSubtract;
+   }
+   
    /** This method attempts to derive the next satisfying near-miss instance. */
    private Runner doNextNearMiss() {
 
@@ -1013,7 +1066,20 @@ public final class VizGUI implements ComponentListener {
       } else if (enumerator==null) {
          OurDialog.alert("Cannot display the next " + enumType + " solution since the analysis engine is not loaded with the visualizer.");
       } else {
-         try { enumerator.compute(xmlFileName); } catch(Throwable ex) { OurDialog.alert(ex.getMessage()); }
+         try
+         {
+        	 if (enumType==null||enumType.equals(""))
+        	 {
+        		 enumerator.compute(xmlFileName);
+        	 }
+        	 else
+        	 {
+        		 BordeauxData bd = new BordeauxData();
+        		 bd.xmlFileName=xmlFileName;
+        		 bd.canAddSubtract=myState.getAddSubtract();
+        		 enumerator.compute(bd);
+        	 }
+         } catch(Throwable ex) { OurDialog.alert(ex.getMessage()); }
       }
       
       return null;
