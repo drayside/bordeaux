@@ -369,7 +369,7 @@ public class A4Solution {
     private A4Solution makeForNext() throws Err { return A4Solution.makeForNext(this); }
 
     /** Construct a new A4Solution that is the continuation of the old one, but with the given instance. */
-    private A4Solution(A4Solution old, Instance inst) throws Err {
+    public A4Solution(A4Solution old, Instance inst) throws Err {
         unrolls = old.unrolls;
         partialInstance = old.partialInstance;
         renameAtoms = old.renameAtoms;
@@ -976,7 +976,7 @@ public class A4Solution {
     private A4Solution i2a(Instance inst) { try { return new A4Solution(this, inst); } catch (Err e) { return null; } }
 
     /** Solve for the solution if not solved already; if cmd==null, we will simply use the lowerbound of each relation as its value. */
-    A4Solution solve(final IA4Reporter rep, Command cmd, ConstSet<AlloyRelation> canAddSubtract, A4Solution old, Simplifier simp, boolean tryBookExamples) throws Err, IOException {
+    A4Solution solve(final IA4Reporter rep, Command cmd, ConstSet<AlloyRelation> canAddSubtract, Instance old, Simplifier simp, boolean tryBookExamples) throws Err, IOException {
         // If already solved, then return this object as is
         if (solved) return this;
         // If cmd==null, then all four arguments are ignored, and we simply use the lower bound of each relation
@@ -1045,28 +1045,22 @@ public class A4Solution {
         for(Relation r: bounds.relations()) if (!r.isAtom()) formulas.add(r.eq(r)); // Without this, kodkod refuses to grow unmentioned relations
         fgoal = Formula.and(formulas);
 
-        if (old!=null && old.prevInst!=null && canAddSubtract!=null)
+        if (old!=null && canAddSubtract!=null)
         {
-        	ArrayList<Relation> relations = new ArrayList<Relation>();
-	        for (Relation r: bounds.relations())
+        	Map<Relation, TupleSet> ts = old.relationTuples();
+	        for (AlloyRelation rel : canAddSubtract)
 	        {
-	        	for (AlloyRelation rel : canAddSubtract)
+	        	for (Relation r: bounds.relations())
 	        	{
+	        		if (r.name().indexOf("this/Node.")!=0) continue;
 	        		if (r.toString().equals("this/Node." + rel.getName()))
 	        		{
-	        			relations.add(r);
-	        		}
-	        	}
-	        }
-	        for (Relation r: bounds.relations())
-	        {	
-	        	if (r.name().indexOf("this/Node.")!=0 || relations.contains(r)) continue;
-	        	Map<Relation, TupleSet> ts = old.prevInst.relationTuples();
-	        	for (Relation rel : ts.keySet())
-	        	{
-	        		if (rel.name().equals(r.name()))
-	        		{
-	        			TupleSet oldTuples = ts.get(rel);
+	        			TupleSet oldTuples = ts.get(r);
+	        			if (oldTuples==null)
+	        			{
+	        				bounds.emptyTupleSet(r);
+	        				continue;
+	        			}
 	        			Iterator<Tuple> it = oldTuples.iterator();
 	        			ArrayList<Tuple> tuples = new ArrayList<Tuple>();
 	        			//TODO This assumes that the universe is identical between the old and new factories.
@@ -1074,9 +1068,43 @@ public class A4Solution {
 	        			if (tuples.isEmpty()) continue;
 	        			TupleSet newTuples = factory.setOf(tuples);
 	        			bounds.boundExactly(r, newTuples);
+	        			break;
 	        		}
 	        	}
+	        	
+	        	for (Relation r : ts.keySet())
+		        {
+		        	String name = r.name();
+		        	TupleSet oldTuples = ts.get(r);
+		        	Iterator<Tuple> it = oldTuples.iterator();
+		        	ArrayList<Tuple> tuples = new ArrayList<Tuple>();
+        			//TODO This assumes that the universe is identical between the old and new factories.
+		        	while(it.hasNext()) tuples.add(factory.tuple(oldTuples.arity(), it.next().index()));
+		        	if (tuples.isEmpty()) continue;
+		        	if (name.indexOf("$findMarginalInstances_node")==0)
+		        	{
+		        		ArrayList<String> names = new ArrayList<String>();
+		        		for (Relation relation : bounds.relations())
+		        		{
+		        			names.add(relation.name());
+		        		}
+		        		for (String relName : names)
+		        		{
+		        			int i = name.lastIndexOf('_')+1;
+		        			if (i!=0 && i<name.length() && relName.equalsIgnoreCase("this/Node."+name.substring(i)))
+		        			{
+		        				this.addRel("this/Node."+name.substring(i), factory.setOf(tuples), factory.setOf(tuples), false);
+		        			}
+		        		}
+		        	}
+		        	else if (name.indexOf("$findMarginalInstances__node")==0)
+		        	{
+	        			this.addRel(name, factory.setOf(tuples), factory.setOf(tuples), false);
+		        	}
+		        }
 	        }
+	        
+	        
         }   
         rep.generatingSolution(fgoal, bounds);
 
@@ -1327,5 +1355,11 @@ public class A4Solution {
 	 */
 	public List<Formula> getKKFormulas(){
 		return Collections.unmodifiableList(formulas);
+	}
+	
+	/** Return a copy of instance that was completed. */
+	public Instance getCompleteInstance()
+	{
+		return prevInst.clone();
 	}
 }

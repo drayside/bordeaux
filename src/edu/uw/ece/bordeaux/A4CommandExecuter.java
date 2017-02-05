@@ -43,6 +43,7 @@ import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod;
 import edu.mit.csail.sdg.alloy4compiler.translator.TranslateDeclarativeConstriant2DeclarativeFormula;
 import edu.mit.csail.sdg.alloy4viz.AlloyRelation;
 import edu.uw.ece.bordeaux.Configuration;
+import edu.uw.ece.bordeaux.engine.BordeauxEngine.BordeauxLastSolutionInfo;
 import kodkod.ast.Formula;
 import kodkod.ast.Relation;
 
@@ -246,7 +247,7 @@ public class A4CommandExecuter {
 		return Collections.unmodifiableMap(result);
 	}
 
-	public MultiValuedMap<String, A4Solution> executeHola(A4Reporter rep, ConstSet<AlloyRelation> canAddSubtract, A4Solution lastSolution, String tmpDirectory, String commandName, String... filenames) throws Err {
+	public MultiValuedMap<String, A4Solution> executeHola(A4Reporter rep, BordeauxLastSolutionInfo blsi, String tmpDirectory, String commandName, String... filenames) throws Err {
 		
 		MultiValuedMap<String, A4Solution> result = new HashSetValuedHashMap<>();
 
@@ -286,10 +287,8 @@ public class A4CommandExecuter {
                     logger.log(Level.INFO, "[" + Thread.currentThread().getName() + "]" + "============ Command " + command + ": ============");
 
 //                result.put(command, TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, opt));
-
-                ArrayList<AlloyRelation> rels = new ArrayList<AlloyRelation>();
-                for (AlloyRelation rel : canAddSubtract) rels.add(rel);
-                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(rep, world.getAllReachableSigs(), command, opt, lastSolution, rels.toArray(new AlloyRelation[0]));
+                
+                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(rep, world.getAllReachableSigs(), command, opt, blsi.getLastSolutionInstance(), blsi.getSuppressions().toArray(new AlloyRelation[0]));
                 A4Solution sol = tr.executeCommand();
 //                System.exit(0);
                 result.put(commandName, sol);

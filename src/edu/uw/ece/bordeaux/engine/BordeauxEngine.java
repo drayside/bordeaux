@@ -28,6 +28,7 @@ import edu.uw.ece.bordeaux.Configuration;
 import edu.uw.ece.bordeaux.onborder.OnBorderCodeGenerator;
 import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import edu.uw.ece.bordeaux.util.Utils;
+import kodkod.instance.Instance;
 
 public final class BordeauxEngine {
 
@@ -45,7 +46,7 @@ public final class BordeauxEngine {
 	private String previousHitString;
 	private String previousMissString;
 	private A4Solution initialSolution;
-	private A4Solution lastSolution;
+	private Instance lastSolution;
 	private Command command;
 	private OnBorderCodeGenerator generator;
 	private File onBorderFile;
@@ -375,7 +376,8 @@ public final class BordeauxEngine {
 		A4Solution result = null;
 		try {
 			String commandName = OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND;
-			MultiValuedMap<String, A4Solution> map = A4CommandExecuter.get().executeHola(reporter, canAddSubtract, lastSolution, this.tmpPath.getAbsolutePath(),
+			BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo(lastSolution, canAddSubtract);
+			MultiValuedMap<String, A4Solution> map = A4CommandExecuter.get().executeHola(reporter, blsi, this.tmpPath.getAbsolutePath(),
 					commandName, onBorderFile.getAbsolutePath());
 					Collection<A4Solution> sols =map.get(commandName);
 			
@@ -394,7 +396,7 @@ public final class BordeauxEngine {
 		if (Configuration.IsInDeubbungMode) {
 			logger.info("Alloy* Complete on : " + onBorderFile + ". Status: " + (success ? "Successful":"Failed"));
 		}
-		lastSolution = result;
+		lastSolution = result.getCompleteInstance();
 		return result;
 	}
 	
@@ -420,7 +422,7 @@ public final class BordeauxEngine {
 
 	private void initSolution(A4Solution sol) {
 		this.initialSolution = sol;
-		this.lastSolution = sol;
+		this.lastSolution = sol.getCompleteInstance();
 		this.previousHitString = ExtractorUtils.convertA4SolutionToAlloySyntax(sol, true);
 		
 		this.createCodeGenerator(inputPath, command);
@@ -457,5 +459,20 @@ public final class BordeauxEngine {
 		A4Solution result = this.perform(rep, this.inputPath, canAddSubtract, constraint1, constraint2);
 		this.previousHitString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).a;
 		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result).a;
+	}
+	
+	public class BordeauxLastSolutionInfo
+	{
+		private final Instance lastSolution;
+		private final ConstSet<AlloyRelation> suppressions;
+		
+		public BordeauxLastSolutionInfo(Instance lastSolution, ConstSet<AlloyRelation> suppressions)
+		{
+			this.lastSolution = lastSolution;
+			this.suppressions = suppressions;
+		}
+		
+		public Instance getLastSolutionInstance() throws Err{return lastSolution.clone();}
+		public ConstSet<AlloyRelation> getSuppressions(){return ConstSet.make(suppressions);}
 	}
 }

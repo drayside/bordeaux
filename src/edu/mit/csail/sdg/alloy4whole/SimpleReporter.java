@@ -734,7 +734,7 @@ public class SimpleReporter extends A4Reporter {
 //                    //TranslateAlloyToKodkod.execute_commandFromBook(rep, world.getAllReachableSigs(), cmd, options);
 //                }
                 
-                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options, latestKodkod);
+                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options, null);
                 sol = tr.getFrame();
                 latestKodkod = sol;
                 sol = tr.executeCommandFromBook();

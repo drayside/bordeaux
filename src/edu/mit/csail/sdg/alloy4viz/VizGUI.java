@@ -68,7 +68,6 @@ import edu.mit.csail.sdg.alloy4.Runner;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4.Version;
 import edu.mit.csail.sdg.alloy4graph.GraphViewer;
-import kodkod.ast.Relation;
 
 /** GUI main window for the visualizer.
  *
@@ -545,11 +544,11 @@ public final class VizGUI implements ComponentListener {
    /** Helper method that enables all relations to be added or subtracted in bordeaux. */
    private void enableAddSubtractAllRelations() {
       int num=0;
-      String label="Add/Remove: all";
+      String label="Suppress: all";
       if (myState==null) { relationButton.setEnabled(false); return; }
       relationButton.setEnabled(true);
       relationPopup.removeAll();
-      final Set<AlloyRelation> relations = myState.getAddSubtract();
+      final ConstSet<AlloyRelation> relations = myState.getAddSubtract();
       for(final AlloyRelation r: myState.getOriginalModel().getRelations()){
          final boolean on = relations.contains(r);
          final JMenuItem m = new JMenuItem(r.getName(), on ? OurCheckbox.ON : OurCheckbox.OFF);
@@ -560,7 +559,7 @@ public final class VizGUI implements ComponentListener {
             }
          });
          relationPopup.add(m);
-         if (on) { num++; if (num==1) label="Adding/Removing "+r.getName(); }
+         if (on) { num++; if (num==1) label="Suppress "+r.getName(); }
       }
       relationButton.setText(num>1 ? ("Relations adding/removing over "+num+" sigs") : label);
    }

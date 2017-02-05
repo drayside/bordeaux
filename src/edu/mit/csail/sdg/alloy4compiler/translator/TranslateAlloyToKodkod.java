@@ -41,6 +41,7 @@ import kodkod.ast.operator.ExprOperator;
 import kodkod.ast.operator.Quantifier;
 import kodkod.engine.CapacityExceededException;
 import kodkod.engine.fol2sat.HigherOrderDeclException;
+import kodkod.instance.Instance;
 import kodkod.instance.Tuple;
 import kodkod.instance.TupleFactory;
 import kodkod.instance.TupleSet;
@@ -122,7 +123,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     private final ConstSet<AlloyRelation> canAddSubtract;
     
     /** The last solution to be used as a reference for the next solution. */
-    private final A4Solution lastSolution;
+    private final Instance lastSolution;
     
     /** Construct a translator based on the given list of sigs and the given command.
      * @param rep - if nonnull, it's the reporter that will receive diagnostics and progress reports
@@ -130,7 +131,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
      * @param sigs - the list of sigs (must not be null, and must be a complete list)
      * @param cmd - the command to solve (must not be null)
      */
-    private TranslateAlloyToKodkod (IA4Reporter rep, A4Options opt, Iterable<Sig> sigs, Command cmd, A4Solution lastSolution, ConstSet<AlloyRelation> canAddSubtract) throws Err {
+    private TranslateAlloyToKodkod (IA4Reporter rep, A4Options opt, Iterable<Sig> sigs, Command cmd, Instance lastSolution, ConstSet<AlloyRelation> canAddSubtract) throws Err {
     	this.canAddSubtract = canAddSubtract;
     	this.lastSolution = lastSolution;
         this.opt = opt;
@@ -321,7 +322,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
           + "Visit http://alloy.mit.edu/ for advice on refactoring.");
     }
 
-    private static A4Solution execute_greedyCommand(IA4Reporter rep, Iterable<Sig> sigs, ConstSet<AlloyRelation> addSubtract, A4Solution lastSolution, Command usercommand, A4Options opt) throws Exception {
+    private static A4Solution execute_greedyCommand(IA4Reporter rep, Iterable<Sig> sigs, ConstSet<AlloyRelation> addSubtract, Instance lastSolution, Command usercommand, A4Options opt) throws Exception {
         // FIXTHIS: if the next command has a "smaller scope" than the last command, we would get a Kodkod exception...
         // FIXTHIS: if the solver is "toCNF" or "toKodkod" then this method will throw an Exception...
         // FIXTHIS: does solution enumeration still work when we're doing a greedy solve?
@@ -390,7 +391,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
      * <p> If the return value X is satisfiable, you can call X.next() to get the next satisfying solution X2;
      * and you can call X2.next() to get the next satisfying solution X3... until you get an unsatisfying solution.
      */
-    public static A4Solution execute_command (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, A4Solution lastSol) throws Err {
+    public static A4Solution execute_command (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, Instance lastSol) throws Err {
         return translate(rep, sigs, cmd, opt, lastSol).executeCommand();
     }
 
@@ -412,7 +413,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
      * <p> If the return value X is satisfiable, you can call X.next() to get the next satisfying solution X2;
      * and you can call X2.next() to get the next satisfying solution X3... until you get an unsatisfying solution.
      */
-    public static A4Solution execute_commandFromBook (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, A4Solution lastSol) throws Err {
+    public static A4Solution execute_commandFromBook (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, Instance lastSol) throws Err {
         return translate(rep, sigs, cmd, opt, lastSol).executeCommandFromBook();
     }
 
@@ -420,7 +421,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
         return translate(rep, sigs, cmd, opt, null).executeCommandFromBook();
     }
     
-    public static TranslateAlloyToKodkod translate(IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, A4Solution lastSolution, AlloyRelation... canAddSubtract) throws Err {
+    public static TranslateAlloyToKodkod translate(IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, Instance lastSolution, AlloyRelation... canAddSubtract) throws Err {
         if (rep==null) rep = A4Reporter.NOP;
         TranslateAlloyToKodkod tr = null;
         try {

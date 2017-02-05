@@ -49,7 +49,6 @@ public final class VizState {
       this.currentModel = originalInstance.model;
       resetTheme();
       loadInstance(originalInstance);
-      for (AlloyRelation rel : originalInstance.model.getRelations()) canAddSubtract.add(rel);
    }
 
    /** Make a copy of an existing VizState object. */
