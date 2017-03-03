@@ -318,7 +318,7 @@ public final class A4SolutionReader {
           sol.kr2type(r, v.type());
        }
        // Done!
-       sol.solve(null, null, null, null, null, false);
+       sol.solve(null, null, null, null, false);
     }
 
     /** Parse the XML element into an AlloyInstance.

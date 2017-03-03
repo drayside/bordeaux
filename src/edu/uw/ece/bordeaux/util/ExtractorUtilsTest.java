@@ -100,7 +100,7 @@ public class ExtractorUtilsTest {
 		
 		final HolaReporter reporter = new HolaReporter();
 		final BordeauxEngine engine = createBordeauxEngine(reporter, tmpFile, commandName);
-		return engine.nextNearMiss(reporter);
+		return engine.nextNearMiss(reporter, null, null);
 	}
 	
 	public BordeauxEngine createBordeauxEngine(A4Reporter reporter, File filepath, String commandName) {

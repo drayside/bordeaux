@@ -153,7 +153,7 @@ public class OnBorderCodeGenerator {
         this.commandScope = ExtractorUtils.extractScopeFromCommand(command);
     }
     
-    public String getForumlaContstraints() {
+    public String getFormulaConstraints() {
     	return this.formulaConstraints;
     }
     

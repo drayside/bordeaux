@@ -261,7 +261,7 @@ public final class Bounds implements Cloneable {
 		putBound(uppers, r, unmodifiableTuplesCopy);
 	}
 
-	/*
+	/**
 	 * Empties the tupleset of a relation.
 	 * @requires r!=null && relations.contains(r)
 	 * @ensures this.relation = this.relation - r

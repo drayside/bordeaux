@@ -102,6 +102,8 @@ import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.PrimSig;
 import edu.mit.csail.sdg.alloy4compiler.ast.Type;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Options.SatSolver;
+import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod.LastInstanceInfo;
+import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod.SolutionType;
 import edu.mit.csail.sdg.alloy4viz.AlloyRelation;
 
 /** This class stores a SATISFIABLE or UNSATISFIABLE solution.
@@ -213,8 +215,8 @@ public class A4Solution {
     /** The map from each Kodkod Variable to an Alloy Type and Alloy Pos. */
     private Map<Variable,Pair<Type,Pos>> decl2type;
     
-    /** The previous instance that was generated. */
-    private Instance prevInst = null;
+    /** The completed instance that was generated. */
+    private Instance compInst = null;
     
     /** optional partial instance */
     private final PartialInstance partialInstance;
@@ -976,7 +978,7 @@ public class A4Solution {
     private A4Solution i2a(Instance inst) { try { return new A4Solution(this, inst); } catch (Err e) { return null; } }
 
     /** Solve for the solution if not solved already; if cmd==null, we will simply use the lowerbound of each relation as its value. */
-    A4Solution solve(final IA4Reporter rep, Command cmd, ConstSet<AlloyRelation> canAddSubtract, Instance old, Simplifier simp, boolean tryBookExamples) throws Err, IOException {
+    A4Solution solve(final IA4Reporter rep, Command cmd, LastInstanceInfo lsi, Simplifier simp, boolean tryBookExamples) throws Err, IOException {
         // If already solved, then return this object as is
         if (solved) return this;
         // If cmd==null, then all four arguments are ignored, and we simply use the lower bound of each relation
@@ -1045,34 +1047,80 @@ public class A4Solution {
         for(Relation r: bounds.relations()) if (!r.isAtom()) formulas.add(r.eq(r)); // Without this, kodkod refuses to grow unmentioned relations
         fgoal = Formula.and(formulas);
 
-        if (old!=null && canAddSubtract!=null)
+        Instance old = null;
+        ConstSet<AlloyRelation> additionSuppression = null;
+        ConstSet<AlloyRelation> subtractionSuppression = null;
+        SolutionType type = null;
+        
+        if (lsi!=null)
         {
+        	old = lsi.getLastSolution();
+        	additionSuppression = lsi.getAdditionSuppression();
+        	subtractionSuppression = lsi.getSubtractionSuppression();
+        	type = lsi.getType();
+        }
+        
+        if (old!=null && (additionSuppression!=null || subtractionSuppression!=null))
+        {
+        	ArrayList<AlloyRelation> addCopy = new ArrayList<AlloyRelation>();
+        	if (additionSuppression!=null) addCopy = new ArrayList<AlloyRelation>(additionSuppression);
+        	ArrayList<AlloyRelation> subCopy = new ArrayList<AlloyRelation>();
+        	if (subtractionSuppression!=null) subCopy = new ArrayList<AlloyRelation>(subtractionSuppression);
+        	if (type==null) type = SolutionType.NEAR_MISS;//throw new ErrorAPI("Bordeaux next graph type unknown (Near-Miss, Near-Hit).");
+        	final String marginal = (type == SolutionType.NEAR_MISS) ? "" : "'";
+        	
         	Map<Relation, TupleSet> ts = old.relationTuples();
-	        for (AlloyRelation rel : canAddSubtract)
-	        {
-	        	for (Relation r: bounds.relations())
-	        	{
-	        		if (r.name().indexOf("this/Node.")!=0) continue;
-	        		if (r.toString().equals("this/Node." + rel.getName()))
-	        		{
-	        			TupleSet oldTuples = ts.get(r);
-	        			if (oldTuples==null)
-	        			{
-	        				bounds.emptyTupleSet(r);
-	        				continue;
-	        			}
-	        			Iterator<Tuple> it = oldTuples.iterator();
-	        			ArrayList<Tuple> tuples = new ArrayList<Tuple>();
-	        			//TODO This assumes that the universe is identical between the old and new factories.
-	        			while (it.hasNext()) tuples.add(factory.tuple(oldTuples.arity(), it.next().index()));
-	        			if (tuples.isEmpty()) continue;
-	        			TupleSet newTuples = factory.setOf(tuples);
-	        			bounds.boundExactly(r, newTuples);
-	        			break;
-	        		}
-	        	}
-	        	
-	        	for (Relation r : ts.keySet())
+        	
+        	if (additionSuppression!=null)
+        	{		
+		        for (AlloyRelation rel : addCopy)
+		        {
+		        	for (Relation r: bounds.relations())
+		        	{
+		        		//TODO do I need $findMarginalInstances__node?
+		        		if (r.name().indexOf("this/Node.")!=0) continue;
+		        		if (r.toString().equals("this/Node." + rel.getName()))
+		        		{
+		        			TupleSet oldTuples = null;
+		        			for (Relation key : ts.keySet())
+		        			{
+		        				String n = key.name();
+		        				if (n.indexOf("$findMarginalInstances_node_")==0 && n.substring(n.lastIndexOf('_')).equalsIgnoreCase('_'+rel.getName()+marginal)) 
+		        					oldTuples = ts.get(key);
+		        			}
+		        			if (oldTuples==null)
+		        			{
+		        				bounds.emptyTupleSet(r);
+		        				continue;
+		        			}
+		        			Iterator<Tuple> it = oldTuples.iterator();
+		        			ArrayList<Tuple> tuples = new ArrayList<Tuple>();
+		        			//TODO This assumes that the universe is identical between the old and new factories.
+		        			while (it.hasNext()) tuples.add(factory.tuple(oldTuples.arity(), it.next().index()));
+		        			if (tuples.isEmpty()) continue;
+		        			TupleSet newTuples = factory.setOf(tuples);
+		        			if (subCopy.contains(rel))
+		        			{
+		        				bounds.boundExactly(r, newTuples);
+		        				subCopy.remove(rel);
+		        			}
+		        			else
+		        			{
+		        				TupleSet lower = bounds.lowerBound(r);
+		        				//TODO make sure that the comparison method works for this.
+	        					Iterator<Tuple> tupIter = lower.iterator();
+	        					while (tupIter.hasNext())
+	        					{
+	        						Tuple tuple = tupIter.next();
+	        						if (!newTuples.contains(tuple)) newTuples.add(tuple);
+	        					}
+		        				bounds.bound(r, lower, newTuples);
+		        			}
+		        			break;
+		        		}
+		        	}
+		        }
+	        	/*for (Relation r : ts.keySet())
 		        {
 		        	String name = r.name();
 		        	TupleSet oldTuples = ts.get(r);
@@ -1088,23 +1136,51 @@ public class A4Solution {
 		        		{
 		        			names.add(relation.name());
 		        		}
-		        		for (String relName : names)
+		        		//for (String relName : names)
 		        		{
 		        			int i = name.lastIndexOf('_')+1;
-		        			if (i!=0 && i<name.length() && relName.equalsIgnoreCase("this/Node."+name.substring(i)))
+		        			if (i!=0 && i<name.length() && rel.getName().toString().equalsIgnoreCase(name.substring(i)))
 		        			{
-		        				this.addRel("this/Node."+name.substring(i), factory.setOf(tuples), factory.setOf(tuples), false);
+		        				//this.addRel(name, factory.setOf(tuples), factory.setOf(tuples), false);
 		        			}
 		        		}
 		        	}
 		        	else if (name.indexOf("$findMarginalInstances__node")==0)
 		        	{
-	        			this.addRel(name, factory.setOf(tuples), factory.setOf(tuples), false);
+	        			//this.addRel(name, factory.setOf(tuples), factory.setOf(tuples), false);
+		        	}
+		        }*/
+	        }
+	        
+        	if (subtractionSuppression!=null)
+        	{
+		        for (AlloyRelation rel : subCopy)
+		        {
+		        	for (Relation r: bounds.relations())
+		        	{
+		        		if (r.name().indexOf("$this/Node.")!=0) continue;
+		        		if (r.toString().equals("$this/Node." + rel.getName()))
+		        		{
+		        			TupleSet upper = bounds.upperBound(r);
+		        			TupleSet oldTuples = null;
+		        			for (Relation key : ts.keySet())
+		        			{
+		        				String n = key.name();
+		        				if (n.indexOf("$findMarginalInstances_node_")==0 && n.substring(n.lastIndexOf('_')).equalsIgnoreCase('_'+rel.getName()+marginal)) 
+		        					oldTuples = ts.get(key);
+		        			}
+		        			if (oldTuples==null) continue;
+		        			Iterator<Tuple> tupIter = oldTuples.iterator();
+		        			while (tupIter.hasNext())
+		        			{
+		        				Tuple tuple = tupIter.next();
+		        				if (!upper.contains(tuple)) upper.add(tuple);
+		        			}
+		        			bounds.bound(r, oldTuples, upper);
+		        		}
 		        	}
 		        }
 	        }
-	        
-	        
         }   
         rep.generatingSolution(fgoal, bounds);
 
@@ -1174,7 +1250,7 @@ public class A4Solution {
         if (inst!=null)
         {
         	rep.resultSAT(cmd, time, this);
-        	prevInst = inst;
+        	compInst = inst;
         }
         else
         {
@@ -1360,6 +1436,6 @@ public class A4Solution {
 	/** Return a copy of instance that was completed. */
 	public Instance getCompleteInstance()
 	{
-		return prevInst.clone();
+		return compInst.clone();
 	}
 }

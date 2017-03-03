@@ -328,7 +328,7 @@ public class TranslateDeclarativeConstriant2DeclarativeFormula extends VisitRetu
                   tr = new TranslateDeclarativeConstriant2DeclarativeFormula(rep2, opt, sigs, cmd);
                   tr.makeFacts(cmd.formula);
                   sim.totalOrderPredicates = tr.totalOrderPredicates;
-                  sol = tr.frame.solve(rep2, cmd, null, null, sim.partial==null || cmd.check ? new Simplifier() : sim, false);
+                  sol = tr.frame.solve(rep2, cmd, null, sim.partial==null || cmd.check ? new Simplifier() : sim, false);
                   if (!sol.satisfiable() && !cmd.check) {
                       start = System.currentTimeMillis() - start;
                       if (sim.partial==null) { rep.resultUNSAT(cmd, start, sol); return sol; } else { rep.resultSAT(cmd, start, sim.partial); return sim.partial; }
@@ -395,7 +395,7 @@ public class TranslateDeclarativeConstriant2DeclarativeFormula extends VisitRetu
           if (cmd.parent!=null || !cmd.getGrowableSigs().isEmpty()) return execute_greedyCommand(rep, sigs, cmd, opt);
           tr = new TranslateDeclarativeConstriant2DeclarativeFormula(rep, opt, sigs, cmd);
           tr.makeFacts(cmd.formula);
-          return tr.frame.solve(rep, cmd, null, null, new Simplifier(), false);
+          return tr.frame.solve(rep, cmd, null, new Simplifier(), false);
       } catch(UnsatisfiedLinkError ex) {
           throw new ErrorFatal("The required JNI library cannot be found: "+ex.toString().trim(), ex);
       } catch(CapacityExceededException ex) {
@@ -430,7 +430,7 @@ public class TranslateDeclarativeConstriant2DeclarativeFormula extends VisitRetu
           if (cmd.parent!=null || !cmd.getGrowableSigs().isEmpty()) return execute_greedyCommand(rep, sigs, cmd, opt);
           tr = new TranslateDeclarativeConstriant2DeclarativeFormula(rep, opt, sigs, cmd);
           tr.makeFacts(cmd.formula);
-          return tr.frame.solve(rep, cmd, null, null, new Simplifier(), true);
+          return tr.frame.solve(rep, cmd, null, new Simplifier(), true);
       } catch(UnsatisfiedLinkError ex) {
           throw new ErrorFatal("The required JNI library cannot be found: "+ex.toString().trim(), ex);
       } catch(CapacityExceededException ex) {

@@ -119,11 +119,19 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     private final A4Options opt;
     private final Iterable<Sig> sigs;
     
-    /** The list of relations that can be added or subtracted in bordeaux calculations*/
-    private final ConstSet<AlloyRelation> canAddSubtract;
+    /** The list of relations whose tuples can not be added from previous model. */
+    //private final ConstSet<AlloyRelation> additionSuppression;
     
+    /** The list of relations whose tuples can not be subtracted from previous model. */
+	//private final ConstSet<AlloyRelation> subtractionSuppression;
+
     /** The last solution to be used as a reference for the next solution. */
-    private final Instance lastSolution;
+    //private final Instance lastSolution;
+    
+    /** The type of the last solution. **/
+    //private final SolutionType type;
+
+    private final LastInstanceInfo lsi; 
     
     /** Construct a translator based on the given list of sigs and the given command.
      * @param rep - if nonnull, it's the reporter that will receive diagnostics and progress reports
@@ -131,9 +139,12 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
      * @param sigs - the list of sigs (must not be null, and must be a complete list)
      * @param cmd - the command to solve (must not be null)
      */
-    private TranslateAlloyToKodkod (IA4Reporter rep, A4Options opt, Iterable<Sig> sigs, Command cmd, Instance lastSolution, ConstSet<AlloyRelation> canAddSubtract) throws Err {
-    	this.canAddSubtract = canAddSubtract;
-    	this.lastSolution = lastSolution;
+    private TranslateAlloyToKodkod (IA4Reporter rep, A4Options opt, Iterable<Sig> sigs, Command cmd, LastInstanceInfo lsi) throws Err {
+    	//this.additionSuppression = lsi.getAdditionSuppression();
+    	//this.subtractionSuppression = lsi.getSubtractionSuppression();
+    	//this.lastSolution = lsi.getLastSolution();
+    	//this.type = lsi.getType();
+    	this.lsi = lsi;
         this.opt = opt;
         this.sigs = sigs;
         this.unrolls = opt.unrolls;
@@ -154,11 +165,13 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
      * @param unrolls - the maximum number of loop unrolling and recursion allowed
      * @param a2k - the mapping from Alloy sig/field/skolem/atom to the corresponding Kodkod expression
      */
-    private TranslateAlloyToKodkod (IntScope intScope, int unrolls, Map<Expr,Expression> a2k, Map<String,Expression> s2k) throws Err {
+    private TranslateAlloyToKodkod (IntScope intScope, int unrolls, Map<Expr,Expression> a2k, Map<String,Expression> s2k, LastInstanceInfo lsi) throws Err {
         this.opt = null;
         this.sigs = null;
-        this.canAddSubtract = null;
-        this.lastSolution = null;
+        //this.additionSuppression = null;
+        //this.subtractionSuppression = null;
+        //this.lastSolution = null;
+        this.lsi = lsi;
         this.unrolls = unrolls;
         this.rep = A4Reporter.NOP;
         this.cmd = null;
@@ -322,7 +335,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
           + "Visit http://alloy.mit.edu/ for advice on refactoring.");
     }
 
-    private static A4Solution execute_greedyCommand(IA4Reporter rep, Iterable<Sig> sigs, ConstSet<AlloyRelation> addSubtract, Instance lastSolution, Command usercommand, A4Options opt) throws Exception {
+    private static A4Solution execute_greedyCommand(IA4Reporter rep, Iterable<Sig> sigs, LastInstanceInfo lsi, Command usercommand, A4Options opt) throws Exception {
         // FIXTHIS: if the next command has a "smaller scope" than the last command, we would get a Kodkod exception...
         // FIXTHIS: if the solver is "toCNF" or "toKodkod" then this method will throw an Exception...
         // FIXTHIS: does solution enumeration still work when we're doing a greedy solve?
@@ -349,9 +362,10 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
                 while(cmd != null) {
                     rep.debug(cmd.scope.toString());
                     usercommand = cmd;
-                    tr = translate(rep2, sigs, cmd, opt, lastSolution); 
+                    tr = translate(rep2, sigs, cmd, opt, lsi.getLastSolution(), (lsi.getType()==SolutionType.NEAR_MISS) ? true : false, 
+                    		lsi.getAdditionSuppression(), lsi.getSubtractionSuppression()); 
                     sim.totalOrderPredicates = tr.totalOrderPredicates;
-                    sol = tr.frame.solve(rep2, cmd, addSubtract, lastSolution, sim.partial==null || cmd.check ? new Simplifier() : sim, false);
+                    sol = tr.frame.solve(rep2, cmd, lsi, sim.partial==null || cmd.check ? new Simplifier() : sim, false);
                     if (!sol.satisfiable() && !cmd.check) {
                         start = System.currentTimeMillis() - start;
                         if (sim.partial==null) { rep.resultUNSAT(cmd, start, sol); return sol; } else { rep.resultSAT(cmd, start, sim.partial); return sim.partial; }
@@ -391,12 +405,13 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
      * <p> If the return value X is satisfiable, you can call X.next() to get the next satisfying solution X2;
      * and you can call X2.next() to get the next satisfying solution X3... until you get an unsatisfying solution.
      */
-    public static A4Solution execute_command (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, Instance lastSol) throws Err {
-        return translate(rep, sigs, cmd, opt, lastSol).executeCommand();
+    public static A4Solution execute_command (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, Object lastSol, boolean nearMiss,
+    		ConstSet<AlloyRelation> addSupp, ConstSet<AlloyRelation> subSupp) throws Err {
+        return translate(rep, sigs, cmd, opt, (Instance)lastSol, nearMiss, addSupp, subSupp).executeCommand();
     }
 
     public static A4Solution execute_command (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt) throws Err {
-        return translate(rep, sigs, cmd, opt, null).executeCommand();
+        return translate(rep, sigs, cmd, opt, null, false, null, null).executeCommand();
     }
     /** Based on the specified "options", execute one command and return the resulting A4Solution object.
      *
@@ -413,21 +428,64 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
      * <p> If the return value X is satisfiable, you can call X.next() to get the next satisfying solution X2;
      * and you can call X2.next() to get the next satisfying solution X3... until you get an unsatisfying solution.
      */
-    public static A4Solution execute_commandFromBook (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, Instance lastSol) throws Err {
-        return translate(rep, sigs, cmd, opt, lastSol).executeCommandFromBook();
+    public static A4Solution execute_commandFromBook (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, Instance lastSol, boolean nearMiss) throws Err {
+        return translate(rep, sigs, cmd, opt, lastSol, nearMiss, null, null).executeCommandFromBook();
     }
 
     public static A4Solution execute_commandFromBook (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt) throws Err {
-        return translate(rep, sigs, cmd, opt, null).executeCommandFromBook();
+        return translate(rep, sigs, cmd, opt, null, false, null, null).executeCommandFromBook();
     }
     
-    public static TranslateAlloyToKodkod translate(IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, Instance lastSolution, AlloyRelation... canAddSubtract) throws Err {
+    enum SolutionType {NEAR_MISS, NEAR_HIT}
+    
+    public static class LastInstanceInfo
+    {
+    	private final Instance lastSolution;
+    	private final SolutionType type;
+    	private final Set<AlloyRelation> additionSuppression;
+    	private final Set<AlloyRelation> subtractionSuppression;
+    	
+    	LastInstanceInfo(Instance lastSolution, SolutionType type,
+    			Set<AlloyRelation> additionSuppression, Set<AlloyRelation> subtractionSuppression)
+    	{
+    		this.lastSolution = lastSolution;
+    		this.type = type;
+    		this.additionSuppression = additionSuppression;
+    		this.subtractionSuppression = subtractionSuppression;
+    	}
+    	
+    	Instance getLastSolution() { return lastSolution!=null ? lastSolution.clone() : null; }
+    	SolutionType getType() { return type; }
+    	ConstSet<AlloyRelation> getAdditionSuppression() { return ConstSet.make(additionSuppression); }
+    	ConstSet<AlloyRelation> getSubtractionSuppression() { return ConstSet.make(subtractionSuppression); }
+    }
+    
+    public static TranslateAlloyToKodkod translate(IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt) throws Err {
+    	return translate(rep, sigs, cmd, opt, null, false, null, null);
+    }
+    
+    public static TranslateAlloyToKodkod translate(IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, Instance lastSolution,
+    		boolean lastSolutionNearMiss, ConstSet<AlloyRelation> additionSuppression, ConstSet<AlloyRelation> subtractionSuppression) throws Err {
         if (rep==null) rep = A4Reporter.NOP;
         TranslateAlloyToKodkod tr = null;
         try {
-        	Set<AlloyRelation> set =  new TreeSet<AlloyRelation>();
-        	for (AlloyRelation rel : canAddSubtract) set.add(rel);
-            tr = new TranslateAlloyToKodkod(rep, opt, sigs, cmd, lastSolution, ConstSet.make(set));
+        	Set<AlloyRelation> addSupp = null;
+        	if (additionSuppression!=null)
+        	{
+        		addSupp =  new TreeSet<AlloyRelation>();
+    			for (AlloyRelation rel : additionSuppression) addSupp.add(rel);
+        	}
+        	Set<AlloyRelation> subSupp = null;
+        	if (subtractionSuppression!=null)
+        	{
+        		subSupp =  new TreeSet<AlloyRelation>();
+            	for (AlloyRelation rel : subtractionSuppression) subSupp.add(rel);
+        	}
+        	LastInstanceInfo lsi = new LastInstanceInfo(lastSolution,
+        			lastSolutionNearMiss ? SolutionType.NEAR_MISS : SolutionType.NEAR_HIT,
+        					addSupp,
+        					subSupp);
+            tr = new TranslateAlloyToKodkod(rep, opt, sigs, cmd, lsi);
             return tr;
         } catch(UnsatisfiedLinkError ex) {
             throw new ErrorFatal("The required JNI library cannot be found: "+ex.toString().trim(), ex);
@@ -448,7 +506,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     public static Object alloy2kodkod(A4Solution sol, Expr expr) throws Err {
         if (expr.ambiguous && !expr.errors.isEmpty()) expr = expr.resolve(expr.type(), null);
         if (!expr.errors.isEmpty()) throw expr.errors.pick();
-        TranslateAlloyToKodkod tr = new TranslateAlloyToKodkod(sol.intScope(), sol.unrolls(), sol.a2k(), sol.s2k());
+        TranslateAlloyToKodkod tr = new TranslateAlloyToKodkod(sol.intScope(), sol.unrolls(), sol.a2k(), sol.s2k(), null);
         Object ans;
         try {
             ans = tr.visitThis(expr);
@@ -1090,8 +1148,8 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
         try {
             if (sigs != null && cmd.parent!=null || !cmd.getGrowableSigs().isEmpty())
             	//TODO Should lastSolution be sent here or null?
-                return execute_greedyCommand(rep, sigs, canAddSubtract, lastSolution, cmd, opt);
-            return frame.solve(rep, cmd, canAddSubtract, lastSolution, new Simplifier(), tryFromBook);
+                return execute_greedyCommand(rep, sigs, lsi, cmd, opt);
+            return frame.solve(rep, cmd, lsi, new Simplifier(), tryFromBook);
         } catch(UnsatisfiedLinkError ex) {
             throw new ErrorFatal("The required JNI library cannot be found: "+ex.toString().trim(), ex);
         } catch(CapacityExceededException ex) {
@@ -1104,8 +1162,6 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
             if (ex instanceof Err) throw (Err)ex; else throw new ErrorFatal("Unknown exception occurred: "+ex, ex);
         }
     }
-
-    public ConstSet<AlloyRelation> getCanAddSubtract(){return canAddSubtract;}
     
     public A4Solution getFrame() {
         return frame;

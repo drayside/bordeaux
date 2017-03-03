@@ -39,6 +39,7 @@ public final class BordeauxEngine {
 	
 	private boolean firstNearMiss = true;
 	private boolean firstNearHit = true;
+	private boolean lastSolutionNearMiss = false;
 	private String currentMiss = "";
 	private String currentHit = "";
 //	private A4Solution previousHit;
@@ -356,7 +357,7 @@ public final class BordeauxEngine {
 		}
 	}*/
 	
-	private A4Solution perform(A4Reporter reporter, File inputPath, ConstSet<AlloyRelation> canAddSubtract, String constraint1, String constraint2) {
+	private A4Solution perform(A4Reporter reporter, File inputPath, BordeauxLastSolutionInfo blsi, String constraint1, String constraint2) {
 		
 		try {
 			Util.writeAll(this.onBorderFile.getAbsolutePath(), "");
@@ -376,7 +377,6 @@ public final class BordeauxEngine {
 		A4Solution result = null;
 		try {
 			String commandName = OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND;
-			BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo(lastSolution, canAddSubtract);
 			MultiValuedMap<String, A4Solution> map = A4CommandExecuter.get().executeHola(reporter, blsi, this.tmpPath.getAbsolutePath(),
 					commandName, onBorderFile.getAbsolutePath());
 					Collection<A4Solution> sols =map.get(commandName);
@@ -426,12 +426,12 @@ public final class BordeauxEngine {
 		this.previousHitString = ExtractorUtils.convertA4SolutionToAlloySyntax(sol, true);
 		
 		this.createCodeGenerator(inputPath, command);
-		this.previousMissString = this.generator.getForumlaContstraints();
-		this.currentMiss = "";
+		this.previousMissString = this.generator.getFormulaConstraints();
+		this.currentMiss = "";//Utils.not(this.generator.getForumlaContstraints());
 		this.currentHit = "";
 	}
 	
-	public A4Solution nextNearMiss(A4Reporter rep, ConstSet<AlloyRelation> canAddSubtract) {
+	public A4Solution nextNearMiss(A4Reporter rep, ConstSet<AlloyRelation> suppressAddition, ConstSet<AlloyRelation> suppressSubtraction) {
 
 		if(!firstNearMiss && this.previousMissString == null) return null;
 		this.firstNearMiss = false; 
@@ -440,39 +440,48 @@ public final class BordeauxEngine {
 		
 //		currentMiss = Utils.or(this.currentMiss, this.previousMissString);
 //		String constraint2 = Utils.not(currentMiss);
-		
 		currentMiss = Utils.and(this.currentMiss, Utils.not(this.previousMissString));
 		String constraint2 = currentMiss;
 		
-		A4Solution result = this.perform(rep, this.inputPath, canAddSubtract, constraint1, constraint2);
+		BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo(lastSolution, SolutionType.NEAR_MISS, suppressAddition, suppressSubtraction);
+		A4Solution result = this.perform(rep, this.inputPath, blsi, constraint1, constraint2);
 		this.previousMissString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).b;
-		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result).b;
+		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result, blsi).b;
 	}
 	
-	public A4Solution nextNearHit(A4Reporter rep, ConstSet<AlloyRelation> canAddSubtract) {
+	public A4Solution nextNearHit(A4Reporter rep, ConstSet<AlloyRelation> suppressAddition, ConstSet<AlloyRelation> suppressSubtraction) {
 
 		String constraint2 = this.previousMissString;
 		
 		currentHit = Utils.and(currentHit, Utils.not(previousHitString));
 		String constraint1 = currentHit;
 		
-		A4Solution result = this.perform(rep, this.inputPath, canAddSubtract, constraint1, constraint2);
+		BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo(lastSolution, SolutionType.NEAR_HIT, suppressAddition, suppressSubtraction);
+		A4Solution result = this.perform(rep, this.inputPath, blsi, constraint1, constraint2);
 		this.previousHitString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).a;
-		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result).a;
+		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result, blsi).a;
 	}
 	
-	public class BordeauxLastSolutionInfo
+	public static class BordeauxLastSolutionInfo
 	{
 		private final Instance lastSolution;
-		private final ConstSet<AlloyRelation> suppressions;
+		private final SolutionType type;
+		private final ConstSet<AlloyRelation> additionSuppressions;
+		private final ConstSet<AlloyRelation> subtractionSuppressions;
 		
-		public BordeauxLastSolutionInfo(Instance lastSolution, ConstSet<AlloyRelation> suppressions)
+		public BordeauxLastSolutionInfo(Instance lastSolution, SolutionType type, ConstSet<AlloyRelation> additionSuppressions, ConstSet<AlloyRelation> subtractionSuppressions)
 		{
 			this.lastSolution = lastSolution;
-			this.suppressions = suppressions;
+			this.type = type;
+			this.additionSuppressions = additionSuppressions;
+			this.subtractionSuppressions = subtractionSuppressions;
 		}
 		
 		public Instance getLastSolutionInstance() throws Err{return lastSolution.clone();}
-		public ConstSet<AlloyRelation> getSuppressions(){return ConstSet.make(suppressions);}
+		public SolutionType getType() {return type;}
+		public ConstSet<AlloyRelation> getAdditionSuppressions() {return ConstSet.make(additionSuppressions);}
+		public ConstSet<AlloyRelation> getSubtractionSuppressions() {return ConstSet.make(subtractionSuppressions);}
 	}
+	
+	public enum SolutionType {NEAR_MISS, NEAR_HIT}
 }

@@ -56,7 +56,7 @@ public final class VizState {
       originalInstance = old.originalInstance;
       currentModel = old.currentModel;
       projectedTypes = new TreeSet<AlloyType>(old.projectedTypes);
-      canAddSubtract = new TreeSet<AlloyRelation>(old.canAddSubtract);
+      addSuppression = new TreeSet<AlloyRelation>(old.addSuppression);
       useOriginalNames = old.useOriginalNames;
       hidePrivate = old.hidePrivate;
       hideMeta = old.hideMeta;
@@ -234,12 +234,19 @@ public final class VizState {
    private Set<AlloyType> projectedTypes = new TreeSet<AlloyType>();
    
    /** The set of relations that can be added and subtracted in bordeaux. */
-   private Set<AlloyRelation> canAddSubtract = new TreeSet<AlloyRelation>();
+   private Set<AlloyRelation> addSuppression = new TreeSet<AlloyRelation>();
 
+   /** The set of relations that can be added and subtracted in bordeaux. */
+   private Set<AlloyRelation> subtractSuppression = new TreeSet<AlloyRelation>();
+   
    /** Gets an unmodifiable copy of the set of types we are currently projecting over. */
    public ConstSet<AlloyType> getProjectedTypes() { return ConstSet.make(projectedTypes); }
    
-   public ConstSet<AlloyRelation> getAddSubtract() { return ConstSet.make(canAddSubtract); }
+   /**Gets an unmodifiable copy of the set of relations whose additions are being suppressed. */
+   public ConstSet<AlloyRelation> getSuppressAdd() { return ConstSet.make(addSuppression); }
+   
+   /**Gets an unmodifiable copy of the set of relations whose subtractions are being suppressed. */
+   public ConstSet<AlloyRelation> getSuppressSubtract() { return ConstSet.make(subtractSuppression); }
 
    /** Returns true iff the type is not univ, and it is a toplevel type. */
    public boolean canProject(final AlloyType type) { return isTopLevel(type); }
@@ -249,8 +256,15 @@ public final class VizState {
       return AlloyType.UNIV.equals(originalInstance.model.getSuperType(type));
    }
 
-   public void addBordeauxRelation(AlloyRelation rel) {canAddSubtract.add(rel);}
-   public void removeBordeauxRelation(AlloyRelation rel) {canAddSubtract.remove(rel);}
+   /** Adds a relation whose addition is to be suppressed.*/
+   public void addAddSuppressionRelation(AlloyRelation rel) {addSuppression.add(rel);}
+   /** Allows a relation that is being suppressed to be added.*/
+   public void removeAddSuppressionRelation(AlloyRelation rel) {addSuppression.remove(rel);}
+   
+   /** Adds a relation whose subtraction is to be suppressed.*/
+   public void addSubtractSuppressionRelation(AlloyRelation rel) {subtractSuppression.add(rel);}
+   /** Allows a relation that is being suppressed to be added. */
+   public void removeSubtractSuppressionRelation(AlloyRelation rel) {subtractSuppression.remove(rel);}
    
    /** Adds type to the list of projected types if it's a toplevel type. */
    public void project(AlloyType type) {

@@ -85,7 +85,7 @@ public final class BordeauxStatsManager {
 			HolaReporter reporter = new HolaReporter();
 			BordeauxEngine engine = BordeauxEngineTest.createBordeauxEngine(reporter, filepath, commandName);
 			
-			A4Solution firstNearMiss = engine.nextNearMiss(reporter, null);
+			A4Solution firstNearMiss = engine.nextNearMiss(reporter, null, null);
 			long solveTime = reporter.solveTime;
 			long evalTime = reporter.evalTime;
 			long translationTime = reporter.trasnalationTime;
@@ -125,7 +125,7 @@ public final class BordeauxStatsManager {
 		options.solver = A4Options.SatSolver.SAT4J;
 		try {
 			A4Solution ans = TranslateAlloyToKodkod.execute_command(A4Reporter.NOP, module.getAllReachableSigs(),
-					commandNot, options, null);
+					commandNot, options);
 			while (ans.satisfiable() && tries < maxRetry) {
 
 				if (equiSAT(filepath, ExtractorUtils.convertBordeauxSolutionToAlloySyntax(firstNearMiss, false).b,
@@ -225,7 +225,7 @@ public final class BordeauxStatsManager {
 
 			@Override
 			public void run() {
-				engine.nextNearMiss(reporter, null);	
+				engine.nextNearMiss(reporter, null, null);	
 				numGenerated.val++;
 			}
 			

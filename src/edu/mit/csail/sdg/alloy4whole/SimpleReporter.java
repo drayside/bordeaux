@@ -544,7 +544,8 @@ public class SimpleReporter extends A4Reporter {
     static final class SimpleTask2 implements WorkerTask {
         private static final long serialVersionUID = 0;
         public String filename = "";
-        public ConstSet<AlloyRelation> relations;
+        public ConstSet<AlloyRelation> suppressAddition;
+        public ConstSet<AlloyRelation> suppressSubtraction;
         public boolean useBordeaxEngine;
         public BordeauxNextType nextType;
         public transient WorkerCallback out = null;
@@ -580,13 +581,13 @@ public class SimpleReporter extends A4Reporter {
             		switch(nextType) {
             		case NearHit: {
             			cb("bold", "Searching for next 'near-hit' instance...\n");
-            			sol = engine.nextNearHit(latestRep, relations);
+            			sol = engine.nextNearHit(latestRep, suppressAddition, suppressSubtraction);
             			break;
             		}
             		
             		case NearMiss: {
             			cb("bold", "Searching for next 'near-miss' instance...\n");
-            			sol = engine.nextNearMiss(latestRep, relations);
+            			sol = engine.nextNearMiss(latestRep, suppressAddition, suppressSubtraction);
             			break;
             		}
             		
@@ -734,7 +735,7 @@ public class SimpleReporter extends A4Reporter {
 //                    //TranslateAlloyToKodkod.execute_commandFromBook(rep, world.getAllReachableSigs(), cmd, options);
 //                }
                 
-                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options, null);
+                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(latestRep, world.getAllReachableSigs(), cmd, options);
                 sol = tr.getFrame();
                 latestKodkod = sol;
                 sol = tr.executeCommandFromBook();

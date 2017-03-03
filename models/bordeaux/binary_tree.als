@@ -1,4 +1,3 @@
-
 sig Node{
 	left:  lone  Node,
 	right: lone  Node}

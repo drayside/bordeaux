@@ -1597,7 +1597,8 @@ public final class SimpleGUI implements ComponentListener, Listener {
         	BordeauxData bd = (BordeauxData) input;
         	task.filename = bd.xmlFileName;
         	arg = bd.xmlFileName;
-        	task.relations = bd.canAddSubtract;
+        	task.suppressAddition = bd.suppressAddition;
+        	task.suppressSubtraction = bd.suppressSubtraction;
         }
         else
         {

@@ -44,8 +44,8 @@ import edu.mit.csail.sdg.alloy4compiler.translator.TranslateDeclarativeConstrian
 import edu.mit.csail.sdg.alloy4viz.AlloyRelation;
 import edu.uw.ece.bordeaux.Configuration;
 import edu.uw.ece.bordeaux.engine.BordeauxEngine.BordeauxLastSolutionInfo;
+import edu.uw.ece.bordeaux.engine.BordeauxEngine.SolutionType;
 import kodkod.ast.Formula;
-import kodkod.ast.Relation;
 
 /**
  * This class is for executing the decomposer using Alloy 4
@@ -126,7 +126,7 @@ public class A4CommandExecuter {
 
 		for (Command command : world.getAllCommands()) {
 			A4Solution ans = TranslateAlloyToKodkod.execute_command(rep,
-					world.getAllReachableSigs(), command, options, null);
+					world.getAllReachableSigs(), command, options);
 			if (Configuration.IsInDeubbungMode)
 				logger.log(Level.INFO, "[" + Thread.currentThread().getName() + "]"
 						+ "An Alloy is executed and the result is: " + ans);
@@ -174,6 +174,11 @@ public class A4CommandExecuter {
 	}
 
 	public A4Solution runAlloyThenGetAnswers(String filename, A4Reporter rep, String commandName) throws Err {
+		BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo(null, null, null, null);
+		return  runAlloyThenGetAnswers(filename, rep, commandName, blsi);
+	}
+	
+	public A4Solution runAlloyThenGetAnswers(String filename, A4Reporter rep, String commandName, BordeauxLastSolutionInfo blsi) throws Err {
 		
 		A4Solution result = null;
 		// Parse+typecheck the model
@@ -199,7 +204,8 @@ public class A4CommandExecuter {
 						+ "============ Command " + command + ": ============");
 
 			result = TranslateAlloyToKodkod.execute_command(rep,
-					world.getAllReachableSigs(), command, options, null);
+					world.getAllReachableSigs(), command, options, blsi.getLastSolutionInstance(),
+					blsi.getType()==SolutionType.NEAR_MISS ? true : false, blsi.getAdditionSuppressions(), blsi.getSubtractionSuppressions());
 		}
 
 		if (null == result)
@@ -240,7 +246,7 @@ public class A4CommandExecuter {
 							+ "============ Command " + command + ": ============");
 
 				result.put(command, TranslateAlloyToKodkod.execute_command(rep,
-						world.getAllReachableSigs(), command, options, null));
+						world.getAllReachableSigs(), command, options, null, false, null, null));
 			}
 		}
 
@@ -256,6 +262,7 @@ public class A4CommandExecuter {
          opt.tempDirectory = alloyHome() + fs + "tmp";
         //opt.tempDirectory = tmpDirectory;
         opt.solverDirectory = alloyHome() + fs + "binary";
+        opt.enableBordeaux = true;
         opt.recordKodkod = RecordKodkod.get();
         opt.noOverflow = NoOverflow.get();
         opt.unrolls = Version.experimental ? Unrolls.get() : (-1);
@@ -288,7 +295,10 @@ public class A4CommandExecuter {
 
 //                result.put(command, TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, opt));
                 
-                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(rep, world.getAllReachableSigs(), command, opt, blsi.getLastSolutionInstance(), blsi.getSuppressions().toArray(new AlloyRelation[0]));
+                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(rep, world.getAllReachableSigs(), command, opt,
+                		blsi.getLastSolutionInstance(), (blsi.getType()==SolutionType.NEAR_MISS) ? true : false,
+                		blsi.getAdditionSuppressions(),
+                		blsi.getSubtractionSuppressions());
                 A4Solution sol = tr.executeCommand();
 //                System.exit(0);
                 result.put(commandName, sol);
@@ -298,8 +308,8 @@ public class A4CommandExecuter {
         return result;
 	}
 	
-	public void runAlloy(String fileName, A4Reporter rep, String commandName) throws Err {
-		runAlloyThenGetAnswers(fileName, rep, commandName);
+	public void runAlloy(String fileName, A4Reporter rep, BordeauxLastSolutionInfo blsi, String commandName) throws Err {
+		runAlloyThenGetAnswers(fileName, rep, commandName, blsi);
 	}
 	
 	public void runAlloy(String[] args, A4Reporter rep) throws Err {

@@ -32,8 +32,11 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4Tuple;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4TupleSet;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.Configuration;
+import edu.uw.ece.bordeaux.engine.BordeauxEngine.BordeauxLastSolutionInfo;
+import edu.uw.ece.bordeaux.engine.BordeauxEngine.SolutionType;
 import edu.uw.ece.bordeaux.onborder.OnBorderCodeGenerator;
 import edu.uw.ece.bordeaux.tests.Elaboration;
+import kodkod.instance.Instance;
 
 /**
  * The class contains static methods that are helpful for extracting Alloy
@@ -264,7 +267,7 @@ public class ExtractorUtils {
 
 	}
 	
-	public static Pair<A4Solution, A4Solution> convertBordeauxSolutionToAlloySolution(A4Solution solution) {
+	public static Pair<A4Solution, A4Solution> convertBordeauxSolutionToAlloySolution(A4Solution solution, BordeauxLastSolutionInfo blsi) {
 
 		final File fileName = solution.getAllReachableSigs().makeCopy().stream().filter(s -> !s.builtin)
 				.filter(s -> s.pos.filename != "").map(s -> new File(s.pos.filename)).findFirst().get();
@@ -284,11 +287,21 @@ public class ExtractorUtils {
 		}
 
 		Pair<A4Solution, A4Solution> result = new Pair<>(null, null);
+		
+		Instance inst = null;
+		try
+		{
+			inst = blsi.getLastSolutionInstance();
+		}
+		catch (Err e)
+		{}
+		BordeauxLastSolutionInfo blsi_a_ = new BordeauxLastSolutionInfo(inst, SolutionType.NEAR_HIT, blsi.getAdditionSuppressions(), blsi.getSubtractionSuppressions());
+		BordeauxLastSolutionInfo blsi_b_ = new BordeauxLastSolutionInfo(inst, SolutionType.NEAR_MISS, blsi.getAdditionSuppressions(), blsi.getSubtractionSuppressions());
 		try {
 			result = new Pair<>(
-					A4CommandExecuter.get().runAlloyThenGetAnswers(toSolution.getAbsolutePath(), A4Reporter.NOP, "_a_"),
+					A4CommandExecuter.get().runAlloyThenGetAnswers(toSolution.getAbsolutePath(), A4Reporter.NOP, "_a_", blsi_a_),
 					A4CommandExecuter.get().runAlloyThenGetAnswers(toSolution.getAbsolutePath(), A4Reporter.NOP,
-							"_b_"));
+							"_b_", blsi_b_));
 		} catch (Err e) {
 			e.printStackTrace();
 		}
