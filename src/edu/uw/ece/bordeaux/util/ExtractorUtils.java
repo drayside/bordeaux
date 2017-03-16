@@ -288,15 +288,11 @@ public class ExtractorUtils {
 
 		Pair<A4Solution, A4Solution> result = new Pair<>(null, null);
 		
-		Instance inst = null;
-		try
-		{
-			inst = blsi.getLastSolutionInstance();
-		}
-		catch (Err e)
-		{}
-		BordeauxLastSolutionInfo blsi_a_ = new BordeauxLastSolutionInfo(inst, SolutionType.NEAR_HIT, blsi.getAdditionSuppressions(), blsi.getSubtractionSuppressions());
-		BordeauxLastSolutionInfo blsi_b_ = new BordeauxLastSolutionInfo(inst, SolutionType.NEAR_MISS, blsi.getAdditionSuppressions(), blsi.getSubtractionSuppressions());
+		Instance inst = blsi.getLastSolutionInstance();
+		BordeauxLastSolutionInfo blsi_a_ = new BordeauxLastSolutionInfo(inst!=null ? inst.clone() : null, SolutionType.NEAR_HIT, blsi.getAtoms(),
+				blsi.getAdditionSuppressions(), blsi.getSubtractionSuppressions());
+		BordeauxLastSolutionInfo blsi_b_ = new BordeauxLastSolutionInfo(inst!=null ? inst.clone() : null, SolutionType.NEAR_MISS, blsi.getAtoms(),
+				blsi.getAdditionSuppressions(), blsi.getSubtractionSuppressions());
 		try {
 			result = new Pair<>(
 					A4CommandExecuter.get().runAlloyThenGetAnswers(toSolution.getAbsolutePath(), A4Reporter.NOP, "_a_", blsi_a_),

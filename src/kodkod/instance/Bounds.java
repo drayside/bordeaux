@@ -455,4 +455,8 @@ public final class Bounds implements Cloneable {
         return null;
     }
 
+    public TupleSet emptyAtomSet()
+    {
+    	return new TupleSet(factory.universe(), 1);
+    }
 }

@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,10 +31,12 @@ import kodkod.ast.Expression;
 import kodkod.ast.Formula;
 import kodkod.ast.Relation;
 import kodkod.ast.Variable;
+import kodkod.instance.Instance;
 import kodkod.instance.Tuple;
 import kodkod.instance.TupleFactory;
 import kodkod.instance.TupleSet;
 import kodkod.instance.Universe;
+import edu.mit.csail.sdg.alloy4.ConstSet;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.ErrorFatal;
 import edu.mit.csail.sdg.alloy4.IA4Reporter;
@@ -55,6 +58,7 @@ import edu.mit.csail.sdg.alloy4compiler.ast.Sig.SubsetSig;
 import edu.mit.csail.sdg.alloy4compiler.ast.Type;
 import edu.mit.csail.sdg.alloy4compiler.translator.PartialInstance.Atom;
 import edu.mit.csail.sdg.alloy4compiler.translator.PartialInstance.Fix;
+import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod.LastInstanceInfo;
 
 /** Immutable; this class assigns each sig and field to some Kodkod relation or expression, then set the bounds. */
 
@@ -75,6 +79,9 @@ final class BoundsComputer {
     /** Stores the computed scope for each sig. */
     private final ScopeComputer sc;
 
+    /** Stores the information of the last instance. */
+    private final LastInstanceInfo lsi;
+    
     /** Stores the upperbound for each sig. */
     private final Map<Sig,TupleSet> ub = new LinkedHashMap<Sig,TupleSet>();
 
@@ -159,10 +166,68 @@ final class BoundsComputer {
 
     private void allocateAtomSig(AtomSig sig) throws Err {
         TupleSet lower = factory.setOf(sig.shortLabel());
-        Relation exp = sol.addRel(sig.label, lower, lower, true);
+        if (lsi!= null && lsi.getLastSolution() != null)
+        {
+        	Instance inst = lsi.getLastSolution();
+        	boolean found = false;
+        	for (Relation r : inst.relations())
+        	{
+        		if (r.name().equals(sig.label) && inst.relationTuples().get(r) != null)
+        		{
+        			found = true; break;
+        		}
+        	}
+        	if (!found) return;
+        }
+        Relation exp = sol.addRel(sig.label, lower, lower, true);//atoms
         sol.addSig(sig, exp);
     }
 
+    private TupleSet getOldTuples(String relName)
+    {
+    	 Instance inst = null;
+         if (lsi!=null && lsi.getLastSolution() !=null) inst = lsi.getLastSolution();
+         if (inst != null)
+         {
+         	Map<Relation, TupleSet> rel2Tuples = inst.relationTuples();
+         	for (Relation r : rel2Tuples.keySet())
+         	{
+         		if (r.name().equals(relName))
+         		{
+         			TupleSet tuples = rel2Tuples.get(r);
+         			return tuples.clone();//lower = tuples.clone(); upper = tuples.clone();
+         		}
+         	}
+         	//lower = lb.get(sig).clone(); upper = ub.get(sig).clone();
+         }	
+         return null;
+    }
+    
+    /** Helper method for translating tuples of one instance to tuples of another instance. */
+    private TupleSet translateTuples(String relName)
+    {
+    	TupleSet temp;
+        if ((temp = getOldTuples(relName)) != null)
+        {
+        	Iterator<Tuple> it = temp.iterator();
+			ArrayList<Tuple> tuples = new ArrayList<Tuple>();
+			//TODO This assumes that the universe is identical between the old and new factories.
+			while (it.hasNext())
+			{
+				Tuple nextTuple = it.next();
+				ArrayList<Object> atoms = new ArrayList<Object>();
+				for (int i = 0;i<nextTuple.arity();i++)
+				{
+					atoms.add(nextTuple.atom(i));
+				}
+				Tuple newTuple = factory.tuple(atoms);
+				tuples.add(newTuple);
+			}
+			return !tuples.isEmpty() ? factory.setOf(tuples) : null;
+        }
+        return null;
+    }
+    
     /** Allocate relations for nonbuiltin PrimSigs bottom-up. */
     private Expression allocatePrimSig(PrimSig sig) throws Err {
         for (AtomSig as: sig.atomSigs()) allocateAtomSig(as);
@@ -175,10 +240,21 @@ final class BoundsComputer {
            sol.addFormula(sum.intersection(childexpr).no(), child.isSubsig);
            sum = sum.union(childexpr);
         }
-        TupleSet lower = lb.get(sig).clone(), upper = ub.get(sig).clone();
-        if (sum == null) {
+        
+        TupleSet lower, upper;
+        boolean determined = false;
+        if ((lower = translateTuples(sig.label)) != null)
+        {
+        	upper = lower; determined = true;
+        }
+        else
+        {
+        	lower = lb.get(sig).clone(); upper = ub.get(sig).clone();
+        }
+        
+        if (sum == null || determined) {
            // If sig doesn't have children, then sig should make a fresh relation for itself
-           sum = sol.addRel(sig.label, lower, upper, false);
+           sum = sol.addRel(sig.label, lower, upper, false);//Node list
         } else if (sig.isAbstract == null) {
            // If sig has children, and sig is not abstract, then create a new relation to act as the remainder.
            for(PrimSig child:sig.children()) {
@@ -206,7 +282,8 @@ final class BoundsComputer {
         // check if it is a int subset sig and whether we have a bound for it
         IntSubsetScope iss = sc.intsub2scope(sig);
         if (iss != null) {
-            TupleSet ts = factory.noneOf(1);
+            TupleSet ts;
+            if ((ts = translateTuples(sig.label)) == null) ts = factory.noneOf(1);// else ts = temp;
             for (int i : iss.intScope.enumerate()) {
                 ts.add(factory.tuple(""+i));
             }
@@ -216,7 +293,8 @@ final class BoundsComputer {
         }
         
         // Recursively form the union of all parent expressions
-        TupleSet ts = factory.noneOf(1);
+        TupleSet ts;// = factory.noneOf(1);
+        if ((ts = translateTuples(sig.label)) == null) ts = factory.noneOf(1);
         for(Sig parent:sig.parents) {
            Expression p = (parent instanceof PrimSig) ? sol.a2k(parent) : allocateSubsetSig((SubsetSig)parent);
            ts.addAll(sol.query(true, p, false));
@@ -285,11 +363,12 @@ final class BoundsComputer {
     }
 
     /** Computes the bounds for sigs/fields, then construct a BoundsComputer object that you can query. */
-    private BoundsComputer(IA4Reporter rep, A4Solution sol, ScopeComputer sc, Iterable<Sig> sigs) throws Err {
+    private BoundsComputer(IA4Reporter rep, A4Solution sol, ScopeComputer sc, Iterable<Sig> sigs, LastInstanceInfo lsi) throws Err {
         this.sc = sc;
         this.factory = sol.getFactory();
         this.rep = rep;
         this.sol = sol;
+        this.lsi = lsi;
         // Figure out the sig bounds
         final Universe universe = factory.universe();
         final int atomN = universe.size();
@@ -335,6 +414,8 @@ final class BoundsComputer {
                  lastTS=TS;
               }
               if (firstTS.size()!=(n>0 ? 1 : 0) || nextTS.size() != n-1) break;
+              //TODO should I get information from the last solution for this? This seems to be the fields of the signature which is instance independant.
+              //So this might be constant throughout the program (hence no need to change). How do fields appear in the graph?
               sol.addField(f1, sol.addRel(s.label+"."+f1.label, firstTS, firstTS, false));
               sol.addField(f2, sol.addRel(s.label+"."+f2.label, nextTS, nextTS, false));
               rep.bound("Field "+s.label+"."+f1.label+" == "+firstTS+"\n");
@@ -362,8 +443,10 @@ final class BoundsComputer {
               {
             	  t = f.type();
               }
+              
+              TupleSet ub, piLb;
               //compute upper
-              TupleSet ub = factory.noneOf(t.arity());
+              ub = factory.noneOf(t.arity());
               for(List<PrimSig> p:t.fold()) {
                  TupleSet upper=null;
                  int col = 0;
@@ -384,7 +467,7 @@ final class BoundsComputer {
                  ub.addAll(upper);
               }
               // compute bounds from partial instance
-              TupleSet piLb = null;
+              piLb = null;
               List<List<Atom>> fldLo = sc.pi.fldLower2(s.shortLabel(), f.label, ub.arity());
               if (fldLo != null) piLb = toKodkodTupleSet(fldLo, ub.arity(), sigs);
 
@@ -409,7 +492,35 @@ final class BoundsComputer {
                  }
                  ub.removeAll(tuplesToRemove);
               }
-
+              
+              final String name = s.label + "." + f.label;
+              boolean addSupp = false; boolean subSupp =false;
+              if (lsi!=null)
+              {
+            	  //TODO what if multiple sigs have relations of the same name?
+            	  ConstSet<String> addRel = lsi.getAddSuppAsString();
+            	  ConstSet<String> subRel = lsi.getSubSuppAsString();
+            	  if (addRel != null && addRel.contains(f.label)) addSupp = true;
+            	  if (subRel != null && subRel.contains(f.label)) subSupp = true;
+              }
+              TupleSet temp = translateTuples(name);
+              
+              if (subSupp)
+              {
+            	  if (temp == null) piLb = null;
+            	  else piLb = temp.clone();        	    
+              }
+              if (addSupp)
+              { 
+            	  if (temp != null)
+            	  {
+            		  ub = temp.clone();
+            	  }
+            	  else
+            	  {
+            		  ub.clear();
+            	  }
+              }
               //*******************************************************************************************
               //TODO: temp testing, remove
 //              final Set<String> rels = new HashSet<String>(Arrays.asList("left", "right", "then", "elsen"));
@@ -450,8 +561,9 @@ final class BoundsComputer {
 //                 }
 //              }
               //------------------
-              
-              Relation r = sol.addRel(s.label+"."+f.label, piLb, ub, s.isAtom != null);
+              //Relations
+              //if (temp != null){ piLb = temp; ub = temp;}
+              Relation r = sol.addRel(name, piLb, ub, s.isAtom != null);
               sol.addField(f, r);
            }
         }
@@ -557,7 +669,12 @@ final class BoundsComputer {
 
     /** Assign each sig and field to some Kodkod relation or expression, then set the bounds. */
     static void compute (IA4Reporter rep, A4Solution sol, ScopeComputer sc, Iterable<Sig> sigs) throws Err {
-        new BoundsComputer(rep, sol, sc, sigs);
+        new BoundsComputer(rep, sol, sc, sigs, null);
+    }
+    
+    /** Assign each sig and field to some Kodkod relation or expression, then set the bounds. This includes the information from the previous instance. */
+    static void compute (IA4Reporter rep, A4Solution sol, ScopeComputer sc, Iterable<Sig> sigs, LastInstanceInfo lsi) throws Err {
+    	new BoundsComputer(rep, sol, sc, sigs, lsi);
     }
 
     class Aux {

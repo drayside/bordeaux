@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -37,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeSet;
 
 import kodkod.ast.BinaryExpression;
 import kodkod.ast.BinaryFormula;
@@ -222,7 +224,8 @@ public class A4Solution {
     private final PartialInstance partialInstance;
     /** whether or not to rename atoms */
     private boolean renameAtoms = true;
-
+    /** whether this A4Solution is the one currently being displayed in the VizGui.*/
+    private boolean currShown = false;
 //    /** The bitwidth; always between 1 and 30. */
 //    private final int bitwidth;
 //
@@ -407,6 +410,7 @@ public class A4Solution {
            eval = null;
            a2k = old.a2k;
         }
+        compInst = inst;
         s2k = old.s2k;
         atoms = atoms.dup();
         atom2name = ConstMap.make(atom2name);
@@ -1047,10 +1051,11 @@ public class A4Solution {
         for(Relation r: bounds.relations()) if (!r.isAtom()) formulas.add(r.eq(r)); // Without this, kodkod refuses to grow unmentioned relations
         fgoal = Formula.and(formulas);
 
-        Instance old = null;
+        /*Instance old = null;
         ConstSet<AlloyRelation> additionSuppression = null;
         ConstSet<AlloyRelation> subtractionSuppression = null;
         SolutionType type = null;
+        ConstSet<ExprVar> constAtoms = null;
         
         if (lsi!=null)
         {
@@ -1058,6 +1063,7 @@ public class A4Solution {
         	additionSuppression = lsi.getAdditionSuppression();
         	subtractionSuppression = lsi.getSubtractionSuppression();
         	type = lsi.getType();
+        	constAtoms = lsi.getAtoms();
         }
         
         if (old!=null && (additionSuppression!=null || subtractionSuppression!=null))
@@ -1067,7 +1073,7 @@ public class A4Solution {
         	ArrayList<AlloyRelation> subCopy = new ArrayList<AlloyRelation>();
         	if (subtractionSuppression!=null) subCopy = new ArrayList<AlloyRelation>(subtractionSuppression);
         	if (type==null) type = SolutionType.NEAR_MISS;//throw new ErrorAPI("Bordeaux next graph type unknown (Near-Miss, Near-Hit).");
-        	final String marginal = (type == SolutionType.NEAR_MISS) ? "" : "'";
+        	final String marginal = (type == SolutionType.NEAR_MISS) ? "'" : "";
         	
         	Map<Relation, TupleSet> ts = old.relationTuples();
         	
@@ -1085,10 +1091,11 @@ public class A4Solution {
 		        			for (Relation key : ts.keySet())
 		        			{
 		        				String n = key.name();
-		        				if (n.indexOf("$findMarginalInstances_node_")==0 && n.substring(n.lastIndexOf('_')).equalsIgnoreCase('_'+rel.getName()+marginal)) 
+		        				//if (n.indexOf("$findMarginalInstances_node_")==0 && n.substring(n.lastIndexOf('_')).equalsIgnoreCase('_'+rel.getName()+marginal)) 
+		        				if (n.indexOf("this/Node.")==0 && n.substring(n.indexOf('.')).equalsIgnoreCase('.'+rel.getName()))
 		        					oldTuples = ts.get(key);
 		        			}
-		        			if (oldTuples==null)
+		        			if (oldTuples==null || oldTuples.isEmpty())
 		        			{
 		        				bounds.emptyTupleSet(r);
 		        				continue;
@@ -1096,7 +1103,18 @@ public class A4Solution {
 		        			Iterator<Tuple> it = oldTuples.iterator();
 		        			ArrayList<Tuple> tuples = new ArrayList<Tuple>();
 		        			//TODO This assumes that the universe is identical between the old and new factories.
-		        			while (it.hasNext()) tuples.add(factory.tuple(oldTuples.arity(), it.next().index()));
+		        			while (it.hasNext())
+		        			{
+		        				Tuple nextTuple = it.next();
+		        				ArrayList<Object> atoms = new ArrayList<Object>();
+		        				for (int i = 0;i<nextTuple.arity();i++)
+		        				{
+		        					atoms.add(nextTuple.atom(i));
+		        				}
+		        				Tuple newTuple = factory.tuple(atoms);
+		        				//Tuple newTup = factory.tuple(oldTuples.arity(), it.next().i);
+		        				tuples.add(newTuple);
+		        			}
 		        			if (tuples.isEmpty()) continue;
 		        			TupleSet newTuples = factory.setOf(tuples);
 		        			if (subCopy.contains(rel))
@@ -1111,8 +1129,14 @@ public class A4Solution {
 	        					Iterator<Tuple> tupIter = lower.iterator();
 	        					while (tupIter.hasNext())
 	        					{
-	        						Tuple tuple = tupIter.next();
-	        						if (!newTuples.contains(tuple)) newTuples.add(tuple);
+	        						Tuple nextTuple = tupIter.next();
+	        						ArrayList<Object> atoms = new ArrayList<Object>();
+			        				for (int i = 0;i<nextTuple.arity();i++)
+			        				{
+			        					atoms.add(nextTuple.atom(i));
+			        				}
+			        				Tuple newTuple = factory.tuple(atoms);
+	        						if (!newTuples.contains(newTuple)) newTuples.add(newTuple);
 	        					}
 		        				bounds.bound(r, lower, newTuples);
 		        			}
@@ -1120,36 +1144,6 @@ public class A4Solution {
 		        		}
 		        	}
 		        }
-	        	/*for (Relation r : ts.keySet())
-		        {
-		        	String name = r.name();
-		        	TupleSet oldTuples = ts.get(r);
-		        	Iterator<Tuple> it = oldTuples.iterator();
-		        	ArrayList<Tuple> tuples = new ArrayList<Tuple>();
-        			//TODO This assumes that the universe is identical between the old and new factories.
-		        	while(it.hasNext()) tuples.add(factory.tuple(oldTuples.arity(), it.next().index()));
-		        	if (tuples.isEmpty()) continue;
-		        	if (name.indexOf("$findMarginalInstances_node")==0)
-		        	{
-		        		ArrayList<String> names = new ArrayList<String>();
-		        		for (Relation relation : bounds.relations())
-		        		{
-		        			names.add(relation.name());
-		        		}
-		        		//for (String relName : names)
-		        		{
-		        			int i = name.lastIndexOf('_')+1;
-		        			if (i!=0 && i<name.length() && rel.getName().toString().equalsIgnoreCase(name.substring(i)))
-		        			{
-		        				//this.addRel(name, factory.setOf(tuples), factory.setOf(tuples), false);
-		        			}
-		        		}
-		        	}
-		        	else if (name.indexOf("$findMarginalInstances__node")==0)
-		        	{
-	        			//this.addRel(name, factory.setOf(tuples), factory.setOf(tuples), false);
-		        	}
-		        }*/
 	        }
 	        
         	if (subtractionSuppression!=null)
@@ -1158,23 +1152,30 @@ public class A4Solution {
 		        {
 		        	for (Relation r: bounds.relations())
 		        	{
-		        		if (r.name().indexOf("$this/Node.")!=0) continue;
-		        		if (r.toString().equals("$this/Node." + rel.getName()))
+		        		if (r.name().indexOf("this/Node.")!=0) continue;
+		        		if (r.toString().equals("this/Node." + rel.getName()))
 		        		{
 		        			TupleSet upper = bounds.upperBound(r);
 		        			TupleSet oldTuples = null;
 		        			for (Relation key : ts.keySet())
 		        			{
 		        				String n = key.name();
-		        				if (n.indexOf("$findMarginalInstances_node_")==0 && n.substring(n.lastIndexOf('_')).equalsIgnoreCase('_'+rel.getName()+marginal)) 
+		        				//if (n.indexOf("$findMarginalInstances_node_")==0 && n.substring(n.lastIndexOf('_')).equalsIgnoreCase('_'+rel.getName()+marginal)) 
+		        				if (n.indexOf("this/Node.")==0 && n.substring(n.indexOf('.')).equalsIgnoreCase('.'+rel.getName()))
 		        					oldTuples = ts.get(key);
 		        			}
 		        			if (oldTuples==null) continue;
 		        			Iterator<Tuple> tupIter = oldTuples.iterator();
 		        			while (tupIter.hasNext())
 		        			{
-		        				Tuple tuple = tupIter.next();
-		        				if (!upper.contains(tuple)) upper.add(tuple);
+		        				Tuple nextTuple = tupIter.next();
+        						ArrayList<Object> atoms = new ArrayList<Object>();
+		        				for (int i = 0;i<nextTuple.arity();i++)
+		        				{
+		        					atoms.add(nextTuple.atom(i));
+		        				}
+		        				Tuple newTuple = factory.tuple(atoms);
+		        				if (!upper.contains(newTuple)) upper.add(newTuple);
 		        			}
 		        			bounds.bound(r, oldTuples, upper);
 		        		}
@@ -1182,6 +1183,57 @@ public class A4Solution {
 		        }
 	        }
         }   
+        
+        //This is supposed to make sure the atoms are consistent throughout each frame.
+        if (constAtoms!=null)
+        {
+        	for (Relation r : bounds.relations())
+        	{
+        		if (r.name().equals("this/Node"))
+        		{
+        			ConstSet<ExprVar> atoms = lsi.getAtoms();
+        			HashSet<String> atomNames = new HashSet<String>();
+        			for (ExprVar atom : atoms)
+        			{
+        				//atomNames.add(atom.label);
+        				Iterator<Object> it = bounds.universe().iterator();
+        				while (it.hasNext())
+        				{
+        					Object boundsAtom = it.next();
+        					if (atom.label!=null && atom.label.equals(boundsAtom.toString()))
+        					{
+        						atomNames.add(atom.label);
+        					}
+        				}
+        			}
+        			
+        			TupleSet tupSet = bounds.upperBound(r);
+        			TupleSet copy = bounds.emptyAtomSet();
+        			for (Tuple tup : tupSet){copy.add(tup);}
+        			Iterator<Tuple> tupIt = copy.iterator();
+        			TupleSet removeThese = bounds.emptyAtomSet();
+        			//TupleSet newTupSet = new TupleSet(bounds.universe(), 1);
+        			while (tupIt.hasNext())
+        			{
+        				Tuple tuple = tupIt.next();
+        				boolean found = false;
+        				for (String atomName : atomNames)
+        				{
+        					if (tuple.atom(0).toString().equals(atomName))
+        					{
+        						found = true;
+        						break;
+        					}
+        				}
+        				
+        				if (!found){removeThese.add(tuple);}
+        			}
+        			
+        			copy.removeAll(removeThese);
+        			bounds.boundExactly(r, copy);
+        		}
+        	}
+        }*/
         rep.generatingSolution(fgoal, bounds);
 
         // Now pick the solver and solve it!
@@ -1436,6 +1488,12 @@ public class A4Solution {
 	/** Return a copy of instance that was completed. */
 	public Instance getCompleteInstance()
 	{
-		return compInst.clone();
+		return compInst != null ? compInst.clone() : null;
 	}
+	
+	/** Changes the indicator that tells whether this A4Solution is the one currently being shown. */
+	public void verifyDisplayed() {this.currShown = true;}
+	
+	/** Whether this A4Solution is the one currently being shown.*/
+	public boolean currentlyDisplayed() {return this.currShown;}
 }

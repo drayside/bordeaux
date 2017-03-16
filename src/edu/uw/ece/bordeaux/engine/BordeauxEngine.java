@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -21,6 +22,7 @@ import edu.mit.csail.sdg.alloy4.ConstSet;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
+import edu.mit.csail.sdg.alloy4compiler.ast.ExprVar;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.mit.csail.sdg.alloy4viz.AlloyRelation;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
@@ -47,7 +49,10 @@ public final class BordeauxEngine {
 	private String previousHitString;
 	private String previousMissString;
 	private A4Solution initialSolution;
-	private Instance lastSolution;
+	//private A4Solution lastSolution;
+	private A4Solution lastNearHitSolution;
+	private A4Solution lastNearMissSolution;
+	boolean hitSolution = true;
 	private Command command;
 	private OnBorderCodeGenerator generator;
 	private File onBorderFile;
@@ -396,7 +401,6 @@ public final class BordeauxEngine {
 		if (Configuration.IsInDeubbungMode) {
 			logger.info("Alloy* Complete on : " + onBorderFile + ". Status: " + (success ? "Successful":"Failed"));
 		}
-		lastSolution = result.getCompleteInstance();
 		return result;
 	}
 	
@@ -422,7 +426,8 @@ public final class BordeauxEngine {
 
 	private void initSolution(A4Solution sol) {
 		this.initialSolution = sol;
-		this.lastSolution = sol.getCompleteInstance();
+		this.lastNearHitSolution = sol;
+		this.lastNearMissSolution = null;
 		this.previousHitString = ExtractorUtils.convertA4SolutionToAlloySyntax(sol, true);
 		
 		this.createCodeGenerator(inputPath, command);
@@ -443,12 +448,29 @@ public final class BordeauxEngine {
 		currentMiss = Utils.and(this.currentMiss, Utils.not(this.previousMissString));
 		String constraint2 = currentMiss;
 		
-		BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo(lastSolution, SolutionType.NEAR_MISS, suppressAddition, suppressSubtraction);
+		BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo((
+				lastNearHitSolution!=null && lastNearHitSolution.getCompleteInstance()!=null) ?
+				lastNearHitSolution.getCompleteInstance().clone() : null, SolutionType.NEAR_MISS,
+				lastNearHitSolution.getAllAtoms(), suppressAddition, suppressSubtraction);
+		Instance temp = (lastNearHitSolution!=null && lastNearHitSolution.getCompleteInstance()!=null) ? lastNearHitSolution.getCompleteInstance().clone() : null;
 		A4Solution result = this.perform(rep, this.inputPath, blsi, constraint1, constraint2);
+		//TODO if b is empty should it still be assigned?
 		this.previousMissString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).b;
-		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result, blsi).b;
+		//Creating new last solution.
+		BordeauxLastSolutionInfo blsi2 = new BordeauxLastSolutionInfo(temp, SolutionType.NEAR_MISS, lastNearHitSolution.getAllAtoms(), suppressAddition, suppressSubtraction);
+		A4Solution sol = ExtractorUtils.convertBordeauxSolutionToAlloySolution(result, blsi2).b;
+		if (sol!=null && sol.satisfiable())
+		{	
+			lastNearMissSolution = sol;
+			hitSolution = false;
+			return sol;
+		}
+		else
+		{
+			return lastSolution();
+		}
 	}
-	
+	//TODO change next function to change the nextnearhit.
 	public A4Solution nextNearHit(A4Reporter rep, ConstSet<AlloyRelation> suppressAddition, ConstSet<AlloyRelation> suppressSubtraction) {
 
 		String constraint2 = this.previousMissString;
@@ -456,31 +478,62 @@ public final class BordeauxEngine {
 		currentHit = Utils.and(currentHit, Utils.not(previousHitString));
 		String constraint1 = currentHit;
 		
-		BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo(lastSolution, SolutionType.NEAR_HIT, suppressAddition, suppressSubtraction);
+		BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo(
+				(lastNearMissSolution!=null && lastNearMissSolution.getCompleteInstance()!=null) ?
+				lastNearMissSolution.getCompleteInstance() : null, SolutionType.NEAR_HIT,
+				lastNearHitSolution.getAllAtoms(), suppressAddition, suppressSubtraction);
+		Instance temp = (lastNearMissSolution!=null && lastNearMissSolution.getCompleteInstance()!=null) ? lastNearMissSolution.getCompleteInstance().clone() : null;
 		A4Solution result = this.perform(rep, this.inputPath, blsi, constraint1, constraint2);
 		this.previousHitString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).a;
-		return ExtractorUtils.convertBordeauxSolutionToAlloySolution(result, blsi).a;
+		BordeauxLastSolutionInfo blsi2 = new BordeauxLastSolutionInfo(temp, SolutionType.NEAR_HIT, lastNearMissSolution!=null ? lastNearMissSolution.getAllAtoms() : null, suppressAddition, suppressSubtraction);
+		A4Solution sol = ExtractorUtils.convertBordeauxSolutionToAlloySolution(result, blsi2).a;
+		if (sol!=null && sol.satisfiable())
+		{	
+			lastNearHitSolution = sol;
+			hitSolution = true;
+			return sol;
+		}
+		else
+		{
+			return lastSolution();
+		}
+	}
+	
+	private A4Solution lastSolution()
+	{
+		if (hitSolution)
+		{
+			if (lastNearHitSolution!=null && lastNearHitSolution.equals(initialSolution)) lastNearHitSolution.verifyDisplayed();
+			return lastNearHitSolution;
+		}
+		else return lastNearMissSolution;
 	}
 	
 	public static class BordeauxLastSolutionInfo
 	{
+		//TODO instance can't be null
 		private final Instance lastSolution;
 		private final SolutionType type;
+		private final ArrayList<ExprVar> atoms = new ArrayList<ExprVar>();;
 		private final ConstSet<AlloyRelation> additionSuppressions;
 		private final ConstSet<AlloyRelation> subtractionSuppressions;
 		
-		public BordeauxLastSolutionInfo(Instance lastSolution, SolutionType type, ConstSet<AlloyRelation> additionSuppressions, ConstSet<AlloyRelation> subtractionSuppressions)
+		public BordeauxLastSolutionInfo(Instance lastSolution, SolutionType type, Iterable<ExprVar> atoms,
+				ConstSet<AlloyRelation> additionSuppressions, ConstSet<AlloyRelation> subtractionSuppressions)
 		{
 			this.lastSolution = lastSolution;
 			this.type = type;
+			Iterator<ExprVar> it = atoms.iterator();
+			while (it.hasNext()) { this.atoms.add(it.next()); }
 			this.additionSuppressions = additionSuppressions;
 			this.subtractionSuppressions = subtractionSuppressions;
 		}
 		
-		public Instance getLastSolutionInstance() throws Err{return lastSolution.clone();}
+		public Instance getLastSolutionInstance() {return lastSolution!=null ? lastSolution.clone() : null;}
 		public SolutionType getType() {return type;}
-		public ConstSet<AlloyRelation> getAdditionSuppressions() {return ConstSet.make(additionSuppressions);}
-		public ConstSet<AlloyRelation> getSubtractionSuppressions() {return ConstSet.make(subtractionSuppressions);}
+		public ConstSet<ExprVar> getAtoms(){return atoms != null ? ConstSet.make(atoms) : null;}
+		public ConstSet<AlloyRelation> getAdditionSuppressions() {return additionSuppressions != null ? ConstSet.make(additionSuppressions) : null;}
+		public ConstSet<AlloyRelation> getSubtractionSuppressions() {return subtractionSuppressions != null ? ConstSet.make(subtractionSuppressions) : null;}
 	}
 	
 	public enum SolutionType {NEAR_MISS, NEAR_HIT}
