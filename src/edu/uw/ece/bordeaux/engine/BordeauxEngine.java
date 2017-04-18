@@ -436,7 +436,7 @@ public final class BordeauxEngine {
 		this.currentHit = "";
 	}
 	
-	public A4Solution nextNearMiss(A4Reporter rep, ConstSet<AlloyRelation> suppressAddition, ConstSet<AlloyRelation> suppressSubtraction) {
+	public A4Solution nextNearMiss(A4Reporter rep, ConstSet<AlloyRelation> suppressAddition, ConstSet<AlloyRelation> suppressSubtraction) throws NullPointerException {
 
 		if(!firstNearMiss && this.previousMissString == null) return null;
 		this.firstNearMiss = false; 
@@ -448,14 +448,23 @@ public final class BordeauxEngine {
 		currentMiss = Utils.and(this.currentMiss, Utils.not(this.previousMissString));
 		String constraint2 = currentMiss;
 		
+		A4Solution temp = null;
+		try {
+			temp = (lastNearHitSolution!=null) ? new A4Solution(lastNearHitSolution, lastNearHitSolution.getCompleteInstance()) : null;
+		} catch (Err e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		if (temp == null) return null;
 		BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo((
-				lastNearHitSolution!=null && lastNearHitSolution.getCompleteInstance()!=null) ?
-				lastNearHitSolution.getCompleteInstance().clone() : null, SolutionType.NEAR_MISS,
+				lastNearHitSolution!=null) ?
+				lastNearHitSolution : null, SolutionType.NEAR_MISS,
 				lastNearHitSolution.getAllAtoms(), suppressAddition, suppressSubtraction);
-		Instance temp = (lastNearHitSolution!=null && lastNearHitSolution.getCompleteInstance()!=null) ? lastNearHitSolution.getCompleteInstance().clone() : null;
+		
 		A4Solution result = this.perform(rep, this.inputPath, blsi, constraint1, constraint2);
-		//TODO if b is empty should it still be assigned?
-		this.previousMissString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).b;
+		if (result==null || (hitSolution && result.equals(lastNearHitSolution)) || (!hitSolution && result.equals(lastNearMissSolution))) return lastSolution();
+		String tempString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).b;
+		this.previousMissString = tempString !=null && !tempString.equals("") ? tempString : this.previousMissString;
 		//Creating new last solution.
 		BordeauxLastSolutionInfo blsi2 = new BordeauxLastSolutionInfo(temp, SolutionType.NEAR_MISS, lastNearHitSolution.getAllAtoms(), suppressAddition, suppressSubtraction);
 		A4Solution sol = ExtractorUtils.convertBordeauxSolutionToAlloySolution(result, blsi2).b;
@@ -470,21 +479,30 @@ public final class BordeauxEngine {
 			return lastSolution();
 		}
 	}
-	//TODO change next function to change the nextnearhit.
-	public A4Solution nextNearHit(A4Reporter rep, ConstSet<AlloyRelation> suppressAddition, ConstSet<AlloyRelation> suppressSubtraction) {
+
+	public A4Solution nextNearHit(A4Reporter rep, ConstSet<AlloyRelation> suppressAddition, ConstSet<AlloyRelation> suppressSubtraction) throws NullPointerException {
 
 		String constraint2 = this.previousMissString;
 		
 		currentHit = Utils.and(currentHit, Utils.not(previousHitString));
 		String constraint1 = currentHit;
 		
+		A4Solution temp = null;
+		try {
+			temp = (lastNearMissSolution!=null) ? new A4Solution(lastNearMissSolution, lastNearMissSolution.getCompleteInstance()) : null;
+		} catch (Err e) {
+			e.printStackTrace();
+		}
+		if (temp==null) return null;
 		BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo(
-				(lastNearMissSolution!=null && lastNearMissSolution.getCompleteInstance()!=null) ?
-				lastNearMissSolution.getCompleteInstance() : null, SolutionType.NEAR_HIT,
+				(lastNearMissSolution!=null) ?
+				lastNearMissSolution: null, SolutionType.NEAR_HIT,
 				lastNearHitSolution.getAllAtoms(), suppressAddition, suppressSubtraction);
-		Instance temp = (lastNearMissSolution!=null && lastNearMissSolution.getCompleteInstance()!=null) ? lastNearMissSolution.getCompleteInstance().clone() : null;
+		
 		A4Solution result = this.perform(rep, this.inputPath, blsi, constraint1, constraint2);
-		this.previousHitString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).a;
+		if (result==null || (hitSolution && result.equals(lastNearHitSolution)) || (!hitSolution && result.equals(lastNearMissSolution))) return lastSolution();
+		String tempString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).a;
+		this.previousHitString = tempString !=null && !tempString.equals("") ? tempString : this.previousHitString;
 		BordeauxLastSolutionInfo blsi2 = new BordeauxLastSolutionInfo(temp, SolutionType.NEAR_HIT, lastNearMissSolution!=null ? lastNearMissSolution.getAllAtoms() : null, suppressAddition, suppressSubtraction);
 		A4Solution sol = ExtractorUtils.convertBordeauxSolutionToAlloySolution(result, blsi2).a;
 		if (sol!=null && sol.satisfiable())
@@ -511,16 +529,16 @@ public final class BordeauxEngine {
 	
 	public static class BordeauxLastSolutionInfo
 	{
-		//TODO instance can't be null
-		private final Instance lastSolution;
+		private final A4Solution lastSolution;
 		private final SolutionType type;
 		private final ArrayList<ExprVar> atoms = new ArrayList<ExprVar>();;
 		private final ConstSet<AlloyRelation> additionSuppressions;
 		private final ConstSet<AlloyRelation> subtractionSuppressions;
 		
-		public BordeauxLastSolutionInfo(Instance lastSolution, SolutionType type, Iterable<ExprVar> atoms,
-				ConstSet<AlloyRelation> additionSuppressions, ConstSet<AlloyRelation> subtractionSuppressions)
+		public BordeauxLastSolutionInfo(A4Solution lastSolution, SolutionType type, Iterable<ExprVar> atoms,
+				ConstSet<AlloyRelation> additionSuppressions, ConstSet<AlloyRelation> subtractionSuppressions) throws NullPointerException
 		{
+			if (lastSolution==null) throw new NullPointerException("The last solution can not be set to null");
 			this.lastSolution = lastSolution;
 			this.type = type;
 			Iterator<ExprVar> it = atoms.iterator();
@@ -529,7 +547,7 @@ public final class BordeauxEngine {
 			this.subtractionSuppressions = subtractionSuppressions;
 		}
 		
-		public Instance getLastSolutionInstance() {return lastSolution!=null ? lastSolution.clone() : null;}
+		public A4Solution getLastSolutionInstance() throws Err {return lastSolution!=null ? new A4Solution(lastSolution, lastSolution.getCompleteInstance()) : null;}
 		public SolutionType getType() {return type;}
 		public ConstSet<ExprVar> getAtoms(){return atoms != null ? ConstSet.make(atoms) : null;}
 		public ConstSet<AlloyRelation> getAdditionSuppressions() {return additionSuppressions != null ? ConstSet.make(additionSuppressions) : null;}

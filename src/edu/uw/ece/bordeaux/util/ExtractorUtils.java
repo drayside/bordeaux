@@ -288,11 +288,20 @@ public class ExtractorUtils {
 
 		Pair<A4Solution, A4Solution> result = new Pair<>(null, null);
 		
-		Instance inst = blsi.getLastSolutionInstance();
-		BordeauxLastSolutionInfo blsi_a_ = new BordeauxLastSolutionInfo(inst!=null ? inst.clone() : null, SolutionType.NEAR_HIT, blsi.getAtoms(),
-				blsi.getAdditionSuppressions(), blsi.getSubtractionSuppressions());
-		BordeauxLastSolutionInfo blsi_b_ = new BordeauxLastSolutionInfo(inst!=null ? inst.clone() : null, SolutionType.NEAR_MISS, blsi.getAtoms(),
-				blsi.getAdditionSuppressions(), blsi.getSubtractionSuppressions());
+		//Instance inst = blsi.getLastSolutionInstance().getCompleteInstance();
+		BordeauxLastSolutionInfo blsi_a_ = null;
+		BordeauxLastSolutionInfo blsi_b_ = null;
+		try {
+			blsi_a_ = new BordeauxLastSolutionInfo(blsi.getLastSolutionInstance(), SolutionType.NEAR_HIT, blsi.getAtoms(),
+					blsi.getAdditionSuppressions(), blsi.getSubtractionSuppressions());
+			blsi_b_ = new BordeauxLastSolutionInfo(blsi.getLastSolutionInstance(), SolutionType.NEAR_MISS, blsi.getAtoms(),
+					blsi.getAdditionSuppressions(), blsi.getSubtractionSuppressions());
+		} catch (NullPointerException e1) {
+			e1.printStackTrace();
+		} catch (Err e1) {
+			e1.printStackTrace();
+		}
+		
 		try {
 			result = new Pair<>(
 					A4CommandExecuter.get().runAlloyThenGetAnswers(toSolution.getAbsolutePath(), A4Reporter.NOP, "_a_", blsi_a_),
@@ -313,8 +322,12 @@ public class ExtractorUtils {
 
 		List<List<ExprVar>> skolemizedVars = seperateSkolemizedVars(vars);
 
-		String nearHitString = convertBordeauxSolutionToAlloySyntax(solution, skolemizedVars.get(0), decodeSkolemizedNames, useLocalNames);
-		String nearMissString = convertBordeauxSolutionToAlloySyntax(solution, skolemizedVars.get(1), decodeSkolemizedNames, useLocalNames);
+		String nearHitString = "";
+		String nearMissString = "";
+		try{nearHitString = convertBordeauxSolutionToAlloySyntax(solution, skolemizedVars.get(0), decodeSkolemizedNames, useLocalNames);}
+		catch(Exception e){System.out.println(e.toString());}
+		try{nearMissString = convertBordeauxSolutionToAlloySyntax(solution, skolemizedVars.get(1), decodeSkolemizedNames, useLocalNames);}
+		catch(Exception e){System.out.println(e.toString());}
 		
 		return new Pair<>(nearHitString, nearMissString);
 	}

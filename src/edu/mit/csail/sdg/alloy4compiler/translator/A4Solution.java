@@ -982,7 +982,7 @@ public class A4Solution {
     private A4Solution i2a(Instance inst) { try { return new A4Solution(this, inst); } catch (Err e) { return null; } }
 
     /** Solve for the solution if not solved already; if cmd==null, we will simply use the lowerbound of each relation as its value. */
-    A4Solution solve(final IA4Reporter rep, Command cmd, LastInstanceInfo lsi, Simplifier simp, boolean tryBookExamples) throws Err, IOException {
+    A4Solution solve(final IA4Reporter rep, Command cmd, Simplifier simp, boolean tryBookExamples) throws Err, IOException {
         // If already solved, then return this object as is
         if (solved) return this;
         // If cmd==null, then all four arguments are ignored, and we simply use the lower bound of each relation
@@ -1489,6 +1489,18 @@ public class A4Solution {
 	public Instance getCompleteInstance()
 	{
 		return compInst != null ? compInst.clone() : null;
+	}
+	
+	/** Return a list of the atoms. */
+	public ConstList<String> getAtoms()
+	{
+		return ConstList.make(kAtoms);
+	}
+	
+	/** Returns the order of the atoms that were received during construction. */
+	public Set<String> getAtomOrder()
+	{
+		return ConstSet.make(kAtoms);
 	}
 	
 	/** Changes the indicator that tells whether this A4Solution is the one currently being shown. */

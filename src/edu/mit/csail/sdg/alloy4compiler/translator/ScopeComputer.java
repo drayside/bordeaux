@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Set;
 
 import edu.mit.csail.sdg.alloy4.ConstList;
+import edu.mit.csail.sdg.alloy4.ConstSet;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.ErrorFatal;
 import edu.mit.csail.sdg.alloy4.ErrorSyntax;
@@ -40,6 +41,7 @@ import edu.mit.csail.sdg.alloy4.UniqueNameGenerator;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.ast.CommandScope;
+import edu.mit.csail.sdg.alloy4compiler.ast.ExprVar;
 import edu.mit.csail.sdg.alloy4compiler.ast.IntScope;
 import edu.mit.csail.sdg.alloy4compiler.ast.IntScope.AtomRange;
 import edu.mit.csail.sdg.alloy4compiler.ast.IntScope.AtomSet;
@@ -50,6 +52,7 @@ import edu.mit.csail.sdg.alloy4compiler.ast.Sig.PrimSig;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.SubsetSig;
 import edu.mit.csail.sdg.alloy4compiler.parser.CompUtil;
 import edu.mit.csail.sdg.alloy4compiler.translator.PartialInstance.Atom;
+import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod.LastInstanceInfo;
 
 /** Immutable; this class computes the scopes for each sig and computes the bitwidth and maximum sequence length.
  *
@@ -119,6 +122,9 @@ final class ScopeComputer {
     public final PartialInstance pi;
 
     private final List<Pair<String, PrimSig>> newAtoms;
+    
+    /** Information about the last solution.*/
+    private final LastInstanceInfo lsi;
 
     /** Returns the scope for a sig (or -1 if we don't know). */
     public int sig2scope(Sig sig) {
@@ -137,14 +143,18 @@ final class ScopeComputer {
         return new ArrayList<Pair<String,PrimSig>>(newAtoms);
     }
 
-    /** Sets the scope for a sig; returns true iff the sig's scope is changed by this call. */
     private void sig2scope(Sig sig, int newValue) throws Err {
+    	sig2scope(sig, newValue, false);
+    }
+    
+    /** Sets the scope for a sig; returns true iff the sig's scope is changed by this call. */
+    private void sig2scope(Sig sig, int newValue, boolean forceOverwrite) throws Err {
         if (sig.builtin)                throw new ErrorSyntax(cmd.pos, "Cannot specify a scope for the builtin signature \""+sig+"\"");
         if (!(sig instanceof PrimSig))  throw new ErrorSyntax(cmd.pos, "Cannot specify a scope for a subset signature \""+sig+"\"");
         if (newValue<0)                 throw new ErrorSyntax(cmd.pos, "Cannot specify a negative scope for sig \""+sig+"\"");
         int old=sig2scope(sig);
         if (old==newValue) return;
-        if (old>=0)        throw new ErrorSyntax(cmd.pos, "Sig \""+sig+"\" already has a scope of "+old+", so we cannot set it to be "+newValue);
+        if (old>=0 && !forceOverwrite)        throw new ErrorSyntax(cmd.pos, "Sig \""+sig+"\" already has a scope of "+old+", so we cannot set it to be "+newValue);
         sig2scope.put((PrimSig)sig, newValue);
         rep.scope("Sig "+sig+" scope <= "+newValue+"\n");
     }
@@ -269,7 +279,6 @@ final class ScopeComputer {
         String sigName = sig.shortLabel();
 
 //        //[PI]
-        List<Atom> piAtoms = pi.atomsForType(sigName);
 
         // Add special overrides for "exactly" sigs
         if (!isExact && cmd.additionalExactScopes.contains(sig)) {
@@ -287,17 +296,10 @@ final class ScopeComputer {
                 atoms.add(piAtomName);
                 lower++;
             } else {
-                String name = un.make(sigName);
+                //String name = un.make(sigName);
                 // Now, generate each atom using the format "SIGNAME$INDEX"
                 for (int i = 0; i < n; i++) {
-                    String x;
-                    if (i < sig.atomSigs().size()) {
-                        x = sig.atomSigs().get(i).shortLabel();
-                    } else {
-                        x = name + '$' + i; //(i < piAtoms.size()) ? piAtoms.get(i).toString() :
-                        if (atoms.contains(x)) x = name + '$' + (i + piAtoms.size());
-                        newAtoms.add(new Pair<String, PrimSig>(x, sig));
-                    }
+                    String x = getAtomName(sig, sigName, i); 
                     atoms.add(x);
                     lower++;
                 }
@@ -306,6 +308,20 @@ final class ScopeComputer {
         return lower;
     }
 
+    private String getAtomName(PrimSig sig, String name, int index) throws Err
+    {
+    	String x;
+        List<Atom> piAtoms = pi.atomsForType(name);
+    	if (index < sig.atomSigs().size()) {
+            x = sig.atomSigs().get(index).shortLabel();
+        } else {
+            x = name + '$' + index; //(i < piAtoms.size()) ? piAtoms.get(i).toString() :
+            if (atoms.contains(x)) x = name + '$' + (index + piAtoms.size());
+            newAtoms.add(new Pair<String, PrimSig>(x, sig));
+        }
+    	return x;
+    }
+    
     private String isPiSig(PrimSig sig) {
         if (sig.isAtom != null) { return sig.shortLabel(); }
         if (sig.isOne == null) return null;
@@ -316,13 +332,14 @@ final class ScopeComputer {
     }
 
     //===========================================================================================================================//
-
+    
     /** Compute the scopes, based on the settings in the "cmd", then log messages to the reporter.
      * @param pi */
-    private ScopeComputer(IA4Reporter rep, Iterable<Sig> sigs, Command command, PartialInstance pi) throws Err {
+    private ScopeComputer(IA4Reporter rep, Iterable<Sig> sigs, Command command, PartialInstance pi, LastInstanceInfo lsi) throws Err {
         this.rep = rep;
         this.pi = pi == null ? new PartialInstance() : pi;
         this.cmd = resolveIntScopes(pi, sigs, command);
+        this.lsi = lsi;
         this.intScope = cmd.intScope;
         this.newAtoms = new ArrayList<Pair<String,PrimSig>>();
 
@@ -368,7 +385,8 @@ final class ScopeComputer {
         }
         // Force "one" sigs to be exactly one, and "lone" to be at most one
         for(Sig s:sigs) if (s instanceof PrimSig) {
-            if (s.isOne!=null) { makeExact(cmd.pos, s); sig2scope(s,1); } else if (s.isLone!=null && sig2scope(s)!=0) sig2scope(s,1);
+            if (s.isOne!=null) { makeExact(cmd.pos, s); sig2scope(s,1); }
+            else if (s.isLone!=null && sig2scope(s)!=0) sig2scope(s,1);
         }
         // Derive the implicit scopes
         while(true) {
@@ -396,8 +414,52 @@ final class ScopeComputer {
         sig2scope.put(SEQIDX, maxseq);
 
         // Generate the atoms and the universe
-        Set<String> intAtoms = new HashSet<String>(); 
-        for(Sig s:sigs) if (s.isTopLevel()) computeLowerBound((PrimSig)s);
+        Set<String> intAtoms = new HashSet<String>();
+        if (lsi == null || lsi.getLastSolution()==null || lsi.getLastSolution().getAtomOrder()==null)
+        {
+        	for(Sig s:sigs) if (s.isTopLevel()) computeLowerBound((PrimSig)s);
+        }
+        else
+        {
+        	Set<String> atomsOrder = lsi.getLastSolution().getAtomOrder();
+        	Sig lastSig = null;
+        	int count = 0;
+        	for (String atom : atomsOrder)
+        	{
+        		if (atom.indexOf('$')==-1) continue;
+    			String name = atom.substring(0, atom.indexOf('$'));
+        		for (Sig s: sigs)
+        		{
+        			if (!(s instanceof PrimSig)) continue;
+        			if (name.equals(s.shortLabel()))
+        			{
+        				if (!(lastSig == null || s.equals(lastSig)))
+        				{
+        					sig2scope(lastSig, count, true);
+        					count = 0;
+        				}
+        				atoms.add(atom);
+        				newAtoms.add(new Pair<String, PrimSig>(atom, (PrimSig)s));
+        				count++;
+        				lastSig = s;        				
+        			}
+        		}
+        	}
+        	Iterable<Sig> oldSigs = lsi.getLastSolution().getAllReachableSigs();
+        	for (Sig oldSig : oldSigs)
+        	{
+        		String oldName = oldSig.label;
+        		for (Sig sig : sigs)
+        		{
+        			String name = sig.label;
+        			if (oldName == null || name == null) continue;
+        			if (oldName.equals(name) && oldSig.isOne != null)
+        			{
+        				exact.put(sig, sig);
+        			}
+        		}
+        	}
+        }
         for (int i : intScope.enumerate()) intAtoms.add(""+i);
         for (CommandScope cs : cmd.scope) if (cs instanceof IntSubsetScope) {
             for (int i : ((IntSubsetScope) cs).intScope.enumerate()) 
@@ -513,9 +575,10 @@ final class ScopeComputer {
      *
      * <p> Please see ScopeComputer.java for the exact rules for deriving the missing scopes.
      */
-    static Pair<A4Solution,ScopeComputer> compute (IA4Reporter rep, A4Options opt, Iterable<Sig> sigs, Command cmd) throws Err {
+    static Pair<A4Solution,ScopeComputer> compute (IA4Reporter rep, A4Options opt, Iterable<Sig> sigs, Command cmd, LastInstanceInfo lsi) throws Err
+    {
         PartialInstance pi = new PartialInstanceParser(opt.partialInstance).parse();
-        ScopeComputer sc = new ScopeComputer(rep, sigs, cmd, pi);
+        ScopeComputer sc = new ScopeComputer(rep, sigs, cmd, pi, lsi);
         cmd = sc.cmd;
         Set<String> set = cmd.getAllStringConstants(sigs);
         if (sc.maxstring>=0 && set.size()>sc.maxstring) rep.scope("Sig String expanded to contain all "+set.size()+" String constant(s) referenced by this command.\n");
@@ -524,5 +587,11 @@ final class ScopeComputer {
         A4Solution sol = new A4Solution(cmd.toString(), sc.intScope, sc.maxseq, set, sc.atoms, rep, opt, cmd.expects, pi);
         return new Pair<A4Solution,ScopeComputer>(sol, sc);
     }
+    
+    static Pair<A4Solution,ScopeComputer> compute (IA4Reporter rep, A4Options opt, Iterable<Sig> sigs, Command cmd) throws Err
+    {
+    	return compute(rep, opt, sigs, cmd, null);
+    }
+
 
 }

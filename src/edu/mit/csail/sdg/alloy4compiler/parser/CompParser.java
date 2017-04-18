@@ -2576,6 +2576,7 @@ public class CompParser extends java_cup.runtime.lr_parser {
      stack.removeAllElements();
      stack.push(getSymbolFactory().startSymbol("START", 0, start_state()));
      tos = 0;
+     try{
      for (_done_parsing = false; !_done_parsing; ) {
         act = get_action(((Symbol)stack.peek()).parse_state, cur_token.sym);
         if (act > 0) { // "shift"; thus, we shift to the encoded state by pushing it on the stack
@@ -2599,6 +2600,11 @@ public class CompParser extends java_cup.runtime.lr_parser {
            syntax_error(cur_token);
            done_parsing();
         }
+     }
+     }
+     catch (ErrorSyntax e)
+     {
+    	 System.out.println(e.getStackTrace());
      }
      return lhs_sym;
   }
@@ -2793,7 +2799,9 @@ public class CompParser extends java_cup.runtime.lr_parser {
         CompFilter s = new CompFilter(u, seenDollar, filename, lineOffset, new BufferedReader(isr));
         CompParser p = new CompParser(s);
         p.alloymodule=u;
-        try {p.parse();} catch(Throwable ex) {if (ex instanceof Err) throw (Err)ex; throw new ErrorFatal("Parser Exception", ex);}
+        try {p.parse();}
+        catch(Throwable ex)
+        {if (ex instanceof Err) throw (Err)ex; throw new ErrorFatal("Parser Exception", ex);}
         return u;
     } finally {
         Util.close(isr);

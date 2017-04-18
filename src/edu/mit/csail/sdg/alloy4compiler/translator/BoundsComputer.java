@@ -79,7 +79,7 @@ final class BoundsComputer {
     /** Stores the computed scope for each sig. */
     private final ScopeComputer sc;
 
-    /** Stores the information of the last instance. */
+    /** Stores the information of the last instance. Null value means that last instance info is not applicalble to this computation.*/
     private final LastInstanceInfo lsi;
     
     /** Stores the upperbound for each sig. */
@@ -166,9 +166,11 @@ final class BoundsComputer {
 
     private void allocateAtomSig(AtomSig sig) throws Err {
         TupleSet lower = factory.setOf(sig.shortLabel());
+        //If this Bounds is supposed to be derived from the previous instance.
         if (lsi!= null && lsi.getLastSolution() != null)
         {
-        	Instance inst = lsi.getLastSolution();
+        	A4Solution sol = lsi.getLastSolution();
+        	Instance inst = sol.getCompleteInstance();
         	boolean found = false;
         	for (Relation r : inst.relations())
         	{
@@ -186,7 +188,11 @@ final class BoundsComputer {
     private TupleSet getOldTuples(String relName)
     {
     	 Instance inst = null;
-         if (lsi!=null && lsi.getLastSolution() !=null) inst = lsi.getLastSolution();
+         try {
+			if (lsi!=null && lsi.getLastSolution() !=null) inst = lsi.getLastSolution().getCompleteInstance();
+		} catch (Err e) {
+			e.printStackTrace();
+		}
          if (inst != null)
          {
          	Map<Relation, TupleSet> rel2Tuples = inst.relationTuples();
@@ -243,21 +249,23 @@ final class BoundsComputer {
         
         TupleSet lower, upper;
         boolean determined = false;
-        if ((lower = translateTuples(sig.label)) != null)
-        {
-        	upper = lower; determined = true;
-        }
-        else
-        {
-        	lower = lb.get(sig).clone(); upper = ub.get(sig).clone();
-        }
+
         
-        if (sum == null || determined) {
+        if (sum == null) {
+        	//If the previous instance info is available, then set the exact bounds based on that bounds of the previous instance.
+            if ((lower = translateTuples(sig.label)) != null) {upper = lower; determined = true;}
+            else {lower = lb.get(sig).clone(); upper = ub.get(sig).clone();}
            // If sig doesn't have children, then sig should make a fresh relation for itself
            sum = sol.addRel(sig.label, lower, upper, false);//Node list
         } else if (sig.isAbstract == null) {
+        	String name = sig.label+" remainder";
+        	//If the previous instance info is available, then set the exact bounds based on that bounds of the previous instance.
+            if ((lower = translateTuples(name)) != null) {upper = lower; determined = true;}
+            else {lower = lb.get(sig).clone(); upper = ub.get(sig).clone();}
            // If sig has children, and sig is not abstract, then create a new relation to act as the remainder.
-           for(PrimSig child:sig.children()) {
+           if (!determined)
+           {
+        	   for(PrimSig child:sig.children()) {
               // Remove atoms that are KNOWN to be in a subsig;
               // it's okay to mistakenly leave some atoms in, since we will never solve for the "remainder" relation directly;
               // instead, we union the remainder with the children, then solve for the combined solution.
@@ -265,8 +273,9 @@ final class BoundsComputer {
               TupleSet childTS = sol.query(false, sol.a2k(child), false);
               lower.removeAll(childTS);
               upper.removeAll(childTS);
+        	   }
            }
-           sum = sum.union(sol.addRel(sig.label+" remainder", lower, upper, false));
+           sum = sum.union(sol.addRel(name, lower, upper, false));
         }
         sol.addSig(sig, sum);
         return sum;
@@ -374,8 +383,20 @@ final class BoundsComputer {
         final int atomN = universe.size();
         final List<Tuple> atoms = new ArrayList<Tuple>(atomN);
         for(int i=atomN-1; i>=0; i--) atoms.add(factory.tuple(universe.atom(i)));
-        for(Sig s:sigs) if (!s.builtin && s.isTopLevel()) computeLowerBound(atoms, (PrimSig)s);
-        for(Sig s:sigs) if (!s.builtin && s.isTopLevel()) computeUpperBound((PrimSig)s);
+        //if (lsi==null || lsi.getAtoms() == null)
+        {
+        	for(Sig s:sigs) if (!s.builtin && s.isTopLevel()) computeLowerBound(atoms, (PrimSig)s);
+            for(Sig s:sigs) if (!s.builtin && s.isTopLevel()) computeUpperBound((PrimSig)s);
+        }
+        /*else
+        {
+        	A4Solution lastSolution = lsi.getLastSolution();
+        	for (Sig s: sigs)
+        	{
+        		
+        	}
+        }*/
+        
         // Bound the sigs
         for(Sig s:sigs) if (!s.builtin && s.isTopLevel()) allocatePrimSig((PrimSig)s);
         for(Sig s:sigs) if (s instanceof SubsetSig) allocateSubsetSig((SubsetSig)s);
@@ -414,8 +435,6 @@ final class BoundsComputer {
                  lastTS=TS;
               }
               if (firstTS.size()!=(n>0 ? 1 : 0) || nextTS.size() != n-1) break;
-              //TODO should I get information from the last solution for this? This seems to be the fields of the signature which is instance independant.
-              //So this might be constant throughout the program (hence no need to change). How do fields appear in the graph?
               sol.addField(f1, sol.addRel(s.label+"."+f1.label, firstTS, firstTS, false));
               sol.addField(f2, sol.addRel(s.label+"."+f2.label, nextTS, nextTS, false));
               rep.bound("Field "+s.label+"."+f1.label+" == "+firstTS+"\n");
@@ -497,11 +516,10 @@ final class BoundsComputer {
               boolean addSupp = false; boolean subSupp =false;
               if (lsi!=null)
               {
-            	  //TODO what if multiple sigs have relations of the same name?
             	  ConstSet<String> addRel = lsi.getAddSuppAsString();
             	  ConstSet<String> subRel = lsi.getSubSuppAsString();
-            	  if (addRel != null && addRel.contains(f.label)) addSupp = true;
-            	  if (subRel != null && subRel.contains(f.label)) subSupp = true;
+            	  if (addRel != null && addRel.contains(name)) addSupp = true; 
+            	  if (subRel != null && subRel.contains(name)) subSupp = true;
               }
               TupleSet temp = translateTuples(name);
               

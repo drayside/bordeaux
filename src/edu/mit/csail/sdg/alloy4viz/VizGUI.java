@@ -431,7 +431,10 @@ public final class VizGUI implements ComponentListener {
       addSuppressionButton.addActionListener(new ActionListener() {
          public void actionPerformed(ActionEvent e) {
         	 enableAddAllRelations();
-             if (addSuppressionPopup.getComponentCount()>0) addSuppressionPopup.show(addSuppressionButton, 10, 10);
+             if (addSuppressionPopup.getComponentCount()>0)
+             {
+            	 addSuppressionPopup.show(addSuppressionButton, 10, 10);
+             }
          }
       });
       enableAddAllRelations();
@@ -441,7 +444,10 @@ public final class VizGUI implements ComponentListener {
       subtractSuppressionButton.addActionListener(new ActionListener() {
          public void actionPerformed(ActionEvent e) {
         	 enableSubtractAllRelations();
-             if (subtractSuppressionPopup.getComponentCount()>0) subtractSuppressionPopup.show(subtractSuppressionButton, 10, 10);
+             if (subtractSuppressionPopup.getComponentCount()>0)
+             {
+            	 subtractSuppressionPopup.show(subtractSuppressionButton, 10, 10);
+             }
          }
       });
  	  enableSubtractAllRelations();
