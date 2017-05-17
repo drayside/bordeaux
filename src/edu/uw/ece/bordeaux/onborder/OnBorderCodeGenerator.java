@@ -461,6 +461,7 @@ public class OnBorderCodeGenerator {
         String parameters = params.toString();
         String arguments = args.toString();
         this.generateStructuralConstraint(parameters, out);
+        this.generateFormulaConstraint(parameters, out);
         this.generateIncludeInstance(parameters, out);
         
         ln();
@@ -486,6 +487,24 @@ public class OnBorderCodeGenerator {
         println("pred structuralConstraints [%s] {", params);
         indent();
         println(this.structuralConstraints);
+        outdent();
+        println("}");
+    }
+    
+    private void generateFormulaConstraint(String params, PrintWriter out) throws Err, IOException {
+
+        if(this.formulaConstraints == null || this.formulaConstraints.isEmpty()) {
+        	//TODO what about this?
+        	//this.generateFormulaConstraintOld(params, out);
+        	return;
+        }
+        
+        this.out = out;
+        ln();
+
+        println("pred formulaConstraints [%s] {", params);
+        indent();
+        println(this.formulaConstraints);
         outdent();
         println("}");
     }
@@ -630,6 +649,7 @@ public class OnBorderCodeGenerator {
         indent();
         println("isInstance[%s]", args);
         println("structuralConstraints[%s]", args);
+        println("formulaConstraints[%s]", args);
         println("%s", contraints[0]);
         outdent();
         println("}");
@@ -638,7 +658,10 @@ public class OnBorderCodeGenerator {
         println("pred isC2Instance [%s] {", params);
         indent();
         println("isInstance[%s]", args);
-        println("not structuralConstraints[%s]", args);
+        println("not {");
+        println("structuralConstraints[%s]", args);
+        println("formulaConstraints[%s]", args);
+        println("}");
         println("%s", contraints[1]);
         outdent();
         println("}");

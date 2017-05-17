@@ -167,7 +167,7 @@ final class BoundsComputer {
     private void allocateAtomSig(AtomSig sig) throws Err {
         TupleSet lower = factory.setOf(sig.shortLabel());
         //If this Bounds is supposed to be derived from the previous instance.
-        if (lsi!= null && lsi.getLastSolution() != null)
+        /*if (lsi!= null && lsi.getLastSolution() != null)
         {
         	A4Solution sol = lsi.getLastSolution();
         	Instance inst = sol.getCompleteInstance();
@@ -180,11 +180,12 @@ final class BoundsComputer {
         		}
         	}
         	if (!found) return;
-        }
+        }*/
         Relation exp = sol.addRel(sig.label, lower, lower, true);//atoms
         sol.addSig(sig, exp);
     }
 
+    /** Helper method for getting tuples of the last instance given a relation name. */
     private TupleSet getOldTuples(String relName)
     {
     	 Instance inst = null;
@@ -248,23 +249,17 @@ final class BoundsComputer {
         }
         
         TupleSet lower, upper;
-        boolean determined = false;
-
         
         if (sum == null) {
         	//If the previous instance info is available, then set the exact bounds based on that bounds of the previous instance.
-            if ((lower = translateTuples(sig.label)) != null) {upper = lower; determined = true;}
-            else {lower = lb.get(sig).clone(); upper = ub.get(sig).clone();}
+        	lower = lb.get(sig).clone(); upper = ub.get(sig).clone();
            // If sig doesn't have children, then sig should make a fresh relation for itself
            sum = sol.addRel(sig.label, lower, upper, false);//Node list
         } else if (sig.isAbstract == null) {
         	String name = sig.label+" remainder";
         	//If the previous instance info is available, then set the exact bounds based on that bounds of the previous instance.
-            if ((lower = translateTuples(name)) != null) {upper = lower; determined = true;}
-            else {lower = lb.get(sig).clone(); upper = ub.get(sig).clone();}
+            lower = lb.get(sig).clone(); upper = ub.get(sig).clone();
            // If sig has children, and sig is not abstract, then create a new relation to act as the remainder.
-           if (!determined)
-           {
         	   for(PrimSig child:sig.children()) {
               // Remove atoms that are KNOWN to be in a subsig;
               // it's okay to mistakenly leave some atoms in, since we will never solve for the "remainder" relation directly;
@@ -274,7 +269,6 @@ final class BoundsComputer {
               lower.removeAll(childTS);
               upper.removeAll(childTS);
         	   }
-           }
            sum = sum.union(sol.addRel(name, lower, upper, false));
         }
         sol.addSig(sig, sum);
@@ -523,6 +517,7 @@ final class BoundsComputer {
               }
               TupleSet temp = translateTuples(name);
               
+              //If the tuples of certain relations should be fixed, then those tuples become the upper and lower bound.
               if (subSupp)
               {
             	  if (temp == null) piLb = null;

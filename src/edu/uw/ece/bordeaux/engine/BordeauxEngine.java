@@ -52,6 +52,7 @@ public final class BordeauxEngine {
 	//private A4Solution lastSolution;
 	private A4Solution lastNearHitSolution;
 	private A4Solution lastNearMissSolution;
+	//Stores whether the last solution generated was a hit solution or miss solution.
 	boolean hitSolution = true;
 	private Command command;
 	private OnBorderCodeGenerator generator;
@@ -429,11 +430,11 @@ public final class BordeauxEngine {
 		this.lastNearHitSolution = sol;
 		this.lastNearMissSolution = null;
 		this.previousHitString = ExtractorUtils.convertA4SolutionToAlloySyntax(sol, true);
+		this.currentHit = "";
 		
 		this.createCodeGenerator(inputPath, command);
 		this.previousMissString = this.generator.getFormulaConstraints();
-		this.currentMiss = "";//Utils.not(this.generator.getForumlaContstraints());
-		this.currentHit = "";
+		this.currentMiss = "";
 	}
 	
 	public A4Solution nextNearMiss(A4Reporter rep, ConstSet<AlloyRelation> suppressAddition, ConstSet<AlloyRelation> suppressSubtraction) throws NullPointerException {
@@ -462,6 +463,7 @@ public final class BordeauxEngine {
 				lastNearHitSolution.getAllAtoms(), suppressAddition, suppressSubtraction);
 		
 		A4Solution result = this.perform(rep, this.inputPath, blsi, constraint1, constraint2);
+		//If there is no result or the result is the same as the previous solution, then return.
 		if (result==null || (hitSolution && result.equals(lastNearHitSolution)) || (!hitSolution && result.equals(lastNearMissSolution))) return lastSolution();
 		String tempString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).b;
 		this.previousMissString = tempString !=null && !tempString.equals("") ? tempString : this.previousMissString;
@@ -497,7 +499,7 @@ public final class BordeauxEngine {
 		BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo(
 				(lastNearMissSolution!=null) ?
 				lastNearMissSolution: null, SolutionType.NEAR_HIT,
-				lastNearHitSolution.getAllAtoms(), suppressAddition, suppressSubtraction);
+				lastNearMissSolution.getAllAtoms(), suppressAddition, suppressSubtraction);
 		
 		A4Solution result = this.perform(rep, this.inputPath, blsi, constraint1, constraint2);
 		if (result==null || (hitSolution && result.equals(lastNearHitSolution)) || (!hitSolution && result.equals(lastNearMissSolution))) return lastSolution();
@@ -517,6 +519,7 @@ public final class BordeauxEngine {
 		}
 	}
 	
+	//Returns the solution that is currently displayed.
 	private A4Solution lastSolution()
 	{
 		if (hitSolution)
@@ -527,6 +530,10 @@ public final class BordeauxEngine {
 		else return lastNearMissSolution;
 	}
 	
+	/**
+	 * @author Bhargava
+	 * Class to contain the info of the initial instance.
+	 */
 	public static class BordeauxLastSolutionInfo
 	{
 		private final A4Solution lastSolution;

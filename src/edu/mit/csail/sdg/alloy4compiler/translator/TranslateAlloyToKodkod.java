@@ -421,6 +421,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     
     enum SolutionType {NEAR_MISS, NEAR_HIT}
     
+    /** Class used to store information about the initial instance. */
     public static class LastInstanceInfo
     {
     	private final A4Solution lastSolution;

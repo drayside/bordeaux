@@ -417,10 +417,12 @@ final class ScopeComputer {
         Set<String> intAtoms = new HashSet<String>();
         if (lsi == null || lsi.getLastSolution()==null || lsi.getLastSolution().getAtomOrder()==null)
         {
+        	//If this is the initial instance, then compute lower bound.
         	for(Sig s:sigs) if (s.isTopLevel()) computeLowerBound((PrimSig)s);
         }
         else
         {
+        	//If there is an instance that this instance should be based on.
         	Set<String> atomsOrder = lsi.getLastSolution().getAtomOrder();
         	Sig lastSig = null;
         	int count = 0;

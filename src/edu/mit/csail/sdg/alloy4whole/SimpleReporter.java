@@ -607,7 +607,7 @@ public class SimpleReporter extends A4Reporter {
                 if (none || !sol.satisfiable() || sol.currentlyDisplayed())
                    {cb("pop", "There are no more satisfying instances.\n\n" +
                    "Note: due to symmetry breaking and other optimizations,\n" +
-                   "some equivalent solutions may have been omitted."); /*return;*/}
+                   "some equivalent solutions may have been omitted."); return;}
                 String toString = sol.toString();
                 synchronized(SimpleReporter.class) {
                     if (!latestKodkods.add(toString)) if (tries<100) { tries++; continue; }
