@@ -36,7 +36,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import edu.uw.ece.bordeaux.onborder.OnBorderCodeGenerator;
+import edu.uw.ece.bordeaux.util.ExtractorUtils;
 import kodkod.ast.BinaryFormula;
 import kodkod.ast.ComparisonFormula;
 import kodkod.ast.Comprehension;
@@ -348,9 +351,30 @@ public abstract class Skolemizer extends AbstractReplacer {
 		for(int i = depth-1; i >= 0; i--) {
 			matrixBound = nonSkolems.get(i).upperBound.cross(matrixBound);
 		}
-
+		
 		final TupleSet skolemBound = bounds.universe().factory().setOf(arity, matrixBound.denseIndices());
-		bounds.bound(skolem, skolemBound);
+		TupleSet skupper = skolemBound;
+		TupleSet sklower = null;
+		
+		if ((skolem.name()).indexOf("$"+OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND)==0
+				&& !skolem.name().endsWith("''"))
+		{
+			Map<String, String> assoc = ExtractorUtils.getAssociates();
+			String value = assoc.get(skolem.name());
+			for (Relation rel : bounds.relations())
+			{
+				if (rel.name()!=null && ("this/"+value).equalsIgnoreCase(rel.name()))
+				{
+					TupleSet upper = bounds.upperBound(rel);
+					sklower = bounds.lowerBound(rel);
+					if (skupper.size()>upper.size()) skupper = upper;
+					 
+				}
+			}
+		}
+				
+		if (sklower!=null) bounds.bound(skolem, sklower, skupper);
+		else bounds.bound(skolem, skupper);
 
 		return skolemExpr;
 	}
@@ -395,7 +419,9 @@ public abstract class Skolemizer extends AbstractReplacer {
 
 			for(Decl decl : decls) {
 				final Decl skolemDecl = visit(decl);
-
+	            
+	            
+				
 				Variable skVar = skolemDecl.variable();
                 final Relation skolem = Relation.skolem("$"+ skVar.name(), nonSkolems.size() + skVar.arity(), skVar, skolemDecl.expression(), quant);
 				reporter.skolemizing(decl, skolem, nonSkolemsView);

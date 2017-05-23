@@ -588,6 +588,7 @@ public class SimpleReporter extends A4Reporter {
             		case NearMiss: {
             			cb("bold", "Searching for next 'near-miss' instance...\n");
             			sol = engine.nextNearMiss(latestRep, suppressAddition, suppressSubtraction);
+            			//System.out.println(latestKodkod);
             			break;
             		}
             		
@@ -607,12 +608,14 @@ public class SimpleReporter extends A4Reporter {
                 if (none || !sol.satisfiable() || sol.currentlyDisplayed())
                    {cb("pop", "There are no more satisfying instances.\n\n" +
                    "Note: due to symmetry breaking and other optimizations,\n" +
-                   "some equivalent solutions may have been omitted."); return;}
+                   "some equivalent solutions may have been omitted.");}
                 String toString = sol.toString();
                 synchronized(SimpleReporter.class) {
                     if (!latestKodkods.add(toString)) if (tries<100) { tries++; continue; }
                     // The counter is needed to avoid a Kodkod bug where sometimes we might repeat the same solution infinitely number of times; this at least allows the user to keep going
-                    writeXML(null, mod, filename, sol, latestKodkodSRC); latestKodkod=sol;
+                    writeXML(null, mod, filename, sol, latestKodkodSRC);
+                    latestKodkod=sol;
+                    latestKodkodXML = filename;
                 }
                 cb("declare", filename);
                 sol.verifyDisplayed();

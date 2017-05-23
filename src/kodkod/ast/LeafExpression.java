@@ -39,19 +39,26 @@ public abstract class LeafExpression extends Expression {
 
 	private final int arity;
 	private final String name;
+	//This is used to carry any kind of information associated with the expression.
+	protected final Object associate;
 
+	LeafExpression(String name, int arity) {
+		this(name, null, arity);
+	}
+	
 	/**
 	 * Constructs a leaf with the specified name and arity
 	 * 
 	 * @ensures  this.name' = name && this.arity' = arity 
 	 * @throws IllegalArgumentException  arity < 1
 	 */
-	LeafExpression(String name, int arity) {
+	LeafExpression(String name, Object associate, int arity) {
 		if (arity < 1) {
 			throw new IllegalArgumentException("Arity must be at least 1: " + arity);
 		}
 		this.name = name;
 		this.arity = arity;
+		this.associate = associate;
 	}
 
 
@@ -71,6 +78,13 @@ public abstract class LeafExpression extends Expression {
 		return name;
 	}
 
+	
+	/**
+	 * Returns associated object.
+	 */
+	public final Object associate() {
+		return associate;
+	}
 	/**
 	 * {@inheritDoc}
 	 * @see kodkod.ast.Node#toString()

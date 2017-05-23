@@ -492,12 +492,7 @@ public class OnBorderCodeGenerator {
     }
     
     private void generateFormulaConstraint(String params, PrintWriter out) throws Err, IOException {
-
-        if(this.formulaConstraints == null || this.formulaConstraints.isEmpty()) {
-        	//TODO what about this?
-        	//this.generateFormulaConstraintOld(params, out);
-        	return;
-        }
+    	if (this.formulaConstraints == null) this.formulaConstraints = "";
         
         this.out = out;
         ln();
@@ -512,7 +507,7 @@ public class OnBorderCodeGenerator {
     private void generateIncludeInstance(String params, PrintWriter out) {
 
         if(this.includeConstraints == null || this.includeConstraints.isEmpty()) {
-        	this.generateIncludeInstanceOld(params, out);
+    		this.generateIncludeInstanceOld(params, out);
         	return;
         }
         

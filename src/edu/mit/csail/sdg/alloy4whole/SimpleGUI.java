@@ -1137,6 +1137,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
 
     /** This method executes the latest command. */
     private Runner doExecuteLatest() {
+    	doSave();
         if (wrap) return wrapMe();
         doRefreshRun();
         OurUtil.enableAll(runmenu);
@@ -1608,6 +1609,7 @@ public final class SimpleGUI implements ComponentListener, Listener {
         task.useBordeaxEngine = useBordeaxEngine;
         task.nextType = nextType;
         try {
+        	subrunningTask=2;
             WorkerEngine.runLocally(task, cb);
 //            if (Util.isDebug() && VerbosityPref.get().geq(Verbosity.FULLDEBUG))
 //                WorkerEngine.runLocally(task, cb);
@@ -1625,7 +1627,6 @@ public final class SimpleGUI implements ComponentListener, Listener {
             doStop(2);
             return arg;
         }
-        subrunningTask=2;
         runmenu.setEnabled(false);
         runbutton.setVisible(false);
         showbutton.setEnabled(false);

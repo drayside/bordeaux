@@ -172,7 +172,6 @@ public abstract class Translation {
 			indices.addAll(lower.indexView());
 			IntSet vars = primaryVariables(r);
 			if (!vars.isEmpty()) {
-				//System.out.println(r + ": [" + vars.min() + ", " + vars.max() + "]");
 				int lit = vars.min();
 				for(IntIterator iter = bounds.upperBound(r).indexView().iterator(); iter.hasNext();) {
 					final int index = iter.next();

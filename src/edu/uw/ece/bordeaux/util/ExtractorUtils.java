@@ -315,7 +315,8 @@ public class ExtractorUtils {
 
 	public static Pair<String, String> convertBordeauxSolutionToAlloySyntax(A4Solution solution, boolean useLocalNames) {
 		
-		Map<String, String> decodeSkolemizedNames = generateSkolemMap(solution, useLocalNames);
+		generateSkolemMap(solution, useLocalNames);
+		Map<String, String> decodeSkolemizedNames = skolemMap;
 		
 		final List<ExprVar> vars = new ArrayList<>();
 		solution.getAllSkolems().forEach(s -> vars.add(s));
@@ -355,9 +356,15 @@ public class ExtractorUtils {
 		return num;
 	}
 
-	public static Map<String, String> generateSkolemMap(A4Solution solution, boolean useLocalNames) {
-
-		Map<String, String> map = new HashMap<>();
+	private static Map<String, String> mapAssociates = new HashMap<String, String>();
+	private static Map<String, String> skolemMap = new HashMap<String, String>();
+	
+	public static Map<String, String> getAssociates() { return Collections.unmodifiableMap(mapAssociates); }
+	public static Map<String, String> getSkolemMap() { return Collections.unmodifiableMap(skolemMap); }
+	
+	public static void generateSkolemMap(A4Solution solution, boolean useLocalNames) {
+		mapAssociates.clear();
+		//Map<String, String> map = new HashMap<>();
 
 		final String base = "$" + OnBorderCodeGenerator.FIND_MARGINAL_INSTANCES_COMMAND + "_";
 		for (Sig sig : solution.getAllReachableSigs()) {
@@ -376,22 +383,26 @@ public class ExtractorUtils {
 			String localSig = ExtractorUtils.getLocalSigName(sigName);
 			String SkolemlSig = base + localSig;
 			String sigValue = useLocalNames ? localSig : sig.shortLabel();
-			map.put(SkolemlSig, sigValue);
-			map.put(SkolemlSig + "'", sigValue);
-			map.put(SkolemlSig + "''", sigValue);
+			mapAssociates.put(SkolemlSig, sigName);
+			mapAssociates.put(SkolemlSig + "'", sigName);
+			mapAssociates.put(SkolemlSig + "''", sigName);
+			skolemMap.put(SkolemlSig, sigValue);
+			skolemMap.put(SkolemlSig + "'", sigValue);
+			skolemMap.put(SkolemlSig + "''", sigValue);
 
 			for (Field field : sig.getFields()) {
 
 				String localField = ExtractorUtils.getLocalFieldName(field.label, sigName);
 				String SkolemField = base + localField;
 				String localValue = useLocalNames ? localField : field.label;
-				map.put(SkolemField, localValue);
-				map.put(SkolemField + "'", localValue);
-				map.put(SkolemField + "''", localValue);
+				mapAssociates.put(SkolemField, sigName+"."+field.label);
+				mapAssociates.put(SkolemField + "'", sigName+"."+field.label);
+				mapAssociates.put(SkolemField + "''", sigName+"."+field.label);
+				skolemMap.put(SkolemField, localValue);
+				skolemMap.put(SkolemField + "'", localValue);
+				skolemMap.put(SkolemField + "''", localValue);
 			}
 		}
-
-		return map;
 	}
 
 	/**

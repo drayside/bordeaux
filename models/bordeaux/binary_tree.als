@@ -56,11 +56,3 @@ some disj n1,n2,n3: Node| n1->n2 = left and n3->n3 = right
 
 }
 
-run
-test
-for 3
-
-run 
-{some disj n1,n2,n3: Node| n1->n2 = left and n3->n3 = right
-	showValidTrees
-}

@@ -47,7 +47,7 @@ public final class Variable extends LeafExpression {
 	 * @ensures this.name' = name && this.arity' = 1
 	 */
 	private Variable(String name) {
-		super(name, 1);
+		super(name, null, 1);
 	}
 
 	/**
@@ -55,9 +55,16 @@ public final class Variable extends LeafExpression {
 	 * @ensures this.name' = name && this.arity' = arity
 	 */
 	private Variable(String name, int arity) {
-		super(name, arity);
+		super(name, null, arity);
 	}
 
+	/**
+	 * Constructs a variable with the specified name and arity variable and associate object.
+	 */
+	private Variable(String name, Object associate, int arity) {
+		super(name, associate, arity);
+	}
+	
 	/**
 	 * Returns a new variable with the specified name and arity 1.
 	 * @ensures this.name' = name && this.arity' = 1
@@ -76,6 +83,17 @@ public final class Variable extends LeafExpression {
 	}
 
 	/**
+	 * Returns a new variable with the specified name and arity.
+	 * @param name
+	 * @param associate
+	 * @param arity
+	 * @return
+	 */
+	public static Variable nary(String name, Object associate, int arity) {
+		return new Variable(name, associate, arity);
+	}
+	
+	/**
 	 * Returns the declaration that constrains this variable to 
 	 * be bound to at most one element of the given expression:  'this: lone expr'.
 	 * @return {d: Decl | d.variable = this && d.multiplicity = LONE && d.expression = expr }
@@ -83,7 +101,7 @@ public final class Variable extends LeafExpression {
 	 * @throws IllegalArgumentException  this.arity != expr.arity || expr.arity != 1
 	 */
 	public Decl loneOf(Expression expr) {
-		return new Decl(this, Multiplicity.LONE, expr);
+		return new Decl(this, Multiplicity.LONE, expr, associate);
 	}
 
 	/**
@@ -94,7 +112,7 @@ public final class Variable extends LeafExpression {
 	 * @throws IllegalArgumentException  this.arity != expr.arity || expr.arity != 1
 	 */
 	public Decl oneOf(Expression expr) {
-		return new Decl(this, Multiplicity.ONE, expr);
+		return new Decl(this, Multiplicity.ONE, expr, associate);
 	}
 
 	/**
@@ -105,7 +123,7 @@ public final class Variable extends LeafExpression {
 	 * @throws IllegalArgumentException  this.arity != expr.arity || expr.arity != 1
 	 */
 	public Decl someOf(Expression expr) {
-		return new Decl(this, Multiplicity.SOME, expr);
+		return new Decl(this, Multiplicity.SOME, expr, associate);
 	}
 
 	/**
@@ -116,7 +134,7 @@ public final class Variable extends LeafExpression {
 	 * @throws IllegalArgumentException  this.arity != expr.arity 
 	 */
 	public Decl setOf(Expression expr) {
-		return new Decl(this, Multiplicity.SET, expr);
+		return new Decl(this, Multiplicity.SET, expr, associate);
 	}
 
 	/**
@@ -129,7 +147,7 @@ public final class Variable extends LeafExpression {
 	 * @throws IllegalArgumentException  this.arity != expr.arity
 	 */
 	public Decl declare(Multiplicity mult, Expression expr) {
-		return new Decl(this, mult, expr);
+		return new Decl(this, mult, expr, associate);
 	}
 
 	/**

@@ -474,7 +474,7 @@ public final class VizGUI implements ComponentListener {
          toolbar.add(enumerateNextButton=OurUtil.button("Next", "Show the next solution", "images/24_history.gif", doNextSolution()));
          toolbar.add(enumerateNearMissButton=OurUtil.button("Next Near-Miss", "Show the next near-miss solution", "images/24_history.gif", doNextNearMiss()));
          toolbar.add(enumerateNearHitButton=OurUtil.button("Next Near-Hit", "Show the next near-hit solution", "images/24_history.gif", doNextNearHit()));
-         toolbar.add(projectionButton);
+         //toolbar.add(projectionButton);
          toolbar.add(addSuppressionButton);
          toolbar.add(subtractSuppressionButton);
          toolbar.add(loadSettingsButton=OurUtil.button("Load", "Load the theme customization from a theme file", "images/24_open.gif", doLoadTheme()));

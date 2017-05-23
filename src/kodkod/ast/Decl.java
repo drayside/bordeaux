@@ -45,6 +45,19 @@ public final class Decl extends Decls {
     private final Variable variable;
     private final Multiplicity mult;
     private final Expression expression;
+    private final Object association;
+    
+    /**
+     * Constructs a new declaration from the specified variable and
+     * expression, with the specified order.
+     * @param variable
+     * @param mult
+     * @param expression
+     */
+    Decl(Variable variable, Multiplicity mult, Expression expression)
+    {
+    	this(variable, mult, expression, null);
+    }
     
     /**  
      * Constructs a new declaration from the specified variable and
@@ -54,7 +67,7 @@ public final class Decl extends Decls {
      * @throws NullPointerException  variable = null || expression = null || mult = null
      * @throws IllegalArgumentException  variable.arity != expression.arity 
      */
-    Decl(Variable variable, Multiplicity mult, Expression expression) {
+    Decl(Variable variable, Multiplicity mult, Expression expression, Object association) {
    		if (mult==Multiplicity.NO)
     			throw new IllegalArgumentException("NO is not a valid multiplicity in a declaration.");
         if (variable.arity() != expression.arity())
@@ -64,6 +77,7 @@ public final class Decl extends Decls {
         this.variable = variable;
         this.mult = mult;
         this.expression = expression;
+        this.association = association;
     }
     
     /**
@@ -83,6 +97,12 @@ public final class Decl extends Decls {
      * @return this.exresssion
      */
     public Expression expression() { return expression;  }
+    
+    /**
+     * Returns the association in this declaration.
+     * @return this.association
+     */
+    public Object association() { return association; } 
     
     /**
      * {@inheritDoc}
