@@ -48,6 +48,7 @@ pred ownGrandpa [p: Person] {
 // This generates an instance similar to Fig 4.3
 run ownGrandpa for 4 Person
 
+run ownGrandpa for 5..7 Person, 3 Man
 ------------------------------------------
 
 pred SocialConvention1 {
