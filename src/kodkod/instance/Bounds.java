@@ -268,6 +268,7 @@ public final class Bounds implements Cloneable {
 	 * this.lowerBound' = this.lowerBound' -- r->tuples &&
 	 * this.upperBound' = this.lowerBound' -- r->tuples
 	 */
+	//TODO factory.noneOf(1) does the same thing I think.
 	public void emptyTupleSet(Relation r) {
 		//If the relation does not exist in the bounds, then return;
 		if (!uppers.containsKey(r)) return;

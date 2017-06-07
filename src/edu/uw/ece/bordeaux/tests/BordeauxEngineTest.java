@@ -12,9 +12,11 @@ import org.junit.rules.ExpectedException;
 import com.sun.tools.javac.util.Pair;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
+import edu.mit.csail.sdg.alloy4.ConstSet;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
+import edu.mit.csail.sdg.alloy4viz.AlloyRelation;
 import edu.mit.csail.sdg.alloy4whole.SimpleGUI.BordeauxNextType;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.HolaReporter;
@@ -169,13 +171,13 @@ public class BordeauxEngineTest {
 			A4Solution sol = null;
 			switch(nextType) {
 				case NearMiss: {
-					sol = engine.nextNearMiss(reporter);
+					sol = engine.nextNearMiss(reporter, null, null);
 					System.out.println(sol);
 					System.out.println("Stat for nearmiss="+reporter);
 					break;					
 				}
 				case NearHit: {
-					sol = engine.nextNearHit(reporter);
+					sol = engine.nextNearHit(reporter, null, null);
 					break;					
 				}
 				case NextSolution: {
@@ -214,7 +216,7 @@ public class BordeauxEngineTest {
 		System.out.println(filepath.getAbsolutePath());
 		
 		try {
-			A4CommandExecuter.get().runAlloy(filepath.getAbsolutePath(), reporter, command.label);
+			A4CommandExecuter.get().runAlloyThenGetAnswers(filepath.getAbsolutePath(), reporter, command.label);
 			A4Solution initialSoln = reporter.getA4Solution();
 			System.out.println("stat for Initial="+reporter);
 			return new BordeauxEngine(filepath, command, initialSoln);

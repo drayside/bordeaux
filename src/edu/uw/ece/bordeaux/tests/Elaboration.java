@@ -419,6 +419,18 @@ public class Elaboration {
 		return createAllSigsdeclaration(src, false, false);
 	}
 
+	/**
+	 * Given an Alloy source code, an Alloy code per each signature is created.
+	 * 
+	 * @param src
+	 * @param withMult
+	 * @param withOne
+	 * @return
+	 */
+	public String createAllSigsdeclarationForOnBorderFile(File src) {
+		return createAllSigsdeclaration(src, true, false);
+	}
+	
 	protected Set<String> createAllSigsNames(File src) {
 		CompModule module = null;
 		try {

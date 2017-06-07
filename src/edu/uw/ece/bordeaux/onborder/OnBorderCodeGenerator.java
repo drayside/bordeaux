@@ -198,7 +198,7 @@ public class OnBorderCodeGenerator {
 //		String decl = this.sigDeclaration.replaceAll("(one|lone|some)", "set");
 
     	Elaboration elaboration = new Elaboration();
-    	String decl = elaboration.createAllSigsdeclaration(new File(filepath));
+    	String decl = elaboration.createAllSigsdeclarationForOnBorderFile(new File(filepath));
         println(decl);        
     }
     
@@ -231,7 +231,7 @@ public class OnBorderCodeGenerator {
 	            
 	            println("pred %s[%s, %s, %s] {", this.getDelta(sigWrap.getSig()), s1, s2, s3);
 	            indent();
-	            println("%1$s != %1$s' implies (%1$s'' = %1$s' - %1$s and %1$s'' + %1$s = %1$s') else no %1$s''", sigName);
+	            println("%1$s != %1$s' implies (((%1$s' - %1$s) + (%1$s - %1$s')) = %1$s'') else no %1$s''", sigName);
 	            outdent();
 	            println("}");
         	}
@@ -247,7 +247,7 @@ public class OnBorderCodeGenerator {
                 
                 println("pred %s[%s, %s, %s] {", this.getDelta(field.getLabel()), s1, s2, s3);
                 indent();
-                println("%1$s != %1$s' implies (%1$s'' = %1$s' - %1$s and %1$s'' + %1$s = %1$s') else no %1$s''", field.getLabel());
+                println("%1$s != %1$s' implies (((%1$s' - %1$s) + (%1$s - %1$s')) = %1$s'') else no %1$s''", field.getLabel());
                 outdent();
                 println("}");
             }

@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
 import edu.mit.csail.sdg.alloy4.ConstList;
 import edu.mit.csail.sdg.alloy4.ConstSet;
@@ -388,7 +389,7 @@ final class ScopeComputer {
             if (s.isOne!=null) { makeExact(cmd.pos, s); sig2scope(s,1); }
             else if (s.isLone!=null && sig2scope(s)!=0) sig2scope(s,1);
         }
-        // Derive the implicit scopes
+	        // Derive the implicit scopes
         while(true) {
             if (derive_partial_instance_scope(sigs)) { do {} while(derive_partial_instance_scope(sigs)); continue; }
             if (derive_abstract_scope(sigs))         { do {} while(derive_abstract_scope(sigs));         continue; }
@@ -396,7 +397,6 @@ final class ScopeComputer {
             if (derive_scope_from_parent(sigs))      { do {} while(derive_scope_from_parent(sigs));      continue; }
             break;
         }
-        
         if (intScope.bitwidth == null || intScope.atoms == null) throw new ErrorFatal("IntScope not computed properly");
 
         this.sig2scope.put(SIGINT, intScope.atoms.size());
@@ -415,17 +415,44 @@ final class ScopeComputer {
 
         // Generate the atoms and the universe
         Set<String> intAtoms = new HashSet<String>();
-        if (lsi == null || lsi.getLastSolution()==null || lsi.getLastSolution().getAtomOrder()==null)
+        /*if (!(lsi == null || lsi.getLastSolution()==null || lsi.getLastSolution().getAtomOrder()==null))
+        {
+        	Iterable<Sig> oldSigs = lsi.getLastSolution().getAllReachableSigs();
+        	for (Sig oldSig : oldSigs)
+        	{
+        		String oldName = oldSig.label;
+				if (!checkShouldBeExact(oldSig)) continue;
+        		for (Sig sig : sigs)
+        		{
+        			String name = sig.label;
+        			if (oldName == null || name == null) continue;
+        			if (oldName.equals(name) && oldSig.isOne != null)
+        			{
+        				exact.put(sig, sig);
+        				Set<String> atoms = lsi.getLastSolution().getAtomOrder();
+        				int count = 0;
+        				for (String atom : atoms)
+        				{
+        					if (atom.indexOf('$')==-1) continue;
+        	    			String atomName = atom.substring(0, atom.indexOf('$'));
+        	    			if (atomName.equals(sig.shortLabel())) count++;
+        				}
+        				sig2scope(sig, new Integer(count), true);
+        			}
+        		}
+        	}
+        }*/
         {
         	//If this is the initial instance, then compute lower bound.
         	for(Sig s:sigs) if (s.isTopLevel()) computeLowerBound((PrimSig)s);
         }
-        else
+        /*else
         {
         	//If there is an instance that this instance should be based on.
         	Set<String> atomsOrder = lsi.getLastSolution().getAtomOrder();
         	Sig lastSig = null;
         	int count = 0;
+        	ArrayList<Sig> affectedSigs = new ArrayList<Sig>();
         	for (String atom : atomsOrder)
         	{
         		if (atom.indexOf('$')==-1) continue;
@@ -438,6 +465,7 @@ final class ScopeComputer {
         				if (!(lastSig == null || s.equals(lastSig)))
         				{
         					sig2scope(lastSig, count, true);
+        					affectedSigs.add(lastSig);
         					count = 0;
         				}
         				atoms.add(atom);
@@ -447,21 +475,7 @@ final class ScopeComputer {
         			}
         		}
         	}
-        	Iterable<Sig> oldSigs = lsi.getLastSolution().getAllReachableSigs();
-        	for (Sig oldSig : oldSigs)
-        	{
-        		String oldName = oldSig.label;
-        		for (Sig sig : sigs)
-        		{
-        			String name = sig.label;
-        			if (oldName == null || name == null) continue;
-        			if (oldName.equals(name) && oldSig.isOne != null)
-        			{
-        				exact.put(sig, sig);
-        			}
-        		}
-        	}
-        }
+        }*/
         for (int i : intScope.enumerate()) intAtoms.add(""+i);
         for (CommandScope cs : cmd.scope) if (cs instanceof IntSubsetScope) {
             for (int i : ((IntSubsetScope) cs).intScope.enumerate()) 
@@ -470,6 +484,10 @@ final class ScopeComputer {
         atoms.addAll(intAtoms);
     }
 
+    private boolean checkShouldBeExact(Sig s)
+    {
+        return s.isOne != null;
+    }
     //===========================================================================================================================//
 
     private static Command resolveIntScopes(PartialInstance pi, Iterable<Sig> sigs, Command cmd) throws Err {

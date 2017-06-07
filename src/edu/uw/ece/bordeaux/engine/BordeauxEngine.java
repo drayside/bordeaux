@@ -545,11 +545,14 @@ public final class BordeauxEngine {
 		public BordeauxLastSolutionInfo(A4Solution lastSolution, SolutionType type, Iterable<ExprVar> atoms,
 				ConstSet<AlloyRelation> additionSuppressions, ConstSet<AlloyRelation> subtractionSuppressions) throws NullPointerException
 		{
-			if (lastSolution==null) throw new NullPointerException("The last solution can not be set to null");
+			//if (lastSolution==null) throw new NullPointerException("The last solution can not be set to null");
 			this.lastSolution = lastSolution;
 			this.type = type;
-			Iterator<ExprVar> it = atoms.iterator();
-			while (it.hasNext()) { this.atoms.add(it.next()); }
+			if (atoms!=null)
+			{
+				Iterator<ExprVar> it = atoms.iterator();
+				while (it.hasNext()) { this.atoms.add(it.next()); }
+			}
 			this.additionSuppressions = additionSuppressions;
 			this.subtractionSuppressions = subtractionSuppressions;
 		}

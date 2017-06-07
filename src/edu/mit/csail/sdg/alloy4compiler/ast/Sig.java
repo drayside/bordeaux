@@ -161,6 +161,12 @@ public abstract class Sig extends Expr {
       return (this!=NONE) && (this instanceof PrimSig) && (this==UNIV || ((PrimSig)this).parent==UNIV);
    }
 
+   /** Returns parent if it exists. */
+   public final Sig getParent() {
+	   if (this!=NONE && (this instanceof PrimSig) && !this.isTopLevel()) return ((PrimSig)this).parent;
+	   return null;
+   }
+   
    /** Constructs a new builtin PrimSig. */
    private Sig(String label) {
       super(Pos.UNKNOWN, null);
