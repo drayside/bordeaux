@@ -111,7 +111,7 @@ public class ExtractorUtilsTest {
 		assertNotNull("Cannot find command from command name", command);
 
 		try {
-			A4CommandExecuter.get().runAlloy(filepath.getAbsolutePath(), reporter, command.label);
+			A4CommandExecuter.get().runAlloy(filepath.getAbsolutePath(), reporter, null, command.label);
 			A4Solution initialSoln = reporter.getA4Solution();
 			return new BordeauxEngine(filepath, command, initialSoln);
 		} catch (Exception e) {

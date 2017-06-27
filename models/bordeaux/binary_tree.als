@@ -49,7 +49,7 @@ pred showValidTrees {
 	isTreeInstance[Node, right, left]
 }
 
-run showValidTrees for 4-- Node
+run showValidTrees for 3-- Node
 
 pred test{
 some disj n1,n2,n3: Node| n1->n2 = left and n3->n3 = right

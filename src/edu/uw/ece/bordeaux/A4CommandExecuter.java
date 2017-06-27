@@ -174,7 +174,7 @@ public class A4CommandExecuter {
 	}
 
 	public A4Solution runAlloyThenGetAnswers(String filename, A4Reporter rep, String commandName) throws Err {
-		BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo(null, null, null, null, null);
+		BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo(null, null, null, null);
 		return  runAlloyThenGetAnswers(filename, rep, commandName, blsi);
 	}
 	
@@ -203,10 +203,20 @@ public class A4CommandExecuter {
 				logger.log(Level.INFO, "[" + Thread.currentThread().getName() + "]"
 						+ "============ Command " + command + ": ============");
 
-			result = TranslateAlloyToKodkod.execute_command(rep,
+			if (blsi!=null)
+			{
+				result = TranslateAlloyToKodkod.execute_command(rep,
 					world.getAllReachableSigs(), command, options, blsi.getLastSolutionInstance(),
-					blsi.getType()==SolutionType.NEAR_MISS ? true : false, blsi.getAtoms(),
+					blsi.getAtoms(),
 							blsi.getAdditionSuppressions(), blsi.getSubtractionSuppressions());
+			}
+			else
+			{
+				result = TranslateAlloyToKodkod.execute_command(rep,
+						world.getAllReachableSigs(), command, options, null,
+						null,
+								null, null);
+			}
 		}
 
 		if (null == result)
@@ -247,7 +257,7 @@ public class A4CommandExecuter {
 							+ "============ Command " + command + ": ============");
 
 				result.put(command, TranslateAlloyToKodkod.execute_command(rep,
-						world.getAllReachableSigs(), command, options, null, false, null, null, null));
+						world.getAllReachableSigs(), command, options, null, null, null, null));
 			}
 		}
 
@@ -296,11 +306,23 @@ public class A4CommandExecuter {
 
 //                result.put(command, TranslateAlloyToKodkod.execute_command(rep, world.getAllReachableSigs(), command, opt));
                 
-                TranslateAlloyToKodkod tr = TranslateAlloyToKodkod.translate(rep, world.getAllReachableSigs(), command, opt,
-                		blsi.getLastSolutionInstance(), (blsi.getType()==SolutionType.NEAR_MISS) ? true : false,
+                TranslateAlloyToKodkod tr;
+                if (blsi!=null)
+                {
+                	tr = TranslateAlloyToKodkod.translate(rep, world.getAllReachableSigs(), command, opt,
+                		blsi.getLastSolutionInstance(),
                 		blsi.getAtoms(),
                 		blsi.getAdditionSuppressions(),
                 		blsi.getSubtractionSuppressions());
+                }
+                else
+                {
+                	tr = TranslateAlloyToKodkod.translate(rep, world.getAllReachableSigs(), command, opt,
+                    		null,
+                    		null,
+                    		null,
+                    		null);
+                }
                 A4Solution sol = tr.executeCommand();
 //                System.exit(0);
                 result.put(commandName, sol);

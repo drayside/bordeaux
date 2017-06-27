@@ -260,32 +260,6 @@ public final class Bounds implements Cloneable {
 		putBound(lowers, r, unmodifiableTuplesCopy);
 		putBound(uppers, r, unmodifiableTuplesCopy);
 	}
-
-	/**
-	 * Empties the tupleset of a relation.
-	 * @requires r!=null && relations.contains(r)
-	 * @ensures this.relation = this.relation - r
-	 * this.lowerBound' = this.lowerBound' -- r->tuples &&
-	 * this.upperBound' = this.lowerBound' -- r->tuples
-	 */
-	//TODO factory.noneOf(1) does the same thing I think.
-	public void emptyTupleSet(Relation r) {
-		//If the relation does not exist in the bounds, then return;
-		if (!uppers.containsKey(r)) return;
-		
-		lowers.put(r, new TupleSet(lowers.get(r).universe(), r.arity()));
-		uppers.put(r, new TupleSet(uppers.get(r).universe(), r.arity()));
-		
-		//relations.remove(r);
-		//Remove the relation from atom2rel.
-		for (Object o : atom2rel.keySet())
-		{
-			if (atom2rel.get(o).equals(r))
-			{
-				atom2rel.remove(o);
-			}
-		}
-	}
 	
 	/**
 	 * Sets the lower and upper bounds for the given relation.

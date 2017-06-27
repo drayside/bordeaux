@@ -18,7 +18,7 @@ public class A4CommandExecuterTest {
 		HolaReporter rep = new HolaReporter();
 		String filename = "./tmp/bare_linked_list.hola--1288522771.als";
 		try {
-			A4CommandExecuter.get().executeHola(rep, new File("tmp/").getAbsolutePath(), "findMarginalInstances", filename);
+			A4CommandExecuter.get().executeHola(rep, null, new File("tmp/").getAbsolutePath(), "findMarginalInstances", filename);
 		} catch (Err e) {
 			e.printStackTrace();
 		}

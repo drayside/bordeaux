@@ -8,6 +8,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
+import edu.mit.csail.sdg.alloy4.ConstSet;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
@@ -35,7 +36,7 @@ public class BoreauxVsAlloyTest {
 		assertNotNull("Cannot find command from command name", command);
 
 		try {
-			A4CommandExecuter.get().runAlloy(filepath.getAbsolutePath(), reporter, command.label);
+			A4CommandExecuter.get().runAlloy(filepath.getAbsolutePath(), reporter, null, command.label);
 			A4Solution initialSoln = reporter.getA4Solution();
 			return new BordeauxEngine(filepath, command, initialSoln);
 		} catch (Exception e) {
@@ -54,7 +55,7 @@ public class BoreauxVsAlloyTest {
 		}
 		final HolaReporter reporter = new HolaReporter();
 		final BordeauxEngine engine = createBordeauxEngine(reporter, tmpFile, commandName);
-		return engine.nextNearMiss(reporter);
+		return engine.nextNearMiss(reporter, ConstSet.make(), ConstSet.make());
 	}
 
 	@Test

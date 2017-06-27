@@ -36,7 +36,10 @@ import edu.uw.ece.bordeaux.engine.BordeauxEngine.BordeauxLastSolutionInfo;
 import edu.uw.ece.bordeaux.engine.BordeauxEngine.SolutionType;
 import edu.uw.ece.bordeaux.onborder.OnBorderCodeGenerator;
 import edu.uw.ece.bordeaux.tests.Elaboration;
+import kodkod.ast.Relation;
+import kodkod.instance.Bounds;
 import kodkod.instance.Instance;
+import kodkod.instance.TupleSet;
 
 /**
  * The class contains static methods that are helpful for extracting Alloy
@@ -292,9 +295,9 @@ public class ExtractorUtils {
 		BordeauxLastSolutionInfo blsi_a_ = null;
 		BordeauxLastSolutionInfo blsi_b_ = null;
 		try {
-			blsi_a_ = new BordeauxLastSolutionInfo(blsi.getLastSolutionInstance(), SolutionType.NEAR_HIT, blsi.getAtoms(),
+			blsi_a_ = new BordeauxLastSolutionInfo(blsi.getLastSolutionInstance(), blsi.getAtoms(),
 					blsi.getAdditionSuppressions(), blsi.getSubtractionSuppressions());
-			blsi_b_ = new BordeauxLastSolutionInfo(blsi.getLastSolutionInstance(), SolutionType.NEAR_MISS, blsi.getAtoms(),
+			blsi_b_ = new BordeauxLastSolutionInfo(blsi.getLastSolutionInstance(), blsi.getAtoms(),
 					blsi.getAdditionSuppressions(), blsi.getSubtractionSuppressions());
 		} catch (NullPointerException e1) {
 			e1.printStackTrace();
@@ -352,6 +355,17 @@ public class ExtractorUtils {
 			for (Field field : sig.getFields()) {
 				num += solution.eval(field).size();
 			}
+		}
+		return num;
+	}
+	
+	public static int getNumberOfTuplesFromA4SolutionBounds(A4Solution solution) {
+		int num = 0;
+		Bounds bounds = solution.getBounds();
+		for (Relation r : bounds.relations())
+		{
+			TupleSet ts = bounds.upperBound(r);
+			num += ts.size();
 		}
 		return num;
 	}

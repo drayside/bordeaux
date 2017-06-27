@@ -123,9 +123,6 @@ final class ScopeComputer {
     public final PartialInstance pi;
 
     private final List<Pair<String, PrimSig>> newAtoms;
-    
-    /** Information about the last solution.*/
-    private final LastInstanceInfo lsi;
 
     /** Returns the scope for a sig (or -1 if we don't know). */
     public int sig2scope(Sig sig) {
@@ -336,11 +333,10 @@ final class ScopeComputer {
     
     /** Compute the scopes, based on the settings in the "cmd", then log messages to the reporter.
      * @param pi */
-    private ScopeComputer(IA4Reporter rep, Iterable<Sig> sigs, Command command, PartialInstance pi, LastInstanceInfo lsi) throws Err {
+    private ScopeComputer(IA4Reporter rep, Iterable<Sig> sigs, Command command, PartialInstance pi) throws Err {
         this.rep = rep;
         this.pi = pi == null ? new PartialInstance() : pi;
         this.cmd = resolveIntScopes(pi, sigs, command);
-        this.lsi = lsi;
         this.intScope = cmd.intScope;
         this.newAtoms = new ArrayList<Pair<String,PrimSig>>();
 
@@ -415,67 +411,8 @@ final class ScopeComputer {
 
         // Generate the atoms and the universe
         Set<String> intAtoms = new HashSet<String>();
-        /*if (!(lsi == null || lsi.getLastSolution()==null || lsi.getLastSolution().getAtomOrder()==null))
-        {
-        	Iterable<Sig> oldSigs = lsi.getLastSolution().getAllReachableSigs();
-        	for (Sig oldSig : oldSigs)
-        	{
-        		String oldName = oldSig.label;
-				if (!checkShouldBeExact(oldSig)) continue;
-        		for (Sig sig : sigs)
-        		{
-        			String name = sig.label;
-        			if (oldName == null || name == null) continue;
-        			if (oldName.equals(name) && oldSig.isOne != null)
-        			{
-        				exact.put(sig, sig);
-        				Set<String> atoms = lsi.getLastSolution().getAtomOrder();
-        				int count = 0;
-        				for (String atom : atoms)
-        				{
-        					if (atom.indexOf('$')==-1) continue;
-        	    			String atomName = atom.substring(0, atom.indexOf('$'));
-        	    			if (atomName.equals(sig.shortLabel())) count++;
-        				}
-        				sig2scope(sig, new Integer(count), true);
-        			}
-        		}
-        	}
-        }*/
-        {
         	//If this is the initial instance, then compute lower bound.
-        	for(Sig s:sigs) if (s.isTopLevel()) computeLowerBound((PrimSig)s);
-        }
-        /*else
-        {
-        	//If there is an instance that this instance should be based on.
-        	Set<String> atomsOrder = lsi.getLastSolution().getAtomOrder();
-        	Sig lastSig = null;
-        	int count = 0;
-        	ArrayList<Sig> affectedSigs = new ArrayList<Sig>();
-        	for (String atom : atomsOrder)
-        	{
-        		if (atom.indexOf('$')==-1) continue;
-    			String name = atom.substring(0, atom.indexOf('$'));
-        		for (Sig s: sigs)
-        		{
-        			if (!(s instanceof PrimSig)) continue;
-        			if (name.equals(s.shortLabel()))
-        			{
-        				if (!(lastSig == null || s.equals(lastSig)))
-        				{
-        					sig2scope(lastSig, count, true);
-        					affectedSigs.add(lastSig);
-        					count = 0;
-        				}
-        				atoms.add(atom);
-        				newAtoms.add(new Pair<String, PrimSig>(atom, (PrimSig)s));
-        				count++;
-        				lastSig = s;        				
-        			}
-        		}
-        	}
-        }*/
+        for(Sig s:sigs) if (s.isTopLevel()) computeLowerBound((PrimSig)s);
         for (int i : intScope.enumerate()) intAtoms.add(""+i);
         for (CommandScope cs : cmd.scope) if (cs instanceof IntSubsetScope) {
             for (int i : ((IntSubsetScope) cs).intScope.enumerate()) 
@@ -595,10 +532,10 @@ final class ScopeComputer {
      *
      * <p> Please see ScopeComputer.java for the exact rules for deriving the missing scopes.
      */
-    static Pair<A4Solution,ScopeComputer> compute (IA4Reporter rep, A4Options opt, Iterable<Sig> sigs, Command cmd, LastInstanceInfo lsi) throws Err
+    static Pair<A4Solution,ScopeComputer> compute (IA4Reporter rep, A4Options opt, Iterable<Sig> sigs, Command cmd) throws Err
     {
         PartialInstance pi = new PartialInstanceParser(opt.partialInstance).parse();
-        ScopeComputer sc = new ScopeComputer(rep, sigs, cmd, pi, lsi);
+        ScopeComputer sc = new ScopeComputer(rep, sigs, cmd, pi);
         cmd = sc.cmd;
         Set<String> set = cmd.getAllStringConstants(sigs);
         if (sc.maxstring>=0 && set.size()>sc.maxstring) rep.scope("Sig String expanded to contain all "+set.size()+" String constant(s) referenced by this command.\n");
@@ -606,11 +543,6 @@ final class ScopeComputer {
         sc.atoms.addAll(set);
         A4Solution sol = new A4Solution(cmd.toString(), sc.intScope, sc.maxseq, set, sc.atoms, rep, opt, cmd.expects, pi);
         return new Pair<A4Solution,ScopeComputer>(sol, sc);
-    }
-    
-    static Pair<A4Solution,ScopeComputer> compute (IA4Reporter rep, A4Options opt, Iterable<Sig> sigs, Command cmd) throws Err
-    {
-    	return compute(rep, opt, sigs, cmd, null);
     }
 
 

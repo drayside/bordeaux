@@ -125,7 +125,8 @@ public final class BordeauxEngine {
 
 		try {
 			String fileToReadFrom = inputPath.getAbsolutePath();
-			int numberOfIntAtoms = ((ExtractorUtils.getNumberOfTuplesFromA4Solution(this.initialSolution)+4) * 3) / 2;
+			//TODO Find a better way to determine this number.
+			int numberOfIntAtoms = ((ExtractorUtils.getNumberOfTuplesFromA4Solution(this.initialSolution)+4) * 3);// / 2;
 			this.generator = new OnBorderCodeGenerator(fileToReadFrom, command, this.relationsToExclude, numberOfIntAtoms, writer);
 		} catch (Exception e) {
 			logger.log(Level.SEVERE, Utils.threadName() + " Failed to generate on border code", e);
@@ -443,9 +444,7 @@ public final class BordeauxEngine {
 		this.firstNearMiss = false; 
 		
 		String constraint1 = this.previousHitString;
-		
-//		currentMiss = Utils.or(this.currentMiss, this.previousMissString);
-//		String constraint2 = Utils.not(currentMiss);
+
 		currentMiss = Utils.and(this.currentMiss, Utils.not(this.previousMissString));
 		String constraint2 = currentMiss;
 		
@@ -453,13 +452,12 @@ public final class BordeauxEngine {
 		try {
 			temp = (lastNearHitSolution!=null) ? new A4Solution(lastNearHitSolution, lastNearHitSolution.getCompleteInstance()) : null;
 		} catch (Err e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		if (temp == null) return null;
 		BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo((
 				lastNearHitSolution!=null) ?
-				lastNearHitSolution : null, SolutionType.NEAR_MISS,
+				lastNearHitSolution : null,
 				lastNearHitSolution.getAllAtoms(), suppressAddition, suppressSubtraction);
 		
 		A4Solution result = this.perform(rep, this.inputPath, blsi, constraint1, constraint2);
@@ -468,7 +466,7 @@ public final class BordeauxEngine {
 		String tempString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).b;
 		this.previousMissString = tempString !=null && !tempString.equals("") ? tempString : this.previousMissString;
 		//Creating new last solution.
-		BordeauxLastSolutionInfo blsi2 = new BordeauxLastSolutionInfo(temp, SolutionType.NEAR_MISS, lastNearHitSolution.getAllAtoms(), suppressAddition, suppressSubtraction);
+		BordeauxLastSolutionInfo blsi2 = new BordeauxLastSolutionInfo(temp, lastNearHitSolution.getAllAtoms(), suppressAddition, suppressSubtraction);
 		A4Solution sol = ExtractorUtils.convertBordeauxSolutionToAlloySolution(result, blsi2).b;
 		if (sol!=null && sol.satisfiable())
 		{	
@@ -498,14 +496,14 @@ public final class BordeauxEngine {
 		if (temp==null) return null;
 		BordeauxLastSolutionInfo blsi = new BordeauxLastSolutionInfo(
 				(lastNearMissSolution!=null) ?
-				lastNearMissSolution: null, SolutionType.NEAR_HIT,
+				lastNearMissSolution: null,
 				lastNearMissSolution.getAllAtoms(), suppressAddition, suppressSubtraction);
 		
 		A4Solution result = this.perform(rep, this.inputPath, blsi, constraint1, constraint2);
 		if (result==null || (hitSolution && result.equals(lastNearHitSolution)) || (!hitSolution && result.equals(lastNearMissSolution))) return lastSolution();
 		String tempString = ExtractorUtils.convertBordeauxSolutionToAlloySyntax(result, true).a;
 		this.previousHitString = tempString !=null && !tempString.equals("") ? tempString : this.previousHitString;
-		BordeauxLastSolutionInfo blsi2 = new BordeauxLastSolutionInfo(temp, SolutionType.NEAR_HIT, lastNearMissSolution!=null ? lastNearMissSolution.getAllAtoms() : null, suppressAddition, suppressSubtraction);
+		BordeauxLastSolutionInfo blsi2 = new BordeauxLastSolutionInfo(temp, lastNearMissSolution!=null ? lastNearMissSolution.getAllAtoms() : null, suppressAddition, suppressSubtraction);
 		A4Solution sol = ExtractorUtils.convertBordeauxSolutionToAlloySolution(result, blsi2).a;
 		if (sol!=null && sol.satisfiable())
 		{	
@@ -537,17 +535,15 @@ public final class BordeauxEngine {
 	public static class BordeauxLastSolutionInfo
 	{
 		private final A4Solution lastSolution;
-		private final SolutionType type;
 		private final ArrayList<ExprVar> atoms = new ArrayList<ExprVar>();;
 		private final ConstSet<AlloyRelation> additionSuppressions;
 		private final ConstSet<AlloyRelation> subtractionSuppressions;
 		
-		public BordeauxLastSolutionInfo(A4Solution lastSolution, SolutionType type, Iterable<ExprVar> atoms,
+		public BordeauxLastSolutionInfo(A4Solution lastSolution, Iterable<ExprVar> atoms,
 				ConstSet<AlloyRelation> additionSuppressions, ConstSet<AlloyRelation> subtractionSuppressions) throws NullPointerException
 		{
 			//if (lastSolution==null) throw new NullPointerException("The last solution can not be set to null");
 			this.lastSolution = lastSolution;
-			this.type = type;
 			if (atoms!=null)
 			{
 				Iterator<ExprVar> it = atoms.iterator();
@@ -558,7 +554,6 @@ public final class BordeauxEngine {
 		}
 		
 		public A4Solution getLastSolutionInstance() throws Err {return lastSolution!=null ? new A4Solution(lastSolution, lastSolution.getCompleteInstance()) : null;}
-		public SolutionType getType() {return type;}
 		public ConstSet<ExprVar> getAtoms(){return atoms != null ? ConstSet.make(atoms) : null;}
 		public ConstSet<AlloyRelation> getAdditionSuppressions() {return additionSuppressions != null ? ConstSet.make(additionSuppressions) : null;}
 		public ConstSet<AlloyRelation> getSubtractionSuppressions() {return subtractionSuppressions != null ? ConstSet.make(subtractionSuppressions) : null;}
