@@ -80,7 +80,9 @@ import edu.mit.csail.sdg.alloy4compiler.ast.Sig;
 import edu.mit.csail.sdg.alloy4compiler.ast.Sig.Field;
 import edu.mit.csail.sdg.alloy4compiler.ast.Type;
 import edu.mit.csail.sdg.alloy4compiler.ast.VisitReturn;
+import edu.mit.csail.sdg.alloy4viz.AlloyElement;
 import edu.mit.csail.sdg.alloy4viz.AlloyRelation;
+import edu.mit.csail.sdg.alloy4viz.AlloyType;
 
 /** Translate an Alloy AST into Kodkod AST then attempt to solve it using Kodkod. */
 
@@ -140,7 +142,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
         this.cmd = pair.b.cmd;
         this.a2k = null;
         this.s2k = null;        
-        if (lsi==null) BoundsComputer.compute(rep, frame, pair.b, sigs);
+        if (lsi==null || lsi.getLastSolution()==null) BoundsComputer.compute(rep, frame, pair.b, sigs);
         else BoundsComputer.compute(rep, frame, pair.b, sigs, lsi);
         this.makeFacts(cmd.formula);
     }
@@ -389,7 +391,7 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
      * and you can call X2.next() to get the next satisfying solution X3... until you get an unsatisfying solution.
      */
     public static A4Solution execute_command (IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, Object lastSol,
-    		ConstSet<ExprVar> atoms, ConstSet<AlloyRelation> addSupp, ConstSet<AlloyRelation> subSupp) throws Err {
+    		ConstSet<ExprVar> atoms, ConstSet<AlloyElement> addSupp, ConstSet<AlloyElement> subSupp) throws Err {
         return translate(rep, sigs, cmd, opt, (A4Solution)lastSol, atoms, addSupp, subSupp).executeCommand();
     }
 
@@ -426,11 +428,11 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     {
     	private final A4Solution lastSolution;
     	private final Set<ExprVar> atoms;
-    	private final Set<AlloyRelation> additionSuppression;
-    	private final Set<AlloyRelation> subtractionSuppression;
+    	private final Set<AlloyElement> additionSuppression;
+    	private final Set<AlloyElement> subtractionSuppression;
     	
     	LastInstanceInfo(A4Solution lastSolution, Set<ExprVar> atoms,
-    			Set<AlloyRelation> additionSuppression, Set<AlloyRelation> subtractionSuppression)
+    			Set<AlloyElement> additionSuppression, Set<AlloyElement> subtractionSuppression)
     	{
     		this.lastSolution = lastSolution;
     		this.atoms = atoms;
@@ -440,22 +442,58 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     	
     	A4Solution getLastSolution() throws Err { return lastSolution!=null ? new A4Solution(lastSolution, lastSolution.getCompleteInstance()) : null; }
     	ConstSet<ExprVar> getAtoms() {return atoms !=null ? ConstSet.make(atoms) : null;}
-    	ConstSet<AlloyRelation> getAdditionSuppression() { return additionSuppression != null ? ConstSet.make(additionSuppression) : null; }
-    	ConstSet<AlloyRelation> getSubtractionSuppression() { return subtractionSuppression != null ? ConstSet.make(subtractionSuppression) : null; }
+    	ConstSet<AlloyElement> getAdditionSuppression() { return additionSuppression != null ? ConstSet.make(additionSuppression) : null; }
+    	ConstSet<AlloyElement> getSubtractionSuppression() { return subtractionSuppression != null ? ConstSet.make(subtractionSuppression) : null; }
     	
-    	ConstSet<String> getAddSuppAsString()
+    	ConstSet<String> getAddSuppTypesAsString()
     	{
     		if (additionSuppression == null) return null;
     		ArrayList<String> addList = new ArrayList<String>();
-    		for (AlloyRelation rel : additionSuppression) addList.add("this/" + rel.getTypes().get(0).getName() + "."+ rel.getName());
+    		for (AlloyElement el : additionSuppression)
+    		{
+    			if (!(el instanceof AlloyType)) continue;
+    			AlloyType type = (AlloyType) el;
+    			addList.add("this/" + type.getName());
+    		}
     		return ConstSet.make(addList);
     	}
     	
-    	ConstSet<String> getSubSuppAsString()
+    	ConstSet<String> getSubSuppTypesAsString()
     	{
     		if (subtractionSuppression == null) return null;
     		ArrayList<String> subList = new ArrayList<String>();
-    		for (AlloyRelation rel : subtractionSuppression) subList.add("this/" + rel.getTypes().get(0).getName() + "." + rel.getName());
+    		for (AlloyElement el : subtractionSuppression)
+    		{
+    			if (!(el instanceof AlloyType)) continue;
+    			AlloyType type = (AlloyType) el;
+    			subList.add("this/" + type.getName());
+    		}
+    		return ConstSet.make(subList);
+    	}
+    	
+    	ConstSet<String> getAddSuppRelationsAsString()
+    	{
+    		if (additionSuppression == null) return null;
+    		ArrayList<String> addList = new ArrayList<String>();
+    		for (AlloyElement el : additionSuppression)
+    		{
+    			if (!(el instanceof AlloyRelation)) continue;
+    			AlloyRelation rel = (AlloyRelation) el;
+    			addList.add("this/" + rel.getTypes().get(0).getName() + "."+ rel.getName());
+    		}
+    		return ConstSet.make(addList);
+    	}
+    	
+    	ConstSet<String> getSubSuppRelationsAsString()
+    	{
+    		if (subtractionSuppression == null) return null;
+    		ArrayList<String> subList = new ArrayList<String>();
+    		for (AlloyElement el : subtractionSuppression)
+    		{
+    			if (!(el instanceof AlloyRelation)) continue;
+    			AlloyRelation rel = (AlloyRelation) el;
+    			subList.add("this/" + rel.getTypes().get(0).getName() + "." + rel.getName());
+    		}
     		return ConstSet.make(subList);
     	}
     }
@@ -465,21 +503,21 @@ public final class TranslateAlloyToKodkod extends VisitReturn<Object> {
     }
     
     public static TranslateAlloyToKodkod translate(IA4Reporter rep, Iterable<Sig> sigs, Command cmd, A4Options opt, A4Solution lastSolution,
-    		ConstSet<ExprVar> atoms, ConstSet<AlloyRelation> additionSuppression, ConstSet<AlloyRelation> subtractionSuppression) throws Err {
+    		ConstSet<ExprVar> atoms, ConstSet<AlloyElement> additionSuppression, ConstSet<AlloyElement> subtractionSuppression) throws Err {
         if (rep==null) rep = A4Reporter.NOP;
         TranslateAlloyToKodkod tr = null;
         try {
-        	Set<AlloyRelation> addSupp = null;
+        	Set<AlloyElement> addSupp = null;
         	if (additionSuppression!=null)
         	{
-        		addSupp =  new TreeSet<AlloyRelation>();
-    			for (AlloyRelation rel : additionSuppression) addSupp.add(rel);
+        		addSupp =  new TreeSet<AlloyElement>();
+    			for (AlloyElement rel : additionSuppression) addSupp.add(rel);
         	}
-        	Set<AlloyRelation> subSupp = null;
+        	Set<AlloyElement> subSupp = null;
         	if (subtractionSuppression!=null)
         	{
-        		subSupp =  new TreeSet<AlloyRelation>();
-            	for (AlloyRelation rel : subtractionSuppression) subSupp.add(rel);
+        		subSupp =  new TreeSet<AlloyElement>();
+            	for (AlloyElement rel : subtractionSuppression) subSupp.add(rel);
         	}
         	LastInstanceInfo lsi = new LastInstanceInfo(lastSolution,
         					atoms, 
