@@ -24,7 +24,6 @@ import edu.mit.csail.sdg.alloy4.Util;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.ast.ExprVar;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
-import edu.mit.csail.sdg.alloy4viz.AlloyElement;
 import edu.mit.csail.sdg.alloy4viz.AlloyRelation;
 import edu.uw.ece.bordeaux.A4CommandExecuter;
 import edu.uw.ece.bordeaux.Configuration;
@@ -430,7 +429,6 @@ public final class BordeauxEngine {
 	private void initSolution(A4Solution sol) {
 		this.initialSolution = sol;
 		this.lastNearHitSolution = sol;
-		ExtractorUtils.generateSkolemMap(sol, false);
 		this.lastNearMissSolution = null;
 		this.previousHitString = ExtractorUtils.convertA4SolutionToAlloySyntax(sol, true);
 		this.currentHit = "";
@@ -440,7 +438,7 @@ public final class BordeauxEngine {
 		this.currentMiss = "";
 	}
 	
-	public A4Solution nextNearMiss(A4Reporter rep, ConstSet<AlloyElement> suppressAddition, ConstSet<AlloyElement> suppressSubtraction) throws NullPointerException {
+	public A4Solution nextNearMiss(A4Reporter rep, ConstSet<AlloyRelation> suppressAddition, ConstSet<AlloyRelation> suppressSubtraction) throws NullPointerException {
 
 		if(!firstNearMiss && this.previousMissString == null) return null;
 		this.firstNearMiss = false; 
@@ -482,7 +480,7 @@ public final class BordeauxEngine {
 		}
 	}
 
-	public A4Solution nextNearHit(A4Reporter rep, ConstSet<AlloyElement> suppressAddition, ConstSet<AlloyElement> suppressSubtraction) throws NullPointerException {
+	public A4Solution nextNearHit(A4Reporter rep, ConstSet<AlloyRelation> suppressAddition, ConstSet<AlloyRelation> suppressSubtraction) throws NullPointerException {
 
 		String constraint2 = this.previousMissString;
 		
@@ -538,11 +536,11 @@ public final class BordeauxEngine {
 	{
 		private final A4Solution lastSolution;
 		private final ArrayList<ExprVar> atoms = new ArrayList<ExprVar>();;
-		private final ConstSet<AlloyElement> additionSuppressions;
-		private final ConstSet<AlloyElement> subtractionSuppressions;
+		private final ConstSet<AlloyRelation> additionSuppressions;
+		private final ConstSet<AlloyRelation> subtractionSuppressions;
 		
 		public BordeauxLastSolutionInfo(A4Solution lastSolution, Iterable<ExprVar> atoms,
-				ConstSet<AlloyElement> additionSuppressions, ConstSet<AlloyElement> subtractionSuppressions) throws NullPointerException
+				ConstSet<AlloyRelation> additionSuppressions, ConstSet<AlloyRelation> subtractionSuppressions) throws NullPointerException
 		{
 			//if (lastSolution==null) throw new NullPointerException("The last solution can not be set to null");
 			this.lastSolution = lastSolution;
@@ -557,8 +555,8 @@ public final class BordeauxEngine {
 		
 		public A4Solution getLastSolutionInstance() throws Err {return lastSolution!=null ? new A4Solution(lastSolution, lastSolution.getCompleteInstance()) : null;}
 		public ConstSet<ExprVar> getAtoms(){return atoms != null ? ConstSet.make(atoms) : null;}
-		public ConstSet<AlloyElement> getAdditionSuppressions() {return additionSuppressions != null ? ConstSet.make(additionSuppressions) : null;}
-		public ConstSet<AlloyElement> getSubtractionSuppressions() {return subtractionSuppressions != null ? ConstSet.make(subtractionSuppressions) : null;}
+		public ConstSet<AlloyRelation> getAdditionSuppressions() {return additionSuppressions != null ? ConstSet.make(additionSuppressions) : null;}
+		public ConstSet<AlloyRelation> getSubtractionSuppressions() {return subtractionSuppressions != null ? ConstSet.make(subtractionSuppressions) : null;}
 	}
 	
 	public enum SolutionType {NEAR_MISS, NEAR_HIT}

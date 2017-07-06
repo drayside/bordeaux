@@ -437,19 +437,20 @@ public final class VizGUI implements ComponentListener {
              }
          }
       });
+      enableAddAllRelations();
       
       subtractSuppressionPopup = new JPopupMenu();
       subtractSuppressionButton = new JButton("Suppress Sub: none");
       subtractSuppressionButton.addActionListener(new ActionListener() {
          public void actionPerformed(ActionEvent e) {
-        	 enableAddAllRelations();
+        	 enableSubtractAllRelations();
              if (subtractSuppressionPopup.getComponentCount()>0)
              {
             	 subtractSuppressionPopup.show(subtractSuppressionButton, 10, 10);
              }
          }
       });
-      enableAddAllRelations();
+ 	  enableSubtractAllRelations();
 
       toolbar = new JToolBar();
       toolbar.setVisible(false);
@@ -560,63 +561,31 @@ public final class VizGUI implements ComponentListener {
       projectionButton.setText(num>1 ? ("Projected over "+num+" sigs") : label);
    }
 
-   /**Helper method to add alloy element to suppression list. */
-   private boolean suppressionHelper(final ConstSet<AlloyElement> relations, AlloyElement element, boolean add)
-   {
-	   final boolean on = relations.contains(element);
-       final JMenuItem m = new JMenuItem(element.getName(), on ? OurCheckbox.ON : OurCheckbox.OFF);
-       if (add)
-       {
-	       m.addActionListener(new ActionListener() {
-	          public void actionPerformed(ActionEvent e) {
-	             if (on) myState.removeAddSuppressionRelation(element); else myState.addAddSuppressionRelation(element);
-	             updateDisplay();
-	          }
-	       });
-	       addSuppressionPopup.add(m);
-   	   }
-       else
-       {
-    	   m.addActionListener(new ActionListener() {
-               public void actionPerformed(ActionEvent e) {
-                  if (on) myState.removeSubtractSuppressionRelation(element); else myState.addSubtractSuppressionRelation(element);
-                  updateDisplay();
-               }
-            });
-            subtractSuppressionPopup.add(m);
-       }
-       return on;
-   }
-   
    /** Helper method that enables all relations to be added in bordeaux. */
    private void enableAddAllRelations() {
-      int addNum=0;
-      int subNum=0;
-      String labelAdd="Suppress Add: none";
-      String labelSub="Suppress Sub: none";
-      if (myState==null) { addSuppressionButton.setEnabled(false); subtractSuppressionButton.setEnabled(false); return; }
+      int num=0;
+      String label="Suppress Add: none";
+      if (myState==null) { addSuppressionButton.setEnabled(false); return; }
       addSuppressionButton.setEnabled(true);
       addSuppressionPopup.removeAll();
-      subtractSuppressionButton.setEnabled(true);
-      subtractSuppressionPopup.removeAll();
-      ConstSet<AlloyElement> addElems = myState.getSuppressAdd();
-      ConstSet<AlloyElement> subElems = myState.getSuppressSubtract();
+      final ConstSet<AlloyRelation> relations = myState.getSuppressAdd();
       for(final AlloyRelation r: myState.getOriginalModel().getRelations()){
-          if (suppressionHelper(addElems, r, true)) { addNum++; if (addNum==1) labelAdd="Suppress Add"+r.getName(); }
-          if (suppressionHelper(subElems, r, false)) { subNum++; if (subNum==1) labelSub="Suppress Sub"+r.getName(); }
+         final boolean on = relations.contains(r);
+         final JMenuItem m = new JMenuItem(r.getName(), on ? OurCheckbox.ON : OurCheckbox.OFF);
+         m.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+               if (on) myState.removeAddSuppressionRelation(r); else myState.addAddSuppressionRelation(r);
+               updateDisplay();
+            }
+         });
+         addSuppressionPopup.add(m);
+         if (on) { num++; if (num==1) label="Suppress Add"+r.getName(); }
       }
-      for(final AlloyType type : myState.getOriginalModel().getTypes())
-      {
-    	  if (type.isAbstract || type.isBuiltin || type.isEnum) continue;
-    	  if (suppressionHelper(addElems, type, true)) { addNum++; if (addNum==1) labelAdd="Suppress Add"+type.getName(); }
-          if (suppressionHelper(subElems, type, false)) { subNum++; if (subNum==1) labelSub="Suppress Sub"+type.getName(); }
-      }
-      addSuppressionButton.setText(addNum>1 ? ("Relations adding/removing over "+addNum+" sigs") : labelAdd);
-      subtractSuppressionButton.setText(subNum>1 ? ("Relations adding/removing over "+subNum+" sigs") : labelSub);
+      addSuppressionButton.setText(num>1 ? ("Relations adding/removing over "+num+" sigs") : label);
    }
    
    /** Helper method that enables all relations to be subtracted in bordeaux. */
-   /*private void enableSubtractAllRelations() {
+   private void enableSubtractAllRelations() {
       int num=0;
       String label="Suppress Sub: none";
       if (myState==null) { subtractSuppressionButton.setEnabled(false); return; }
@@ -636,7 +605,7 @@ public final class VizGUI implements ComponentListener {
          if (on) { num++; if (num==1) label="Suppress Sub"+r.getName(); }
       }
       subtractSuppressionButton.setText(num>1 ? ("Relations adding/removing over "+num+" sigs") : label);
-   }*/
+   }
    
    /** Helper method that refreshes the right-side visualization panel with the latest settings. */
    private void updateDisplay() {
@@ -752,6 +721,7 @@ public final class VizGUI implements ComponentListener {
       if (settingsOpen!=2) content.requestFocusInWindow(); else myEvaluatorPanel.requestFocusInWindow();
       repopulateProjectionPopup();
       enableAddAllRelations();
+ 	  enableSubtractAllRelations();
       if (frame!=null) frame.validate(); else splitpane.validate();
    }
 
@@ -828,6 +798,7 @@ public final class VizGUI implements ComponentListener {
          if (myState==null) myState=new VizState(myInstance); else myState.loadInstance(myInstance);
          repopulateProjectionPopup();
          enableAddAllRelations();
+    	 enableSubtractAllRelations();
          xml2title.put(xmlFileName, makeVizTitle());
          this.xmlFileName = xmlFileName;
       }
@@ -857,6 +828,7 @@ public final class VizGUI implements ComponentListener {
       }
       repopulateProjectionPopup();
       enableAddAllRelations();
+ 	  enableSubtractAllRelations();
       if (myCustomPanel!=null) myCustomPanel.remakeAll();
       if (myGraphPanel!=null) myGraphPanel.remakeAll();
       addThemeHistory(filename);
@@ -1041,6 +1013,7 @@ public final class VizGUI implements ComponentListener {
       myState.resetTheme();
       repopulateProjectionPopup();
       enableAddAllRelations();
+ 	  enableSubtractAllRelations();
       if (myCustomPanel!=null) myCustomPanel.remakeAll();
       if (myGraphPanel!=null) myGraphPanel.remakeAll();
       thmFileName="";
@@ -1057,6 +1030,7 @@ public final class VizGUI implements ComponentListener {
       try { MagicLayout.magic(myState);  MagicColor.magic(myState); } catch(Throwable ex) { }
       repopulateProjectionPopup();
       enableAddAllRelations();
+ 	  enableSubtractAllRelations();
       if (myCustomPanel!=null) myCustomPanel.remakeAll();
       if (myGraphPanel!=null) myGraphPanel.remakeAll();
       updateDisplay();
@@ -1114,8 +1088,8 @@ public final class VizGUI implements ComponentListener {
    public class BordeauxData
    {
    	   public String xmlFileName;
-   	   public ConstSet<AlloyElement> suppressAddition;
-   	   public ConstSet<AlloyElement> suppressSubtraction;
+   	   public ConstSet<AlloyRelation> suppressAddition;
+   	   public ConstSet<AlloyRelation> suppressSubtraction;
    }
    
    /** This method attempts to derive the next satisfying near-miss instance. */

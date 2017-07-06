@@ -248,14 +248,15 @@ final class BoundsComputer {
            sum = sum.union(childexpr);
         }
         
-        TupleSet lower = null, upper = null;;
-    	String name = sig.label;
+        TupleSet lower, upper;
+        
         if (sum == null) {
         	//If the previous instance info is available, then set the exact bounds based on that bounds of the previous instance.
         	lower = lb.get(sig).clone(); upper = ub.get(sig).clone();
            // If sig doesn't have children, then sig should make a fresh relation for itself
-           //sum = sol.addRel(sig.label, lower, upper, false);//Node list
+           sum = sol.addRel(sig.label, lower, upper, false);//Node list
         } else if (sig.isAbstract == null) {
+        	String name = sig.label+" remainder";
         	//If the previous instance info is available, then set the exact bounds based on that bounds of the previous instance.
             lower = lb.get(sig).clone(); upper = ub.get(sig).clone();
            // If sig has children, and sig is not abstract, then create a new relation to act as the remainder.
@@ -268,25 +269,8 @@ final class BoundsComputer {
               lower.removeAll(childTS);
               upper.removeAll(childTS);
         	   }
-        	   name += " remainder";
+           sum = sum.union(sol.addRel(name, lower, upper, false));
         }
-        
-        boolean addSupp = false; boolean subSupp =false; TupleSet temp = null;
-        if (lsi!=null)
-        {
-      	  ConstSet<String> addRel = lsi.getAddSuppTypesAsString();
-      	  ConstSet<String> subRel = lsi.getSubSuppTypesAsString();
-      	  if (addRel != null && addRel.contains(name)) addSupp = true; 
-      	  if (subRel != null && subRel.contains(name)) subSupp = true;
-          temp = translateTuples(name);
-        }
-        if (temp!=null)
-        {
-	        if (addSupp) upper = temp.clone();
-	        if (subSupp) lower = temp.clone();
-        }
-        if (sum != null) sum = sum.union(sol.addRel(name, lower, upper, false));
-        else sum = sol.addRel(name, lower, upper, false);
         sol.addSig(sig, sum);
         return sum;
     }
@@ -526,8 +510,8 @@ final class BoundsComputer {
               boolean addSupp = false; boolean subSupp =false;
               if (lsi!=null)
               {
-            	  ConstSet<String> addRel = lsi.getAddSuppRelationsAsString();
-            	  ConstSet<String> subRel = lsi.getSubSuppRelationsAsString();
+            	  ConstSet<String> addRel = lsi.getAddSuppAsString();
+            	  ConstSet<String> subRel = lsi.getSubSuppAsString();
             	  if (addRel != null && addRel.contains(name)) addSupp = true; 
             	  if (subRel != null && subRel.contains(name)) subSupp = true;
               }

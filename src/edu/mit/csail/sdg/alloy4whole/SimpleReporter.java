@@ -67,7 +67,6 @@ import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4SolutionReader;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4SolutionWriter;
 import edu.mit.csail.sdg.alloy4compiler.translator.TranslateAlloyToKodkod;
-import edu.mit.csail.sdg.alloy4viz.AlloyElement;
 import edu.mit.csail.sdg.alloy4viz.AlloyRelation;
 import edu.mit.csail.sdg.alloy4viz.StaticInstanceReader;
 import edu.mit.csail.sdg.alloy4viz.VizGUI;
@@ -545,8 +544,8 @@ public class SimpleReporter extends A4Reporter {
     static final class SimpleTask2 implements WorkerTask {
         private static final long serialVersionUID = 0;
         public String filename = "";
-        public ConstSet<AlloyElement> suppressAddition;
-        public ConstSet<AlloyElement> suppressSubtraction;
+        public ConstSet<AlloyRelation> suppressAddition;
+        public ConstSet<AlloyRelation> suppressSubtraction;
         public boolean useBordeaxEngine;
         public BordeauxNextType nextType;
         public transient WorkerCallback out = null;

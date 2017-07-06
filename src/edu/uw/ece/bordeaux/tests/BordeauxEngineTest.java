@@ -2,11 +2,9 @@ package edu.uw.ece.bordeaux.tests;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import static org.junit.Assert.*;
@@ -22,7 +20,6 @@ import edu.mit.csail.sdg.alloy4.ConstSet;
 import edu.mit.csail.sdg.alloy4.Err;
 import edu.mit.csail.sdg.alloy4compiler.ast.Command;
 import edu.mit.csail.sdg.alloy4compiler.translator.A4Solution;
-import edu.mit.csail.sdg.alloy4viz.AlloyElement;
 import edu.mit.csail.sdg.alloy4viz.AlloyRelation;
 import edu.mit.csail.sdg.alloy4viz.AlloyType;
 import edu.mit.csail.sdg.alloy4whole.SimpleGUI.BordeauxNextType;
@@ -177,119 +174,7 @@ public class BordeauxEngineTest {
 	}
 	
 	@Test
-	public void testRelationAdditionSuppression() throws Exception
-	{
-		AlloyType type = new AlloyType("Node", false, false, false, false, false, false);
-		List<AlloyType> types = new ArrayList<AlloyType>();
-		types.add(type);types.add(type);
-		AlloyRelation rel = new AlloyRelation("left", false, false, types);
-		HashSet<AlloyRelation> listRel = new HashSet<AlloyRelation>();
-		listRel.add(rel);
-		
-		ArrayList<String> rels = new ArrayList<String>();
-		rels.add("this/Node.left");rels.add("this/Node.right");rels.add("this/Node");
-		
-		HashMap<String, AlloyElement> addRel = new HashMap<String, AlloyElement>();
-		addRel.put("this/Node.left", rel);
-		relationSuppressionHelper(rels, addRel, new HashMap<String, AlloyElement>(), 3);
-	}
-	
-	@Test
-	public void testRelationSubtractionSuppression() throws Exception
-	{
-		AlloyType type = new AlloyType("Node", false, false, false, false, false, false);
-		List<AlloyType> types = new ArrayList<AlloyType>();
-		types.add(type);types.add(type);
-		AlloyRelation rel = new AlloyRelation("left", false, false, types);
-		HashSet<AlloyElement> listRel = new HashSet<AlloyElement>();
-		listRel.add(rel);
-		
-		ArrayList<String> rels = new ArrayList<String>();
-		rels.add("this/Node.left");rels.add("this/Node.right");rels.add("this/Node");
-		
-		HashMap<String, AlloyElement> subRel = new HashMap<String, AlloyElement>();
-		subRel.put("this/Node.left", rel);
-		relationSuppressionHelper(rels, new HashMap<String, AlloyElement>(), subRel, 3);
-	}
-	
-	@Test
-	public void testRelationSubtractionAdditionSuppression() throws Exception
-	{
-		AlloyType type = new AlloyType("Node", false, false, false, false, false, false);
-		List<AlloyType> types = new ArrayList<AlloyType>();
-		types.add(type);types.add(type);
-		AlloyRelation rel = new AlloyRelation("left", false, false, types);
-		HashSet<AlloyRelation> listRel = new HashSet<AlloyRelation>();
-		listRel.add(rel);
-		
-		ArrayList<String> rels = new ArrayList<String>();
-		rels.add("this/Node.left");rels.add("this/Node.right");rels.add("this/Node");
-		
-		HashMap<String, AlloyElement> subRel = new HashMap<String, AlloyElement>();
-		subRel.put("this/Node.left", rel);
-		HashMap<String, AlloyElement> addRel = new HashMap<String, AlloyElement>();
-		addRel.put("this/Node.left", rel);
-		relationSuppressionHelper(rels, addRel, subRel, 1);
-	}
-	
-	@Test
-	public void testTypeAdditionSuppression() throws Exception
-	{
-		AlloyType type = new AlloyType("Node", false, false, false, false, false, false);
-		List<AlloyType> types = new ArrayList<AlloyType>();
-		types.add(type);types.add(type);
-		AlloyRelation rel = new AlloyRelation("Node", false, false, types);
-		HashSet<AlloyRelation> listRel = new HashSet<AlloyRelation>();
-		listRel.add(rel);
-		
-		ArrayList<String> rels = new ArrayList<String>();
-		rels.add("this/Node.left");rels.add("this/Node.right");rels.add("this/Node");
-		
-		HashMap<String, AlloyElement> addRel = new HashMap<String, AlloyElement>();
-		addRel.put("this/Node", rel);
-		relationSuppressionHelper(rels, addRel, new HashMap<String, AlloyElement>(), 1);
-	}
-	
-	@Test
-	public void testTypeSubtractionSuppression() throws Exception
-	{
-		AlloyType type = new AlloyType("Node", false, false, false, false, false, false);
-		List<AlloyType> types = new ArrayList<AlloyType>();
-		types.add(type);types.add(type);
-		AlloyRelation rel = new AlloyRelation("Node", false, false, types);
-		HashSet<AlloyElement> listRel = new HashSet<AlloyElement>();
-		listRel.add(rel);
-		
-		ArrayList<String> rels = new ArrayList<String>();
-		rels.add("this/Node.left");rels.add("this/Node.right");rels.add("this/Node");
-		
-		HashMap<String, AlloyElement> subRel = new HashMap<String, AlloyElement>();
-		subRel.put("this/Node", rel);
-		relationSuppressionHelper(rels, new HashMap<String, AlloyElement>(), subRel, 1);
-	}
-	
-	@Test
-	public void testTypeSubtractionAdditionSuppression() throws Exception
-	{
-		AlloyType type = new AlloyType("Node", false, false, false, false, false, false);
-		List<AlloyType> types = new ArrayList<AlloyType>();
-		types.add(type);types.add(type);
-		AlloyRelation rel = new AlloyRelation("left", false, false, types);
-		HashSet<AlloyRelation> listRel = new HashSet<AlloyRelation>();
-		listRel.add(rel);
-		
-		ArrayList<String> rels = new ArrayList<String>();
-		rels.add("this/Node.left");rels.add("this/Node.right");rels.add("this/Node");
-		
-		HashMap<String, AlloyElement> subRel = new HashMap<String, AlloyElement>();
-		subRel.put("this/Node", rel);
-		HashMap<String, AlloyElement> addRel = new HashMap<String, AlloyElement>();
-		addRel.put("this/Node", rel);
-		relationSuppressionHelper(rels, addRel, subRel, 1);
-	}
-	
-	private void relationSuppressionHelper(ArrayList<String> rels, Map<String, AlloyElement> addSupp,
-			Map<String, AlloyElement> subSupp, int reps) throws Exception
+	public void testRelationSuppression() throws Exception
 	{
 		String filename = "binary_tree.als";
 		String commandName = "showValidTrees";
@@ -298,51 +183,44 @@ public class BordeauxEngineTest {
 		HolaReporter reporter = new HolaReporter();
 		BordeauxEngine engine = createBordeauxEngine(reporter, filepath, commandName);
 		A4Solution solution = getParticularSolution(reporter, filepath, engine, commandName);
+		ArrayList<String> rels = new ArrayList<String>();
+		rels.add("this/Node.left");rels.add("this/Node.right");rels.add("this/Node");
 		
-		Map<String, Integer> relNums = new HashMap<String, Integer>();
+		AlloyType type = new AlloyType("Node", false, false, false, false, false, false);
+		List<AlloyType> types = new ArrayList<AlloyType>();
+		types.add(type);types.add(type);
+		AlloyRelation rel = new AlloyRelation("left", false, false, types);
+		Set<AlloyRelation> listRel = new HashSet<AlloyRelation>();
+		listRel.add(rel);
 		
-		for (String relation : rels)
-			relNums.put(relation, solution.getCompleteInstance().tuples(relation).size());
 		
+		int leftCount = solution.getCompleteInstance().tuples("this/Node.left").size();
 		int count = 0;
 		A4Solution nextMiss = null;
 		do
 		{
 			List<A4Solution> solutions = null;
-			solutions = testNextMiss(reporter, commandName, filepath, engine,
-					ConstSet.make(addSupp.values()), ConstSet.make(subSupp.values()), 1);
+			solutions = testNextMiss(reporter, commandName, filepath, engine, ConstSet.make(listRel), ConstSet.make(), 1);
 			nextMiss = solutions.get(0);
-			//assert(calculateDelta(solution, nextMiss, rels)<=1);
-			for (String relation : rels)
-			{
-				int tupNum = nextMiss.getCompleteInstance().tuples(relation).size();
-				int originalTupNum = relNums.get(relation);
-				
-				if (addSupp.containsKey(relation) ) assert(tupNum<=originalTupNum);
-				if (subSupp.containsKey(relation) ) assert(tupNum>=originalTupNum);
-			}
-			
+			assert(calculateDelta(solution, nextMiss, rels)<=1);
+			int tupNum = nextMiss.getCompleteInstance().tuples("this/Node.left").size();
+			assert(tupNum<=leftCount);
+			leftCount=tupNum;
 			count++;
-		} while(count<reps);
+		} while(count<3);
 		count = 0;
 		A4Solution nextHit = null;
 		do
 		{
 			List<A4Solution> solutions = null;
-			solutions = testNextHit(reporter, commandName, filepath, engine,
-					ConstSet.make(addSupp.values()), ConstSet.make(subSupp.values()), 1);
+			solutions = testNextHit(reporter, commandName, filepath, engine, ConstSet.make(listRel), ConstSet.make(), 1);
 			nextHit = solutions.get(0);
-			//assert(calculateDelta(nextMiss, nextHit, rels)<=1);
-			for (String relation : rels)
-			{
-				int originalTupNum = nextMiss.getCompleteInstance().tuples(relation).size();
-				int tupNum = nextHit.getCompleteInstance().tuples(relation).size();
-				
-				if (addSupp.containsKey(relation) ) assert(tupNum<=originalTupNum);
-				if (subSupp.containsKey(relation) ) assert(tupNum>=originalTupNum);
-			}
+			assert(calculateDelta(nextMiss, nextHit, rels)<=1);
+			int tupNum = nextHit.getCompleteInstance().tuples("this/Node.left").size();
+			assert(tupNum<=leftCount);
+			leftCount=tupNum;
 			count++;
-		} while(count<reps);
+		} while(count<3);
 	}
 	
 	private int calculateDelta(A4Solution sol1, A4Solution sol2, ArrayList<String> relations)
@@ -435,13 +313,13 @@ public class BordeauxEngineTest {
 	}
 	
 	private List<A4Solution> testNextMiss(A4Reporter reporter, String commandName, File filepath, BordeauxEngine engine,
-			ConstSet<AlloyElement> suppAdd, ConstSet<AlloyElement> suppSub, int numberOfRuns) {	
+			ConstSet<AlloyRelation> suppAdd, ConstSet<AlloyRelation> suppSub, int numberOfRuns) {	
 		
 		return testSol(reporter, commandName, filepath, engine, suppAdd, suppSub, numberOfRuns, BordeauxNextType.NearMiss);
 	}
 
 	private List<A4Solution> testNextHit(A4Reporter reporter, String commandName, File filepath, BordeauxEngine engine,
-			ConstSet<AlloyElement> suppAdd, ConstSet<AlloyElement> suppSub, int numberOfRuns) {
+			ConstSet<AlloyRelation> suppAdd, ConstSet<AlloyRelation> suppSub, int numberOfRuns) {
 		
 		return testSol(reporter, commandName, filepath, engine, suppAdd, suppSub, numberOfRuns, BordeauxNextType.NearHit);
 	}
@@ -452,7 +330,7 @@ public class BordeauxEngineTest {
 	}
 	
 	private List<A4Solution> testSol(A4Reporter reporter, String commandName, File filepath, BordeauxEngine engine,
-			ConstSet<AlloyElement> suppAdd, ConstSet<AlloyElement> suppSub, int numberOfRuns, BordeauxNextType nextType) {	
+			ConstSet<AlloyRelation> suppAdd, ConstSet<AlloyRelation> suppSub, int numberOfRuns, BordeauxNextType nextType) {	
 		
 		assertNotNull(engine);
 		
